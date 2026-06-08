@@ -201,3 +201,34 @@ export const vControl = {
     },
 }
 ```
+
+## Icons
+
+Library: `@lucide/vue`
+
+```bash
+pnpm add @lucide/vue
+```
+
+Import icons individually — tree-shakeable, only used icons are bundled:
+
+```vue
+<script setup lang="ts">
+import { Search, RefreshCw, Key, ChevronDown, ChevronUp, X, Loader } from '@lucide/vue'
+</script>
+
+<template>
+  <Search :size="20" />
+</template>
+```
+
+### Icon usage in this project
+
+| Icon | Usage |
+|---|---|
+| `Search` | Search button |
+| `RefreshCw` | Clear search button |
+| `Key` | Request access button |
+| `ChevronDown` / `ChevronUp` | Dropdown trigger open/close state |
+| `X` | Remove tag in OntologyPicker |
+| `Loader` | Loading spinner |
