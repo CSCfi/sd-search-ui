@@ -1,0 +1,35 @@
+@use 'variables' as v;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-body);
+  color: var(--color-dark-blue);
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-heading);
+  letter-spacing: 0.15em;
+  color: var(--color-dark-blue);
+  margin: 0;
+}
+
+p {
+  font-weight: var(--font-weight-body);
+  margin: 0;
+}
+
+a {
+  color: var(--color-bright-blue);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
