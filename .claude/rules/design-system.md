@@ -232,3 +232,90 @@ import { Search, RefreshCw, Key, ChevronDown, ChevronUp, X, Loader } from '@luci
 | `ChevronDown` / `ChevronUp` | Dropdown trigger open/close state |
 | `X` | Remove tag in OntologyPicker |
 | `Loader` | Loading spinner |
+
+## CSC UI — Styling Notes
+
+### Do not target internal classes
+
+CSC UI web components add internal CSS classes (e.g. `is-primary`, `is-active`) to
+their shadow DOM. Do not use these as selectors — they are implementation details
+and may change without notice.
+
+```scss
+// ❌ Unreliable — targets internal class
+.loginButton.is-primary { ... }
+
+// ✅ Correct — target your own class only
+.loginButton { ... }
+```
+
+Style CSC UI components via their exposed CSS custom properties or by wrapping
+them in your own element and styling that.
+
+---
+
+## Breakpoints
+
+Use rem-based breakpoints for consistency. 1rem = 16px.
+
+Mixins are in `src/assets/styles/_mixins.scss` and auto-imported globally via `vite.config.ts`
+— no `@use` needed in components.
+
+```scss
+// _mixins.scss
+@mixin tablet {
+  @media only screen and (min-width: 48rem) { @content; }   // 768px
+}
+
+@mixin desktop-small {
+  @media only screen and (min-width: 64rem) { @content; }   // 1024px
+}
+
+@mixin desktop-large {
+  @media only screen and (min-width: 81.25rem) { @content; } // 1300px
+}
+```
+
+**Pattern: mobile-first.** Base styles target mobile. Media queries override upward.
+Media query mixins are written at the **top level** of the scoped style block,
+not nested inside selectors:
+
+```scss
+// ✅ Correct — mixins at top level
+.home-page {
+  flex-direction: column;  // mobile
+}
+
+@include tablet {
+  .home-page {
+    flex-direction: row;   // tablet+
+  }
+}
+
+// ❌ Avoid — nested media queries (harder to scan overrides)
+.home-page {
+  flex-direction: column;
+
+  @include tablet {
+    flex-direction: row;
+  }
+}
+```
+
+## Font Weights
+
+Only three weights are loaded — do not use other values. Browser will synthesize
+missing weights and the result will look different from the real font.
+
+```scss
+// ✅ Use CSS variables
+font-weight: var(--font-weight-heading);    // 900 — Lato Black
+font-weight: var(--font-weight-subheading); // 300 — Lato Light
+font-weight: var(--font-weight-body);       // 400 — Lato Regular
+
+// ❌ Not loaded — browser synthesizes these
+font-weight: 500;
+font-weight: 600;
+font-weight: 700;
+font-weight: 800;
+```

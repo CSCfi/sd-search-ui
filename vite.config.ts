@@ -21,4 +21,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@use '@/assets/styles/mixins' as *;`,
+      },
+    },
+  },
 })
