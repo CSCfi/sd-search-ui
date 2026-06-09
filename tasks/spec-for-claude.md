@@ -83,8 +83,9 @@ State:
 - `filters: BeaconQueryFilter[]` — active filters to be sent in query
 
 Actions:
-- `setFilter(id, value: string | string[])` — add or replace filter for field id.
-  Remove the filter entirely if value is empty string or empty array.
+- `setFilter(id, value: string | string[], includeDescendantTerms?: boolean)` — add or replace
+  filter for field id. Remove the filter entirely if value is empty string or empty array.
+  `includeDescendantTerms` defaults to `true` — only relevant for `ontology` and `ontologyOrValue` fields.
 - `clearFilters()` — reset filters to empty array
 
 No loading, error, or server data in this store. See `state.md`.
@@ -153,15 +154,16 @@ File: `src/components/dynamic/DynamicField.vue`
 
 Props: `field: BeaconFilteringTerm`
 
-Renders the correct input component based on `field.type`:
+Renders the correct input component based on `field.type`. Extracts only the props
+each child component needs — child components do not receive the full `BeaconFilteringTerm` object.
 
-| `field.type` | Component | Notes |
+| `field.type` | Component | Props passed |
 |---|---|---|
-| `text` | `TextInput` | |
-| `controlledValue` | `MultiSelect` | Custom component — `c-select` does not support multiselect correctly |
-| `ontology` | `OntologyPicker` | `:allow-free-text="false"` |
-| `ontologyOrValue` | `OntologyPicker` | `:allow-free-text="true"` |
-| `iso8601Range` | `RangePicker` | |
+| `text` | `TextInput` | `label`, `modelValue` |
+| `controlledValue` | `MultiSelect` | `label`, `fieldId`, `modelValue` |
+| `ontology` | `OntologyPicker` | `label`, `fieldId`, `modelValue` |
+| `ontologyOrValue` | `OntologyPicker` | `label`, `fieldId`, `modelValue` |
+| `iso8601Range` | `RangePicker` | `label`, `modelValue` |
 
 Unknown type: render nothing and log a console warning.
 
@@ -175,60 +177,80 @@ Each component receives the current value from `searchStore.filters`.
 
 ### `src/components/dynamic/TextInput.vue`
 
-Props: `field: BeaconFilteringTerm`, `modelValue: string`
+Props: `label: string`, `modelValue: string`
 Emits: `update:modelValue`
 
-Renders `<c-text-field>` with `v-control`. Label from `field.label`.
+Renders `<c-text-field>` with `v-control`. Plain text search — no dropdown, no prefilled values.
 
 ### `src/components/dynamic/MultiSelect.vue`
 
-Props: `field: BeaconFilteringTerm`, `modelValue: string[]`
+Props: `label: string`, `fieldId: string`, `modelValue: string[]`, `allowFreeText?: boolean`
 Emits: `update:modelValue`
 
-**Do not use `c-select`** — it does not support multiselect correctly.
-Build a custom dropdown component.
+**Do not use `c-select`** — it does not support multiselect and closes after first selection.
+Build a custom dropdown component matching the MVP visual pattern (see screenshot reference).
 
-Uses `useFieldValues(field.id)` to fetch available options.
+All field types use this component — `controlledValue`, `ontology`, and `ontologyOrValue`
+are all multiselect. There is no single-select in this application.
+
+Uses `useFieldValues(fieldId)` to fetch available options.
 
 Behavior:
 - Trigger button shows "All" when nothing selected, or first selected value + `+N` badge for additional selections
 - Dropdown opens on trigger click, closes on outside click or Escape
-- Each option is a checkbox-style item — clicking toggles selection
-- Search input inside dropdown to filter options
-- Clear button inside dropdown to deselect all
+- Dropdown stays open after each selection — user can select multiple values without reopening
+- Search input at the top of the dropdown to filter options
+- Reset button (↺) next to search input to clear search term
+- Options are plain list items — clicking toggles selection, selected items are visually highlighted
+- No explicit "clear all" button needed — deselecting all items returns to "All" state
 
 Items are `FieldValueCount[]` — display `item.value`, use `item.value` as the stored value.
 `item.count` can be shown next to the label optionally.
 
 Show loading state while fetching.
 
-Accessibility: `role="listbox"`, each option `role="option"`, `aria-selected`.
-
+Accessibility: `role="listbox"`, each option `role="option"`, `aria-selected`,
+trigger button `aria-expanded`, `aria-haspopup="listbox"`.
 
 ### `src/components/dynamic/OntologyPicker.vue`
 
-Props: `field: BeaconFilteringTerm`, `modelValue: string[]`, `allowFreeText: boolean`
-Emits: `update:modelValue`
+Props: `label: string`, `fieldId: string`, `modelValue: string[]`, `allowFreeText: boolean`
+Emits: `update:modelValue`, `update:includeDescendantTerms`
 
-Multiselect autocomplete component. Internal state:
+Used for both `ontology` and `ontologyOrValue` fields.
+
+- `ontology` — `allowFreeText: false` — only SNOMED terms from `/suggestions`
+- `ontologyOrValue` — `allowFreeText: true` — SNOMED terms + free-text input allowed
+
+Internal state:
 - `searchTerm: string` — current input value
 - `selectedItems: FieldValueSuggestion[]` — selected items displayed as removable tags
+- `includeDescendantTerms: boolean` — default `true`
 
-Uses `useSuggestions(field.id, searchTerm)` — enabled when `searchTerm.length >= 2`.
-When `allowFreeText` is true, suggestions include both SNOMED concepts (`concept_id` set)
-and free-text values (`concept_id: null`) — emit the `term` string as value for free-text items.
-When `allowFreeText` is false, only SNOMED concepts are shown and emitted as concept IDs.
+Uses `useSuggestions(fieldId, searchTerm)` — enabled when `searchTerm.length >= 2`.
+When `allowFreeText` is false, only SNOMED concepts (`concept_id` set) are shown.
+When `allowFreeText` is true, free-text values (`concept_id: null`) are also shown.
+Emit `term` string for free-text items, concept ID for SNOMED items.
 On suggestion click: add to `selectedItems`, clear input, emit updated value array.
 On tag remove: remove from `selectedItems`, emit updated array.
+
+**Include descendants checkbox:**
+- Shown below the input
+- Checked by default
+- Label: "Include descendant terms"
+- On toggle: emit `update:includeDescendantTerms` — `DynamicField` passes this to `searchStore.setFilter`
 
 Accessibility: implement combobox ARIA pattern as specified in `accessibility.md`.
 
 On suggestions fetch error: silently hide dropdown (TBD per `errors.md`).
 
+Accessibility: implement combobox ARIA pattern as specified in `accessibility.md`.
+
+On suggestions fetch error: silently hide dropdown (TBD per `errors.md`).
 
 ### `src/components/dynamic/RangePicker.vue`
 
-Props: `field: BeaconFilteringTerm`, `modelValue: string`
+Props: `label: string`, `modelValue: string`
 Emits: `update:modelValue`
 
 Internal state: `from: number | null`, `to: number | null`, `unit: 'Y' | 'M' | 'W' | 'D' | null`
@@ -285,9 +307,9 @@ Displays:
 "Request access" opens REMS in a new tab:
 ```ts
 window.open(
-  `https://bp-rems.sd.csc.fi/apply-for?resource=${result.datasetId}`,
-  '_blank',
-  'noopener,noreferrer'
+    `https://bp-rems.sd.csc.fi/apply-for?resource=${result.datasetId}`,
+    '_blank',
+    'noopener,noreferrer'
 )
 ```
 
