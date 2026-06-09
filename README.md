@@ -65,6 +65,34 @@ pnpm lint           # ESLint
 pnpm format         # Prettier
 ```
 
+## IDE Setup
+
+To show CSC UI components in autocomplete and get prop type hints, set up the IDE as follows.
+
+### JetBrains (Rider / WebStorm)
+
+Install the [Web Components Language Server](https://plugins.jetbrains.com/plugin/18322-web-components-language-server) plugin for component autocomplete.
+
+Generate the Custom Elements Manifest from CSC UI's component definitions:
+
+```bash
+python3 scripts/convert-cem.py
+```
+
+This creates `custom-elements.json` in the project root which the plugin picks up automatically.
+The file is gitignored — run the script once after `pnpm install`. You need to re-run the script after updating `@cscfi/csc-ui` to get new components in autocomplete.
+
+### VS Code
+
+The CSC UI component definitions are available via HTML custom data.
+Add to `.vscode/settings.json`:
+
+```json
+{
+  "html.customData": ["node_modules/@cscfi/csc-ui/vscode-data.json"]
+}
+```
+
 ## Related
 
 - [Search API](https://github.com/CSCfi/sd-search-api) — FastAPI backend

@@ -38,3 +38,12 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 .vite
+
+# Envs
+.env
+.env.local
+.env.production
+.env.development
+
+# Web components manifest
+custom-elements.json
