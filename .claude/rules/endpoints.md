@@ -1,3 +1,8 @@
+---
+description: API endpoints, query format, response types. Read when working on API calls, services, or data fetching.
+alwaysApply: false
+---
+
 # CSC Discovery — API Endpoints
 
 ## Base URL
