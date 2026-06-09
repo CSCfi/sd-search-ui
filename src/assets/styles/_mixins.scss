@@ -1,0 +1,17 @@
+// _mixins.scss
+// Mobile - 360px (0rem baseline)
+// Tablet - 768px
+// Small Desktop - 1024px
+// Large Desktop - 1300px
+
+@mixin tablet {
+  @media only screen and (min-width: 48rem) { @content; }
+}
+
+@mixin desktop-small {
+  @media only screen and (min-width: 64rem) { @content; }
+}
+
+@mixin desktop-large {
+  @media only screen and (min-width: 81.25rem) { @content; }
+}
