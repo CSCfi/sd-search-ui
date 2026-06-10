@@ -24,7 +24,7 @@ const store = useSearchStore()
           v-for="field in data.response.filteringTerms"
           :key="field.id"
           :field="field"
-          :class="{'col-span-4': field.type === 'text'}"
+          :class="{ 'col-span-4': field.type === 'text' }"
         />
       </div>
 
@@ -89,7 +89,9 @@ const store = useSearchStore()
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {

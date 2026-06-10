@@ -10,7 +10,14 @@ import { useSearchStore } from '@/stores/searchStore'
 import type { BeaconFilteringTerm } from '@/types/beacon'
 
 function makeField(overrides: Partial<BeaconFilteringTerm> = {}): BeaconFilteringTerm {
-  return { id: 'test_field', type: 'text', label: 'Test Field', description: '', scopes: [], ...overrides }
+  return {
+    id: 'test_field',
+    type: 'text',
+    label: 'Test Field',
+    description: '',
+    scopes: [],
+    ...overrides,
+  }
 }
 
 describe('DynamicField', () => {
@@ -67,7 +74,10 @@ describe('DynamicField', () => {
 
   it('renders nothing and logs warning for unknown type', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const field = makeField({ id: 'bad_field', type: 'unknown' as unknown as BeaconFilteringTerm['type'] })
+    const field = makeField({
+      id: 'bad_field',
+      type: 'unknown' as unknown as BeaconFilteringTerm['type'],
+    })
     const wrapper = mountField(field)
 
     expect(wrapper.findComponent(TextInput).exists()).toBe(false)

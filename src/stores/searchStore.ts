@@ -1,9 +1,8 @@
-import {defineStore} from "pinia";
-import {ref} from "vue";
-import type {BeaconQueryFilter} from "@/types/beacon.ts";
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { BeaconQueryFilter } from '@/types/beacon.ts'
 
 export const useSearchStore = defineStore('search', () => {
-
   const filters = ref<BeaconQueryFilter[]>([])
 
   const setFilter = (id: string, value: string | string[], includeDescendantTerms?: boolean) => {
@@ -14,7 +13,8 @@ export const useSearchStore = defineStore('search', () => {
       filters.value = filters.value.filter((f) => f.id !== id)
     } else {
       const entry: BeaconQueryFilter = { id, value, operator: '=' }
-      if (includeDescendantTerms !== undefined) entry.includeDescendantTerms = includeDescendantTerms
+      if (includeDescendantTerms !== undefined)
+        entry.includeDescendantTerms = includeDescendantTerms
 
       if (existing >= 0) {
         filters.value[existing] = entry

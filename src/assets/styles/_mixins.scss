@@ -5,13 +5,19 @@
 // Large Desktop - 1300px
 
 @mixin tablet {
-  @media only screen and (min-width: 48rem) { @content; }
+  @media only screen and (min-width: 48rem) {
+    @content;
+  }
 }
 
 @mixin desktop-small {
-  @media only screen and (min-width: 64rem) { @content; }
+  @media only screen and (min-width: 64rem) {
+    @content;
+  }
 }
 
 @mixin desktop-large {
-  @media only screen and (min-width: 81.25rem) { @content; }
+  @media only screen and (min-width: 81.25rem) {
+    @content;
+  }
 }

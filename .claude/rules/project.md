@@ -33,8 +33,14 @@ pnpm build          # production build
 pnpm type-check     # TypeScript
 pnpm test           # vitest
 pnpm test:watch     # vitest watch mode
-pnpm lint           # eslint
-pnpm format         # prettier
+pnpm lint           # Run all linters
+pnpm lint:oxlint    # Run OXLint
+pnpm lint:eslint    # Run ESLint
+pnpm lint:ci        # Run linters in CI mode
+pnpm lint:oxlint:ci # Run OXLint in CI mode
+pnpm lint:eslint:ci # Run ESLint in CI mode
+pnpm format         # Format code with Prettier
+pnpm format:ci      # Check code format with Prettier in CI mode
 ```
 
 ## Project Structure

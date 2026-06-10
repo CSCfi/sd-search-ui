@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { defineCustomElements } from '@cscfi/csc-ui/loader'
-import {vControl} from "@/directives/vControl.ts";
+import { vControl } from '@/directives/vControl.ts'
 
 import 'modern-normalize/modern-normalize.css'
 import '@/assets/styles/main.scss'
