@@ -35,7 +35,7 @@ const router = createRouter({
  * triggers a logout redirect via the Axios interceptor in services/api.ts.
  */
 router.beforeEach((to) => {
-  if (import.meta.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     return true;
   }
 

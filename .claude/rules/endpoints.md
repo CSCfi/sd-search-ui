@@ -29,9 +29,9 @@ Swagger UI: `http://localhost:8000/docs`
 | `type` | Component | Fields |
 |---|---|---|
 | `text` | `<TextInput>` | `dataset_title`, `dataset_description`, `staining_target` |
-| `controlledValue` | `c-select` | `sex` |
-| `ontology` | `<OntologyPicker>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
-| `ontologyOrValue` | `<OntologyPicker>` | `fixation_type`, `staining_procedure`, `staining_compound` |
+| `controlledValue` | `<MultiSelect>` | `sex` |
+| `ontology` | `<MultiSelect>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
+| `ontologyOrValue` | `<MultiSelect>` | `fixation_type`, `staining_procedure`, `staining_compound` |
 | `iso8601Range` | `<RangePicker>` | `age_at_extraction` |
 
 ## POST /query — Request
@@ -40,11 +40,11 @@ Swagger UI: `http://localhost:8000/docs`
 {
   query: {
     filters: [
-      { id: "sex",               value: "Female",              operator: "=" },
-      { id: "animal_species",    value: ["337915000"],          operator: "=" },
-      { id: "age_at_extraction", value: "P40Y-P50Y",           operator: "=" }
+      { id: "sex",               value: "Female",     operator: "="},
+      { id: "animal_species",    value: ["337915000"], operator: "=", includeDescendantTerms: true },
+      { id: "age_at_extraction", value: "P40Y-P50Y",  operator: "=" }
     ],
-    requestedGranularity: "resultSets"  // "boolean" | "count" | "resultSets"
+    requestedGranularity: "resultSets"
   }
 }
 ```
@@ -74,7 +74,7 @@ Swagger UI: `http://localhost:8000/docs`
       {
         id: string            // datasetId
         setType: "dataset"
-        exists: true
+        exists: boolean
         results: [
           {
             datasetId: string
@@ -95,20 +95,29 @@ Swagger UI: `http://localhost:8000/docs`
 
 ```ts
 {
-  response: {
-    filteringTerms: [
-      {
-        id: string                          // e.g. "anatomical_site"
-        type: "text" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
-        label: string                       // e.g. "Anatomical site"
-        description: string
-        scopes: string[]                    // e.g. ["specimen"]
-        ontology?: { id: "SCTID" }
-        ontologyConcept?: string | string[] // root SNOMED concept(s)
-        controlledValues?: string[]         // only for type="controlledValue"
-      }
-    ]
-  }
+    meta: {
+        apiVersion: string
+        beaconId: string
+        returnedSchemas: { entityType: string }[]
+    }
+    response: {
+        filteringTerms: [
+            {
+                id: string                          // e.g. "anatomical_site"
+                type: "text" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
+                label: string                       // e.g. "Anatomical site"
+                description: string
+                scopes: string[]                    // e.g. ["specimen"]
+                ontology?: {
+                    id: string                        // always "SCTID"
+                    rootTerms?: string[] | null
+                    allowedTerms?: string[] | null
+                }
+                ontologyConcept?: string | string[] // root SNOMED concept(s)
+                controlledValues?: string[]         // only for type="controlledValue"
+            }
+        ]
+    }
 }
 ```
 
@@ -117,11 +126,11 @@ Swagger UI: `http://localhost:8000/docs`
 ```ts
 // list ordered by count desc
 [
-  {
-    value: string           // display label or SNOMED preferred term
-    count: number
-    concept_id: string | null  // set for ontology fields, null for free-text
-  }
+    {
+        value: string           // display label or SNOMED preferred term
+        count: number
+        concept_id: string | null  // set for ontology fields, null for free-text
+    }
 ]
 ```
 
@@ -130,10 +139,10 @@ Swagger UI: `http://localhost:8000/docs`
 ```ts
 // query param: ?term=lun&word_match=true
 [
-  {
-    term: string            // display label e.g. "Lung structure"
-    concept_id: string | null  // SNOMED ID if ontology match, null if free-text
-  }
+    {
+        term: string            // display label e.g. "Lung structure"
+        concept_id: string | null  // SNOMED ID if ontology match, null if free-text
+    }
 ]
 ```
 
@@ -146,9 +155,9 @@ Results show "Request access" per dataset — opens REMS:
 
 ```ts
 window.open(
-  `https://bp-rems.sd.csc.fi/apply-for?resource=${datasetId}`,
-  '_blank',
-  'noopener,noreferrer'
+    `https://bp-rems.sd.csc.fi/apply-for?resource=${datasetId}`,
+    '_blank',
+    'noopener,noreferrer'
 )
 ```
 
