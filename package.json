@@ -1,6 +1,7 @@
 {
-  "name": "vue-project",
-  "version": "0.0.0",
+  "name": "sd-search-ui",
+  "version": "0.1.0",
+  "description": "CSC Discovery Search UI",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +14,11 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:ci": "run-s lint:oxlint:ci lint:eslint:ci",
+    "lint:oxlint:ci": "oxlint .",
+    "lint:eslint:ci": "eslint .",
+    "format": "prettier --write --experimental-cli src/",
+    "format:ci": "prettier --check src/"
   },
   "dependencies": {
     "@cscfi/csc-ui": "^3.0.19",
