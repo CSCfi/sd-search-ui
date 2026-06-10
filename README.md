@@ -1,6 +1,6 @@
 # CSC Discovery
 
-A federated digital pathology image search portal built on top of [BigPicture](https://bp.nbis.se). Researchers can search for pathology image datasets using structured filters and request access to relevant images via REMS.
+A federated digital pathology image search portal built on top of [Bigpicture](https://bp.nbis.se). Researchers can search for pathology image datasets using structured filters and then request access via [REMS](https://github.com/CSCfi/rems/).
 
 ## Tech Stack
 
