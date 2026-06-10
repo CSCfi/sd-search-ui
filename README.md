@@ -102,5 +102,6 @@ Add to `.vscode/settings.json`:
 ## Related
 
 - [Search API](https://github.com/CSCfi/sd-search-api) — FastAPI backend
-- [BigPicture](https://bp.nbis.se) — source of pathology image metadata
-- [REMS](https://bp-rems.sd.csc.fi) — access request management
+- [Bigpicture submitter guide (NBIS)](https://bp.nbis.se) —  The contributors submit data + metadata to NBIS. 
+- [REMS](https://bp-rems.sd.csc.fi) — access request management system, where the link from Discovery UI leads
+- [Landing pages](https://datasets.bigpicture.eu/index.html) - the public landing pages, where Discovery UI need to link the datasets in output
