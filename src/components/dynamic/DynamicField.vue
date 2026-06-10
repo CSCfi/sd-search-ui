@@ -59,7 +59,9 @@ const KNOWN_TYPES: BeaconFilteringTerm['type'][] = [
 
 onMounted(() => {
   if (!KNOWN_TYPES.includes(props.field.type)) {
-    console.warn(`[DynamicField] Unknown field type "${props.field.type}" for field "${props.field.id}"`)
+    console.warn(
+      `[DynamicField] Unknown field type "${props.field.type}" for field "${props.field.id}"`,
+    )
   }
 })
 </script>

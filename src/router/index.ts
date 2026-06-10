@@ -36,13 +36,11 @@ const router = createRouter({
  */
 router.beforeEach((to) => {
   if (import.meta.env.DEV) {
-    return true;
+    return true
   }
 
   if (to.meta.requiresAuth) {
-    const loggedIn = document.cookie
-      .split(';')
-      .some((c) => c.trim().startsWith('logged_in=True'))
+    const loggedIn = document.cookie.split(';').some((c) => c.trim().startsWith('logged_in=True'))
 
     if (!loggedIn) {
       window.location.href = import.meta.env.VITE_LOGIN_URL
