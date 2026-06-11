@@ -135,9 +135,9 @@ describe('OntologyPicker', () => {
   it('shows field values when dropdown opens or term is less than 2 characters', async () => {
     const w = mountComponent()
     await openDropdown(w)
-    expect(w.findAll('[role="option"]').map((o) => o.text())).toContain('Breast structure')
+    expect(w.findAll('.option-label').map((o) => o.text())).toContain('Breast structure')
     await typeSearch(w, 'b')
-    expect(w.findAll('[role="option"]').map((o) => o.text())).toContain('Breast structure')
+    expect(w.findAll('.option-label').map((o) => o.text())).toContain('Breast structure')
   })
 
   it('fetches suggestions when term is 2+ characters', async () => {

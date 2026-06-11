@@ -7,7 +7,12 @@ import { useDropdown } from '@/composables/useDropdown'
 import { useFieldValues } from '@/composables/useFieldValues'
 import { useListKeyboardNav } from '@/composables/useListKeyboardNav'
 import { useSuggestions } from '@/composables/useSuggestions'
-import type { FieldValueSuggestion } from '@/types/beacon'
+
+interface PickerItem {
+  term: string
+  concept_id: string | null
+  count?: number
+}
 
 const props = defineProps<{
   label: string
@@ -22,7 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const searchTerm = ref('')
-const selectedItems = ref<FieldValueSuggestion[]>([])
+const selectedItems = ref<PickerItem[]>([])
 const includeDescendantTerms = ref(true)
 
 const triggerRef = useTemplateRef<HTMLButtonElement>('trigger')
@@ -46,7 +51,7 @@ const isLoading = computed(() =>
   searchTerm.value.length >= 2 ? suggestionsLoading.value : valuesLoading.value,
 )
 
-const rawItems = computed<FieldValueSuggestion[]>(() => {
+const rawItems = computed<PickerItem[]>(() => {
   if (searchTerm.value.length >= 2) return suggestionsData.value
   return valuesData.value.map((item) => ({
     term: item.value,
@@ -68,12 +73,12 @@ const additionalCount = computed(() =>
   selectedItems.value.length > 1 ? selectedItems.value.length - 1 : 0,
 )
 
-function isSelected(item: FieldValueSuggestion): boolean {
+function isSelected(item: PickerItem): boolean {
   const key = item.concept_id ?? item.term
   return selectedItems.value.some((s) => (s.concept_id ?? s.term) === key)
 }
 
-function toggleItem(item: FieldValueSuggestion) {
+function toggleItem(item: PickerItem) {
   const key = item.concept_id ?? item.term
   const exists = selectedItems.value.some((s) => (s.concept_id ?? s.term) === key)
 
@@ -195,7 +200,7 @@ watch(searchTerm, resetActiveIndex)
           @keydown="onOptionKeydown($event, index)"
         >
           <span class="option-label">{{ item.term }}</span>
-          <span class="option-count">{{ item.count }}</span>
+          <span v-if="item.count !== undefined" class="option-count">{{ item.count }}</span>
         </li>
         <li v-if="filteredSuggestions.length === 0 && searchTerm.length >= 2" class="no-options">
           No results found
