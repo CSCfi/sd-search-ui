@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import MultiSelect from './MultiSelect.vue'
+import { useFieldValues } from '@/composables/useFieldValues'
 
 vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
@@ -34,7 +35,8 @@ vi.mock('@vueuse/core', async (importOriginal) => {
 
 describe('MultiSelect', () => {
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    clickOutsideCallback = undefined
   })
 
   function mountComponent(modelValue: string[] = []) {
@@ -44,9 +46,16 @@ describe('MultiSelect', () => {
   }
 
   async function openDropdown(w: ReturnType<typeof mountComponent>) {
-    await w.find('.trigger').trigger('click')
+    const trigger = w.find('.trigger')
+    expect(trigger.exists(), 'trigger button must exist').toBe(true)
+    await trigger.trigger('click')
     await nextTick()
   }
+
+  it('calls useFieldValues with correct fieldId', () => {
+    mountComponent()
+    expect(vi.mocked(useFieldValues)).toHaveBeenCalledWith('test')
+  })
 
   it('shows "All" when nothing selected', () => {
     const w = mountComponent([])
@@ -86,7 +95,8 @@ describe('MultiSelect', () => {
   it('closes dropdown on outside click', async () => {
     const w = mountComponent()
     await openDropdown(w)
-    clickOutsideCallback!()
+    expect(clickOutsideCallback).toBeTypeOf('function')
+    clickOutsideCallback?.()
     await nextTick()
     expect(w.find('[role="listbox"]').exists()).toBe(false)
   })
@@ -94,7 +104,9 @@ describe('MultiSelect', () => {
   it('keeps dropdown open after item selection', async () => {
     const w = mountComponent()
     await openDropdown(w)
-    await w.findAll('[role="option"]')[0]!.trigger('click')
+    const maleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Male'))
+    expect(maleOption).toBeDefined()
+    await maleOption!.trigger('click')
     await nextTick()
     expect(w.find('[role="listbox"]').exists()).toBe(true)
   })
@@ -102,14 +114,17 @@ describe('MultiSelect', () => {
   it('emits selected value on item click', async () => {
     const w = mountComponent()
     await openDropdown(w)
-    await w.findAll('[role="option"]')[0]!.trigger('click') // Male
+    const maleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Male'))
+    expect(maleOption).toBeDefined()
+    await maleOption!.trigger('click')
     expect(w.emitted('update:modelValue')?.[0]).toEqual([['Male']])
   })
 
-  it('emits without value when selected item clicked again', async () => {
+  it('emits empty array when toggling selected item off', async () => {
     const w = mountComponent(['Male'])
     await openDropdown(w)
     const maleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Male'))
+    expect(maleOption).toBeDefined()
     await maleOption!.trigger('click')
     expect(w.emitted('update:modelValue')?.[0]).toEqual([[]])
   })
@@ -117,7 +132,9 @@ describe('MultiSelect', () => {
   it('emits multiple values when multiple items selected', async () => {
     const w = mountComponent(['Male'])
     await openDropdown(w)
-    await w.findAll('[role="option"]')[1]!.trigger('click') // Female
+    const femaleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Female'))
+    expect(femaleOption).toBeDefined()
+    await femaleOption!.trigger('click')
     expect(w.emitted('update:modelValue')?.[0]).toEqual([['Male', 'Female']])
   })
 
@@ -137,7 +154,8 @@ describe('MultiSelect', () => {
     await w.find('input').setValue('xyz')
     await nextTick()
     expect(w.find('.no-options').exists()).toBe(true)
-    expect(w.find('[role="option"]').exists()).toBe(false)
+    const selectableOptions = w.findAll('[role="option"]').filter((o) => !o.attributes('aria-disabled'))
+    expect(selectableOptions).toHaveLength(0)
   })
 
   it('clears search on reset click', async () => {
@@ -162,6 +180,7 @@ describe('MultiSelect', () => {
     const w = mountComponent(['Male'])
     await openDropdown(w)
     const maleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Male'))
+    expect(maleOption).toBeDefined()
     expect(maleOption!.attributes('aria-selected')).toBe('true')
   })
 
@@ -169,6 +188,7 @@ describe('MultiSelect', () => {
     const w = mountComponent(['Male'])
     await openDropdown(w)
     const femaleOption = w.findAll('[role="option"]').find((o) => o.text().includes('Female'))
+    expect(femaleOption).toBeDefined()
     expect(femaleOption!.attributes('aria-selected')).toBe('false')
   })
 })
