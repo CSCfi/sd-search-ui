@@ -11,7 +11,6 @@ const props = defineProps<{
   label: string
   fieldId: string
   modelValue: string[]
-  allowFreeText?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -54,6 +53,7 @@ function toggleItem(value: string) {
 }
 
 const {
+  activeIndex,
   onSearchKeydown,
   onOptionKeydown: navOptionKeydown,
   resetActiveIndex,
@@ -81,7 +81,7 @@ watch(searchTerm, resetActiveIndex)
 
 <template>
   <div ref="containerRef" class="multiselect">
-    <label :for="`${fieldId}-trigger`" class="field-label">{{ label }}</label>
+    <label :id="`${fieldId}-label`" class="field-label">{{ label }}</label>
     <button
       :id="`${fieldId}-trigger`"
       ref="trigger"
@@ -90,6 +90,7 @@ watch(searchTerm, resetActiveIndex)
       :aria-expanded="isOpen"
       aria-haspopup="listbox"
       :aria-controls="listboxId"
+      :aria-labelledby="`${fieldId}-label`"
       @click="toggleDropdown"
     >
       <span class="trigger-value">
@@ -134,6 +135,7 @@ watch(searchTerm, resetActiveIndex)
         role="listbox"
         :aria-label="label"
         aria-multiselectable="true"
+        :aria-activedescendant="activeIndex >= 0 ? `${fieldId}-option-${activeIndex}` : undefined"
         class="options-list"
       >
         <li
@@ -151,7 +153,7 @@ watch(searchTerm, resetActiveIndex)
           <span class="option-label">{{ item.value }}</span>
           <span class="option-count">{{ item.count }}</span>
         </li>
-        <li v-if="filteredItems.length === 0" class="no-options">No options found</li>
+        <li v-if="filteredItems.length === 0" role="option" aria-disabled="true" class="no-options">No options found</li>
       </ul>
     </div>
   </div>
