@@ -14,6 +14,7 @@ vi.mock('@/composables/useFieldValues', async () => {
         { value: 'Unknown', count: 5, concept_id: null },
       ]),
       isLoading: ref(false),
+      isError: ref(false),
     })),
   }
 })
