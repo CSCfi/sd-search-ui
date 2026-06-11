@@ -106,4 +106,48 @@ describe('DynamicField', () => {
 
     expect(setFilterSpy).toHaveBeenCalledWith('dataset_description', 'cancer')
   })
+
+  it('passes allowFreeText=false to OntologyPicker for type=ontology', () => {
+    const wrapper = mountField(makeField({ type: 'ontology' }))
+    expect(wrapper.findComponent(OntologyPicker).props('allowFreeText')).toBe(false)
+  })
+
+  it('passes allowFreeText=true to OntologyPicker for type=ontologyOrValue', () => {
+    const wrapper = mountField(makeField({ type: 'ontologyOrValue' }))
+    expect(wrapper.findComponent(OntologyPicker).props('allowFreeText')).toBe(true)
+  })
+
+  it('defaults includeDescendantTerms=true when no toggle emitted', () => {
+    const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
+    const store = useSearchStore()
+    const setFilterSpy = vi.spyOn(store, 'setFilter')
+
+    wrapper.findComponent(OntologyPicker).vm.$emit('update:modelValue', ['80248007'])
+
+    expect(setFilterSpy).toHaveBeenCalledWith('anatomical_site', ['80248007'], true)
+  })
+
+  it('passes includeDescendantTerms=false to setFilter after toggle then select', () => {
+    const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
+    const store = useSearchStore()
+    const setFilterSpy = vi.spyOn(store, 'setFilter')
+
+    const picker = wrapper.findComponent(OntologyPicker)
+    picker.vm.$emit('update:include-descendant-terms', false)
+    picker.vm.$emit('update:modelValue', ['80248007'])
+
+    expect(setFilterSpy).toHaveBeenCalledWith('anatomical_site', ['80248007'], false)
+  })
+
+  it('passes existing store array to OntologyPicker on mount', () => {
+    const store = useSearchStore()
+    store.setFilter('anatomical_site', ['80248007', '64033007'], true)
+
+    const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
+
+    expect(wrapper.findComponent(OntologyPicker).props('modelValue')).toEqual([
+      '80248007',
+      '64033007',
+    ])
+  })
 })
