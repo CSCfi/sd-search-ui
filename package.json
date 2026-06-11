@@ -23,6 +23,7 @@
   "dependencies": {
     "@cscfi/csc-ui": "^3.0.19",
     "@lucide/vue": "^1.17.0",
+    "@vueuse/core": "^14.3.0",
     "modern-normalize": "^3.0.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
