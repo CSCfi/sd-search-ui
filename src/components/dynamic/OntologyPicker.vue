@@ -124,6 +124,13 @@ function onOptionKeydown(event: KeyboardEvent, index: number) {
 }
 
 watch(searchTerm, resetActiveIndex)
+
+watch(
+  () => props.modelValue,
+  (values) => {
+    if (values.length === 0) selectedItems.value = []
+  },
+)
 </script>
 
 <template>
