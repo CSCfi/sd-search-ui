@@ -48,7 +48,11 @@ const isLoading = computed(() =>
 
 const rawItems = computed<FieldValueSuggestion[]>(() => {
   if (searchTerm.value.length >= 2) return suggestionsData.value
-  return valuesData.value.map((item) => ({ term: item.value, concept_id: item.concept_id }))
+  return valuesData.value.map((item) => ({
+    term: item.value,
+    count: item.count,
+    concept_id: item.concept_id,
+  }))
 })
 
 const filteredSuggestions = computed(() => {
@@ -80,7 +84,10 @@ function toggleItem(item: FieldValueSuggestion) {
     searchTerm.value = ''
   }
 
-  emit('update:modelValue', selectedItems.value.map((s) => s.concept_id ?? s.term))
+  emit(
+    'update:modelValue',
+    selectedItems.value.map((s) => s.concept_id ?? s.term),
+  )
 }
 
 function onDescendantsChange(event: Event) {
@@ -188,22 +195,16 @@ watch(searchTerm, resetActiveIndex)
           @keydown="onOptionKeydown($event, index)"
         >
           <span class="option-label">{{ item.term }}</span>
+          <span class="option-count">{{ item.count }}</span>
         </li>
-        <li
-          v-if="filteredSuggestions.length === 0 && searchTerm.length >= 2"
-          class="no-options"
-        >
+        <li v-if="filteredSuggestions.length === 0 && searchTerm.length >= 2" class="no-options">
           No results found
         </li>
       </ul>
 
       <div class="descendants-toggle">
         <label class="descendants-label">
-          <input
-            type="checkbox"
-            :checked="includeDescendantTerms"
-            @change="onDescendantsChange"
-          />
+          <input type="checkbox" :checked="includeDescendantTerms" @change="onDescendantsChange" />
           Include descendant terms
         </label>
       </div>
@@ -382,6 +383,12 @@ watch(searchTerm, resetActiveIndex)
 
 .option-label {
   flex: 1;
+}
+
+.option-count {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  flex-shrink: 0;
 }
 
 .no-options {
