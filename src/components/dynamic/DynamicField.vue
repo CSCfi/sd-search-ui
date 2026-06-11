@@ -70,6 +70,7 @@ onMounted(() => {
   <TextInput
     v-if="field.type === 'text'"
     :label="field.label"
+    :field-id="field.id"
     :model-value="currentStringValue"
     @update:model-value="handleStringUpdate"
   />

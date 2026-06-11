@@ -26,13 +26,13 @@ Swagger UI: `http://localhost:8000/docs`
 
 ## Filter Field Types → UI Components
 
-| `type` | Component | Fields |
-|---|---|---|
-| `text` | `<TextInput>` | `dataset_title`, `dataset_description`, `staining_target` |
-| `controlledValue` | `<MultiSelect>` | `sex` |
+| `type` | Component | Fields                                                                    |
+|---|---|---------------------------------------------------------------------------|
+| `text` | `<TextInput>` | `dataset_title`, `dataset_description`, `staining_target`                 |
+| `controlledValue` | `<MultiSelect>` | `sex`                                                                     |
 | `ontology` | `<MultiSelect>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
-| `ontologyOrValue` | `<MultiSelect>` | `fixation_type`, `staining_procedure`, `staining_compound` |
-| `iso8601Range` | `<RangePicker>` | `age_at_extraction` |
+| `ontologyOrValue` | `<MultiSelect>` | `fixation_type`, `staining_procedure`, `staining_substance`               |
+| `iso8601Range` | `<RangePicker>` | `age_at_extraction`                                                       |
 
 ## POST /query — Request
 

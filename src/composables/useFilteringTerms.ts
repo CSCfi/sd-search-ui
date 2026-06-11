@@ -63,6 +63,13 @@ const mockResponse: BeaconFilteringTermsResponse = {
         description: '',
         scopes: [],
       },
+      {
+        id: 'staining_substance',
+        type: 'ontologyOrValue',
+        label: 'Staining substance',
+        description: '',
+        scopes: [],
+      },
     ],
   },
 }

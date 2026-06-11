@@ -20,12 +20,12 @@ import SearchForm from '@/components/SearchForm.vue'
 
   .filters {
     background-color: var(--color-dark-blue);
-    color: #ffffff;
+    color: var(--color-white);
     display: flex;
     flex-direction: column;
 
     .title {
-      color: #ffffff;
+      color: var(--color-white);
       padding-top: 3rem;
       font-size: 1.5rem;
       font-weight: var(--font-weight-heading);

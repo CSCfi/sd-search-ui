@@ -45,7 +45,7 @@ const store = useSearchStore()
 <style scoped lang="scss">
 .search-form {
   background-color: var(--color-dark-blue);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 2rem 1.5rem;
 }
 
@@ -56,7 +56,7 @@ const store = useSearchStore()
 }
 
 .state-error {
-  color: #ffffff;
+  color: var(--color-white);
   text-align: center;
   padding: 3rem 0;
 }
@@ -76,7 +76,7 @@ const store = useSearchStore()
 
 .btn-search {
   background-color: var(--color-pink);
-  color: #ffffff;
+  color: var(--color-white);
 
   &:hover {
     background-color: #ff2567;
@@ -84,8 +84,8 @@ const store = useSearchStore()
 }
 
 .btn-clear {
-  color: #ffffff;
-  border-color: #ffffff;
+  color: var(--color-white);
+  border-color: var(--color-white);
 }
 
 @keyframes spin {

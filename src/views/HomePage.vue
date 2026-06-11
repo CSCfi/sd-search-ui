@@ -30,7 +30,7 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
 
   .home-hero {
     background-color: var(--color-dark-blue);
-    color: #ffffff;
+    color: var(--color-white);
     display: flex;
     flex-direction: column;
   }
@@ -53,7 +53,7 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
   .header {
     font-size: 1.75rem;
     font-weight: var(--font-weight-heading);
-    color: #ffffff;
+    color: var(--color-white);
     line-height: 2.25rem;
     letter-spacing: 0;
     text-align: left;
@@ -73,7 +73,7 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
     background-color: var(--color-pink);
     width: 10.4375rem;
     height: 3.5rem;
-    color: #ffffff;
+    color: var(--color-white);
 
     &:hover {
       background-color: #ff2567;

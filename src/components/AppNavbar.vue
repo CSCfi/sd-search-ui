@@ -28,7 +28,7 @@ const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
 
 <style scoped lang="scss">
 .app-navbar {
-  background-color: #ffffff;
+  background-color: var(--color-white);
   display: flex;
   align-items: center;
   justify-content: flex-end;
