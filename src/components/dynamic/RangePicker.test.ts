@@ -11,10 +11,12 @@ vi.mock('@vueuse/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vueuse/core')>()
   return {
     ...actual,
-    onClickOutside: vi.fn((_target: unknown, callback: () => void) => {
-      clickOutsideCallback = callback
-      return vi.fn()
-    }),
+    onClickOutside: vi.fn<(_target: unknown, callback: () => void) => () => void>(
+      (_target: unknown, callback: () => void) => {
+        clickOutsideCallback = callback
+        return vi.fn<() => void>()
+      },
+    ),
   }
 })
 

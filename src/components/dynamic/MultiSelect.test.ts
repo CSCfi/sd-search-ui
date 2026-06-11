@@ -7,7 +7,7 @@ import { useFieldValues } from '@/composables/useFieldValues'
 vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
-    useFieldValues: vi.fn(() => ({
+    useFieldValues: vi.fn<typeof useFieldValues>(() => ({
       data: ref([
         { value: 'Male', count: 42, concept_id: null },
         { value: 'Female', count: 38, concept_id: null },
@@ -26,10 +26,12 @@ vi.mock('@vueuse/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vueuse/core')>()
   return {
     ...actual,
-    onClickOutside: vi.fn((_target: unknown, callback: () => void) => {
-      clickOutsideCallback = callback
-      return vi.fn()
-    }),
+    onClickOutside: vi.fn<(_target: unknown, callback: () => void) => () => void>(
+      (_target: unknown, callback: () => void) => {
+        clickOutsideCallback = callback
+        return vi.fn<() => void>()
+      },
+    ),
   }
 })
 
@@ -47,7 +49,7 @@ describe('MultiSelect', () => {
 
   async function openDropdown(w: ReturnType<typeof mountComponent>) {
     const trigger = w.find('.trigger')
-    expect(trigger.exists(), 'trigger button must exist').toBe(true)
+    expect(trigger.exists()).toBe(true)
     await trigger.trigger('click')
     await nextTick()
   }

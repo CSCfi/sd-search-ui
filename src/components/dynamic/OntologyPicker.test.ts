@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { type Ref, nextTick } from 'vue'
 import OntologyPicker from './OntologyPicker.vue'
 
 const MOCK_SUGGESTIONS = vi.hoisted((): { term: string; concept_id: string | null }[] => [
@@ -18,23 +18,27 @@ const MOCK_VALUES = vi.hoisted(
 
 // jsdom composedPath() doesn't work with vueuse's capture listener.
 // Capture the callback and invoke it directly in the outside-click test.
-let clickOutsideCallback: (() => void) | undefined
+let _clickOutsideCallback: (() => void) | undefined
 
 vi.mock('@vueuse/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vueuse/core')>()
   return {
     ...actual,
-    onClickOutside: vi.fn((_target: unknown, callback: () => void) => {
-      clickOutsideCallback = callback
-      return vi.fn()
-    }),
+    onClickOutside: vi.fn<(_target: unknown, callback: () => void) => () => void>(
+      (_target: unknown, callback: () => void) => {
+        _clickOutsideCallback = callback
+        return vi.fn<() => void>()
+      },
+    ),
   }
 })
 
 vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
-    useFieldValues: vi.fn(() => ({
+    useFieldValues: vi.fn<
+      () => { data: Ref<typeof MOCK_VALUES>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+    >(() => ({
       data: ref(MOCK_VALUES),
       isLoading: ref(false),
       isError: ref(false),
@@ -46,7 +50,12 @@ vi.mock('@/composables/useFieldValues', async () => {
 vi.mock('@/composables/useSuggestions', async () => {
   const { ref, watchEffect } = await import('vue')
   return {
-    useSuggestions: vi.fn((_fieldId: string, searchTerm: { value: string }) => {
+    useSuggestions: vi.fn<
+      (
+        _fieldId: string,
+        searchTerm: { value: string },
+      ) => { data: Ref<typeof MOCK_SUGGESTIONS>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+    >((_fieldId: string, searchTerm: { value: string }) => {
       const data = ref([] as typeof MOCK_SUGGESTIONS)
       watchEffect(() => {
         data.value = searchTerm.value.length >= 2 ? MOCK_SUGGESTIONS : []
