@@ -17,9 +17,7 @@ interface UseListKeyboardNavReturn {
   resetActiveIndex: () => void
 }
 
-export function useListKeyboardNav(
-  options: UseListKeyboardNavOptions,
-): UseListKeyboardNavReturn {
+export function useListKeyboardNav(options: UseListKeyboardNavOptions): UseListKeyboardNavReturn {
   const { isOpen, itemCount, listboxRef, searchRef, onClose } = options
 
   const activeIndex = ref(-1)

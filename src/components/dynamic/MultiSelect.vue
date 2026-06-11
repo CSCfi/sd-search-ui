@@ -153,7 +153,9 @@ watch(searchTerm, resetActiveIndex)
           <span class="option-label">{{ item.value }}</span>
           <span class="option-count">{{ item.count }}</span>
         </li>
-        <li v-if="filteredItems.length === 0" role="option" aria-disabled="true" class="no-options">No options found</li>
+        <li v-if="filteredItems.length === 0" role="option" aria-disabled="true" class="no-options">
+          No options found
+        </li>
       </ul>
     </div>
   </div>

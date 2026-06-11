@@ -154,7 +154,9 @@ describe('MultiSelect', () => {
     await w.find('input').setValue('xyz')
     await nextTick()
     expect(w.find('.no-options').exists()).toBe(true)
-    const selectableOptions = w.findAll('[role="option"]').filter((o) => !o.attributes('aria-disabled'))
+    const selectableOptions = w
+      .findAll('[role="option"]')
+      .filter((o) => !o.attributes('aria-disabled'))
     expect(selectableOptions).toHaveLength(0)
   })
 
