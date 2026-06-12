@@ -1,5 +1,8 @@
 import axios from 'axios'
 
+// ProblemDetails-like error model used by the UI.
+// FastAPI responses in this project typically provide `detail`,
+// while `type` and `instance` are not provided by the backend.
 export interface ApiError {
   status: number
   title: string
@@ -11,18 +14,26 @@ const api = axios.create({
   withCredentials: true,
 })
 
-api.interceptors.response.use(null, (error) => {
+api.interceptors.response.use(undefined, (error) => {
   if (error.response?.status === 401) {
     window.location.href = import.meta.env.VITE_LOGOUT_URL
     return Promise.reject(error)
   }
 
-  // Normalizes to RFC 7807 ProblemDetails shape.
-  // FastAPI returns { detail } only — title is derived from HTTP statusText.
+  if (!axios.isAxiosError(error)) {
+    return Promise.reject({
+      status: 0,
+      title: error instanceof Error ? error.message : 'Unknown error',
+    } satisfies ApiError)
+  }
+
+  const detail =
+    typeof error.response?.data?.detail === 'string' ? error.response.data.detail : undefined
+
   const apiError: ApiError = {
     status: error.response?.status ?? 0,
     title: error.response?.data?.title ?? error.response?.statusText ?? 'Unknown error',
-    detail: error.response?.data?.detail,
+    detail,
   }
 
   return Promise.reject(apiError)
