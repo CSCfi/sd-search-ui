@@ -14,7 +14,9 @@ const MOCK_VALUES = vi.hoisted((): FieldValueCount[] => [
 vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
-    useFieldValues: vi.fn<() => { data: Ref<FieldValueCount[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }>(() => ({
+    useFieldValues: vi.fn<
+      () => { data: Ref<FieldValueCount[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+    >(() => ({
       data: ref(MOCK_VALUES),
       isLoading: ref(false),
       isError: ref(false),
