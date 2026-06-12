@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { ChevronDown, ChevronUp, RotateCcw } from '@lucide/vue'
+import { refDebounced } from '@vueuse/core'
 import Badge from '@/components/ui/Badge.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import { useDropdown } from '@/composables/useDropdown'
@@ -30,6 +31,8 @@ const searchTerm = ref('')
 const selectedItems = ref<PickerItem[]>([])
 const includeDescendantTerms = ref(true)
 
+const debouncedTerm = refDebounced(searchTerm, 500)
+
 const triggerRef = useTemplateRef<HTMLButtonElement>('trigger')
 const searchRef = useTemplateRef<HTMLInputElement>('search')
 const listboxRef = useTemplateRef<HTMLElement>('listbox')
@@ -41,7 +44,7 @@ const { isOpen, containerRef, closeDropdown, toggleDropdown } = useDropdown({
 
 const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions(
   props.fieldId,
-  searchTerm,
+  debouncedTerm,
 )
 const { data: valuesData, isLoading: valuesLoading } = useFieldValues(props.fieldId)
 
@@ -52,8 +55,8 @@ const isLoading = computed(() =>
 )
 
 const rawItems = computed<PickerItem[]>(() => {
-  if (searchTerm.value.length >= 2) return suggestionsData.value
-  return valuesData.value.map((item) => ({
+  if (searchTerm.value.length >= 2) return suggestionsData.value ?? []
+  return (valuesData.value ?? []).map((item) => ({
     term: item.value,
     count: item.count,
     concept_id: item.concept_id,

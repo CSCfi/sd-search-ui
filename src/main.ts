@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import { defineCustomElements } from '@cscfi/csc-ui/loader'
 import { vControl } from '@/directives/vControl.ts'
 
@@ -15,6 +16,7 @@ defineCustomElements()
 
 app.use(createPinia())
 app.use(router)
+app.use(VueQueryPlugin)
 app.directive('control', vControl)
 
 app.mount('#app')

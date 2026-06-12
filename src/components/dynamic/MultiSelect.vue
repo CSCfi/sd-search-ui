@@ -38,9 +38,10 @@ const additionalCount = computed(() =>
 )
 
 const filteredItems = computed(() => {
+  const items = data.value ?? []
   const term = searchTerm.value.toLowerCase()
-  if (!term) return data.value
-  return data.value.filter((item) => item.value.toLowerCase().includes(term))
+  if (!term) return items
+  return items.filter((item) => item.value.toLowerCase().includes(term))
 })
 
 const itemCount = computed(() => filteredItems.value.length)

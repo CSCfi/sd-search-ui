@@ -1,83 +1,31 @@
-import { ref } from 'vue'
-import type { BeaconFilteringTermsResponse } from '@/types/beacon'
+import { useQuery } from '@tanstack/vue-query'
+import { fetchFilteringTerms } from '@/services/filteringTermsApi'
 
-// Stub — replace body with TanStack Query useQuery call when api.ts is ready
-const mockResponse: BeaconFilteringTermsResponse = {
-  meta: { apiVersion: '2.0', beaconId: 'csc-discovery', returnedSchemas: [] },
-  response: {
-    filteringTerms: [
-      {
-        id: 'dataset_description',
-        type: 'text',
-        label: 'Dataset description',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'animal_species',
-        type: 'ontology',
-        label: 'Biological species',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'anatomical_site',
-        type: 'ontology',
-        label: 'Anatomical site',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'sex',
-        type: 'controlledValue',
-        label: 'Sex',
-        description: '',
-        scopes: [],
-        controlledValues: ['Male', 'Female', 'Unknown'],
-      },
-      {
-        id: 'age_at_extraction',
-        type: 'iso8601Range',
-        label: 'Age at extraction',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'fixation_type',
-        type: 'ontologyOrValue',
-        label: 'Fixation type',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'block_preparation',
-        type: 'ontology',
-        label: 'Block preparation',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'staining_procedure',
-        type: 'ontologyOrValue',
-        label: 'Staining procedure',
-        description: '',
-        scopes: [],
-      },
-      {
-        id: 'staining_substance',
-        type: 'ontologyOrValue',
-        label: 'Staining substance',
-        description: '',
-        scopes: [],
-      },
-    ],
-  },
-}
+// Backend returns fields that is not meant to be used in UI currently. Whitelist visible fields.
+const VISIBLE_FIELD_IDS = new Set([
+  'dataset_description',
+  'animal_species',
+  'anatomical_site',
+  'sex',
+  'age_at_extraction',
+  'fixation_type',
+  'block_preparation',
+  'specimen_type',
+  'staining_procedure',
+  'staining_substance',
+  'staining_target',
+])
 
 export function useFilteringTerms() {
-  return {
-    data: ref(mockResponse),
-    isLoading: ref(false),
-    isError: ref(false),
-  }
+  return useQuery({
+    queryKey: ['filteringTerms'],
+    queryFn: fetchFilteringTerms,
+    staleTime: Infinity,
+    select: (data) => ({
+      ...data,
+      response: {
+        filteringTerms: data.response.filteringTerms.filter((f) => VISIBLE_FIELD_IDS.has(f.id)),
+      },
+    }),
+  })
 }
