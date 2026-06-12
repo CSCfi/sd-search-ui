@@ -44,7 +44,7 @@ Swagger UI: `http://localhost:8000/docs`
       { id: "animal_species",    value: ["337915000"], operator: "=", includeDescendantTerms: true },
       { id: "age_at_extraction", value: "P40Y-P50Y",  operator: "=" }
     ],
-    requestedGranularity: "resultSets"
+    requestedGranularity: "record"
   }
 }
 ```
@@ -56,14 +56,14 @@ Swagger UI: `http://localhost:8000/docs`
 - `iso8601Range`: `value` is `"P40Y-P50Y"` — backend converts to days internally
 - Backend auto-expands SNOMED descendants — frontend sends exact concept ID only
 
-## POST /query — Response (resultSets)
+## POST /query — Response (record)
 
 ```ts
 {
   meta: {
     apiVersion: string
     beaconId: string
-    returnedGranularity: "resultSets"
+    returnedGranularity: "record"
   },
   responseSummary: {
     exists: boolean

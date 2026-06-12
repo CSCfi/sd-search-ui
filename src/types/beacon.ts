@@ -62,7 +62,7 @@ export interface BeaconResultSetsResponse {
   meta: {
     apiVersion: string
     beaconId: string
-    returnedGranularity: 'resultSets'
+    returnedGranularity: 'record'
   }
   responseSummary: {
     exists: boolean

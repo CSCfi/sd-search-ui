@@ -41,7 +41,7 @@ Required types:
 - `FieldValueCount` — item from `/values`
 
 Do not define `BeaconBooleanResponse`, `BeaconCountResponse`, or `BeaconQueryGranularity` —
-frontend always uses `resultSets` granularity. No type guards needed.
+frontend always uses `record` granularity. No type guards needed.
 
 ---
 
@@ -63,9 +63,9 @@ postQuery(filters: BeaconQueryFilter[]): Promise<BeaconResultSetsResponse>
 checkSession(): Promise<boolean>
 ```
 
-`postQuery` always sends `requestedGranularity: "resultSets"` — hardcoded, not a parameter.
+`postQuery` always sends `requestedGranularity: "record"` — hardcoded, not a parameter.
 
-The Beacon V2 protocol supports three granularities (`boolean`, `count`, `resultSets`)
+The Beacon V2 protocol supports three granularities (`boolean`, `count`, `record`)
 designed for privacy — unauthenticated clients may only receive `boolean` or `count`.
 CSC Discovery users are always authenticated via LifeScience AAI, so `resultSets`
 is always available. Other granularities are not needed in the frontend.

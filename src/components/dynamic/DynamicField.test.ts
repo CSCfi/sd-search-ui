@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import DynamicField from './DynamicField.vue'
 import TextInput from './TextField.vue'
 import MultiSelect from './MultiSelect.vue'
@@ -36,7 +37,7 @@ describe('DynamicField', () => {
     return mount(DynamicField, {
       props: { field },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, VueQueryPlugin],
         directives: { control: {} },
       },
     })

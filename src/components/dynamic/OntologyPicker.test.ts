@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { type Ref, nextTick } from 'vue'
 import OntologyPicker from './OntologyPicker.vue'
@@ -66,7 +66,12 @@ vi.mock('@/composables/useSuggestions', async () => {
 })
 
 describe('OntologyPicker', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -96,6 +101,7 @@ describe('OntologyPicker', () => {
 
   async function typeSearch(w: ReturnType<typeof mountComponent>, term: string) {
     await w.find('.search-input').setValue(term)
+    await vi.advanceTimersByTimeAsync(500)
     await nextTick()
   }
 
