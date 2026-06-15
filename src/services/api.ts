@@ -1,42 +1,50 @@
-import axios from 'axios'
+import type {
+  BeaconFilteringTermsResponse,
+  BeaconQueryFilter,
+  BeaconResultSetsResponse,
+  FieldValueCount,
+  FieldValueSuggestion,
+} from '@/types/beacon'
+import apiClient from './apiClient'
 
-// ProblemDetails-like error model used by the UI.
-// FastAPI responses in this project typically provide `detail`,
-// while `type` and `instance` are not provided by the backend.
-export interface ApiError {
-  status: number
-  title: string
-  detail?: string
+export async function getFilteringTerms(): Promise<BeaconFilteringTermsResponse> {
+  return apiClient.get<BeaconFilteringTermsResponse>('/filtering_terms').then((r) => r.data)
 }
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true,
-})
+export async function getFieldValues(fieldId: string): Promise<FieldValueCount[]> {
+  return apiClient.get<FieldValueCount[]>(`/filtering_terms/${fieldId}/values`).then((r) => r.data)
+}
 
-api.interceptors.response.use(undefined, (error) => {
-  if (error.response?.status === 401) {
-    window.location.href = import.meta.env.VITE_LOGOUT_URL
-    return Promise.reject(error)
+export async function getSuggestions(
+  fieldId: string,
+  term: string,
+  signal: AbortSignal,
+): Promise<FieldValueSuggestion[]> {
+  return apiClient
+    .get<FieldValueSuggestion[]>(`/filtering_terms/${fieldId}/suggestions`, {
+      params: { term, word_match: true },
+      signal,
+    })
+    .then((r) => r.data)
+}
+
+export async function postQuery(
+  filters: BeaconQueryFilter[],
+): Promise<BeaconResultSetsResponse> {
+  const res = await apiClient.post<BeaconResultSetsResponse>('/query', {
+    query: {
+      filters,
+      requestedGranularity: 'record',
+    },
+  })
+  return res.data
+}
+
+export async function checkSession(): Promise<boolean> {
+  try {
+    await apiClient.get(import.meta.env.VITE_ACCOUNT_INFO)
+    return true
+  } catch {
+    return false
   }
-
-  if (!axios.isAxiosError(error)) {
-    return Promise.reject({
-      status: 0,
-      title: error instanceof Error ? error.message : 'Unknown error',
-    } satisfies ApiError)
-  }
-
-  const detail =
-    typeof error.response?.data?.detail === 'string' ? error.response.data.detail : undefined
-
-  const apiError: ApiError = {
-    status: error.response?.status ?? 0,
-    title: error.response?.data?.title ?? error.response?.statusText ?? 'Unknown error',
-    detail,
-  }
-
-  return Promise.reject(apiError)
-})
-
-export default api
+}
