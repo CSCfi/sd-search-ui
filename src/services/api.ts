@@ -28,9 +28,7 @@ export async function getSuggestions(
     .then((r) => r.data)
 }
 
-export async function postQuery(
-  filters: BeaconQueryFilter[],
-): Promise<BeaconResultSetsResponse> {
+export async function postQuery(filters: BeaconQueryFilter[]): Promise<BeaconResultSetsResponse> {
   const res = await apiClient.post<BeaconResultSetsResponse>('/query', {
     query: {
       filters,
