@@ -134,7 +134,7 @@ describe('DynamicField', () => {
     const setFilterSpy = vi.spyOn(store, 'setFilter')
 
     const picker = wrapper.findComponent(OntologyPicker)
-    picker.vm.$emit('update:include-descendant-terms', false)
+    picker.vm.$emit('update:includeDescendantTerms', false)
     picker.vm.$emit('update:modelValue', ['80248007'])
 
     expect(setFilterSpy).toHaveBeenCalledWith('anatomical_site', ['80248007'], false)
