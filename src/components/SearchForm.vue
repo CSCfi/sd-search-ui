@@ -10,7 +10,6 @@ useSearch()
 
 const { data, isLoading, isError } = useFilteringTerms()
 const store = useSearchStore()
-console.log(store.committedFilters, store.hasCommittedFilters)
 </script>
 
 <template>
