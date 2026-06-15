@@ -1,32 +1,40 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { BeaconQueryFilter } from '@/types/beacon.ts'
 
 export const useSearchStore = defineStore('search', () => {
-  const filters = ref<BeaconQueryFilter[]>([])
+  const draftFilters = ref<BeaconQueryFilter[]>([])
+  const committedFilters = ref<BeaconQueryFilter[]>([])
 
   const setFilter = (id: string, value: string | string[], includeDescendantTerms?: boolean) => {
-    const existing = filters.value.findIndex((f) => f.id === id)
+    const existing = draftFilters.value.findIndex((f) => f.id === id)
     const isEmpty = Array.isArray(value) ? value.length === 0 : value === ''
 
     if (isEmpty) {
-      filters.value = filters.value.filter((f) => f.id !== id)
+      draftFilters.value = draftFilters.value.filter((f) => f.id !== id)
     } else {
       const entry: BeaconQueryFilter = { id, value, operator: '=' }
       if (includeDescendantTerms !== undefined)
         entry.includeDescendantTerms = includeDescendantTerms
 
       if (existing >= 0) {
-        filters.value[existing] = entry
+        draftFilters.value[existing] = entry
       } else {
-        filters.value.push(entry)
+        draftFilters.value.push(entry)
       }
     }
   }
 
+  const hasCommittedFilters = computed(() => committedFilters.value.length > 0)
+
   const clearFilters = () => {
-    filters.value = []
+    draftFilters.value = []
+    committedFilters.value = []
   }
 
-  return { filters, setFilter, clearFilters }
+  const commit = () => {
+    committedFilters.value = [...draftFilters.value]
+  }
+
+  return { draftFilters, committedFilters, hasCommittedFilters, setFilter, clearFilters, commit }
 })
