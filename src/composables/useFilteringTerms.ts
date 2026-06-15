@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/vue-query'
-import { fetchFilteringTerms } from '@/services/filteringTermsApi'
+import { getFilteringTerms } from '@/services/api'
 
 const HIDDEN_FIELD_IDS = new Set(['dataset_title'])
 
 export function useFilteringTerms() {
   return useQuery({
     queryKey: ['filteringTerms'],
-    queryFn: fetchFilteringTerms,
+    queryFn: getFilteringTerms,
     staleTime: Infinity,
     select: (data) => ({
       ...data,

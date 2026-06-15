@@ -3,6 +3,10 @@ import { Loader, RefreshCw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
+import { useSearch } from '@/composables/useSearch.ts'
+
+// TODO: remove when ResultsList is implemented — it will register the query. This is only to test query until implemented.
+useSearch()
 
 const { data, isLoading, isError } = useFilteringTerms()
 const store = useSearchStore()
@@ -29,7 +33,7 @@ const store = useSearchStore()
       </div>
 
       <div class="form-actions">
-        <c-button class="btn-search" type="submit">
+        <c-button class="btn-search" type="submit" @click="store.commit()">
           <Search :size="16" aria-hidden="true" />
           Search
         </c-button>

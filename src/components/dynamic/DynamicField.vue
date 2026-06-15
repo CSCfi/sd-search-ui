@@ -14,20 +14,20 @@ const props = defineProps<{
 const store = useSearchStore()
 
 const currentStringValue = computed(() => {
-  const f = store.filters.find((f) => f.id === props.field.id)
+  const f = store.draftFilters.find((f) => f.id === props.field.id)
   if (!f) return ''
   return typeof f.value === 'string' ? f.value : ''
 })
 
 const currentArrayValue = computed(() => {
-  const f = store.filters.find((f) => f.id === props.field.id)
+  const f = store.draftFilters.find((f) => f.id === props.field.id)
   if (!f) return []
   return Array.isArray(f.value) ? f.value : []
 })
 
 // Tracked locally so unchecking before any selection is honoured on first pick
 const includeDescendantTerms = ref(
-  store.filters.find((f) => f.id === props.field.id)?.includeDescendantTerms ?? true,
+  store.draftFilters.find((f) => f.id === props.field.id)?.includeDescendantTerms ?? true,
 )
 
 function handleStringUpdate(value: string) {

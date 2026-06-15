@@ -23,30 +23,31 @@ alwaysApply: false
 // Filter field definitions — static, fetched once
 useQuery({
   queryKey: ['filteringTerms'],
-  queryFn: fetchFilteringTerms,
+  queryFn: getFilteringTerms,
   staleTime: Infinity,
 })
 
 // Field values with counts — cached 4h (matches backend cache TTL)
 useQuery({
   queryKey: ['values', fieldId],
-  queryFn: () => fetchFieldValues(fieldId),
+  queryFn: () => getFieldValues(fieldId),
   staleTime: 4 * 60 * 60 * 1000,
 })
 
 // Autocomplete suggestions — enabled only after user types 2+ chars
 useQuery({
   queryKey: ['suggestions', fieldId, term],
-  queryFn: () => fetchSuggestions(fieldId, term),
+  queryFn: () => getSuggestions(fieldId, term),
   enabled: term.length > 1,
   staleTime: 5 * 60 * 1000,  // 5 min
 })
 
-// Search results — enabled only when filters are set
+// Search results — enabled only when committed filters are set
 useQuery({
-  queryKey: ['search', filters],
-  queryFn: () => postQuery(filters),
-  enabled: filters.length > 0,
+  queryKey: ['search', committedFilters],
+  queryFn: () => postQuery(committedFilters.value),
+  enabled: hasCommittedFilters,
+})
 })
 ```
 
@@ -55,27 +56,38 @@ useQuery({
 ```ts
 // stores/searchStore.ts
 export const useSearchStore = defineStore('search', () => {
-  // Active filters sent to POST /query
-  const filters = ref<BeaconQueryFilter[]>([])
+    // Form state — updated on every field change
+    const draftFilters = ref<BeaconQueryFilter[]>([])
 
-  const setFilter = (id: string, value: string | string[]) => {
-    const existing = filters.value.findIndex((f) => f.id === id)
-    const isEmpty = Array.isArray(value) ? value.length === 0 : value === ''
+    // Query state — updated only when user clicks Search
+    const committedFilters = ref<BeaconQueryFilter[]>([])
 
-    if (isEmpty) {
-      filters.value = filters.value.filter((f) => f.id !== id)
-    } else if (existing >= 0) {
-      filters.value[existing] = { id, value, operator: '=' }
-    } else {
-      filters.value.push({ id, value, operator: '=' })
+    const hasCommittedFilters = computed(() => committedFilters.value.length > 0)
+
+    const setFilter = (id: string, value: string | string[], includeDescendantTerms = true) => {
+        const existing = draftFilters.value.findIndex((f) => f.id === id)
+        const isEmpty = Array.isArray(value) ? value.length === 0 : value === ''
+
+        if (isEmpty) {
+            draftFilters.value = draftFilters.value.filter((f) => f.id !== id)
+        } else if (existing >= 0) {
+            draftFilters.value[existing] = { id, value, operator: '=', includeDescendantTerms }
+        } else {
+            draftFilters.value.push({ id, value, operator: '=', includeDescendantTerms })
+        }
     }
-  }
 
-  const clearFilters = () => {
-    filters.value = []
-  }
+    const commit = () => {
+        committedFilters.value = [...draftFilters.value]
+    }
 
-  return { filters, setFilter, clearFilters }
+    const clearFilters = () => {
+        draftFilters.value = []
+        committedFilters.value = []
+    }
+
+    return { draftFilters, committedFilters, hasCommittedFilters, setFilter, commit, clearFilters }
+})
 })
 ```
 
