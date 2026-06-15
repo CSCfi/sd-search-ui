@@ -47,27 +47,39 @@ frontend always uses `record` granularity. No type guards needed.
 
 ## Step 2 — API Service Layer
 
-File: `src/services/api.ts`
+Files:
+- `src/services/apiClient.ts` — Axios instance with `baseURL: import.meta.env.VITE_API_BASE_URL`
+  and `withCredentials: true`. Response interceptor redirects to
+  `import.meta.env.VITE_LOGOUT_URL` on 401.
+- `src/services/api.ts` — all endpoint functions, imports Axios instance from `apiClient.ts`
 
-Create an Axios instance with `baseURL: import.meta.env.VITE_API_BASE_URL` and
-`withCredentials: true`. Add a response interceptor that redirects to
-`import.meta.env.VITE_LOGOUT_URL` on 401.
-
-Export the following functions. All return typed promises — no `any`.
+Export the following functions from `api.ts`. All return typed promises — no `any`.
 
 ```ts
-fetchFilteringTerms(): Promise<BeaconFilteringTermsResponse>
-fetchFieldValues(fieldId: string): Promise<FieldValueCount[]>
-fetchSuggestions(fieldId: string, term: string): Promise<FieldValueSuggestion[]>
+getFilteringTerms(): Promise<BeaconFilteringTermsResponse>
+getFieldValues(fieldId: string): Promise<FieldValueCount[]>
+getSuggestions(fieldId: string, term: string): Promise<FieldValueSuggestion[]>
 postQuery(filters: BeaconQueryFilter[]): Promise<BeaconResultSetsResponse>
 checkSession(): Promise<boolean>
 ```
 
+`postQuery` unwraps `AxiosResponse` — returns `res.data` of type `BeaconResultSetsResponse`.
+
 `postQuery` always sends `requestedGranularity: "record"` — hardcoded, not a parameter.
+
+`postQuery` sends `requestedGranularity: "record"` inside the `query` object, not at the top level:
+```ts
+{
+  query: {
+    filters: BeaconQueryFilter[],
+    requestedGranularity: "record"
+  }
+}
+```
 
 The Beacon V2 protocol supports three granularities (`boolean`, `count`, `record`)
 designed for privacy — unauthenticated clients may only receive `boolean` or `count`.
-CSC Discovery users are always authenticated via LifeScience AAI, so `resultSets`
+CSC Discovery users are always authenticated via LifeScience AAI, so `record`
 is always available. Other granularities are not needed in the frontend.
 
 `checkSession` calls `GET import.meta.env.VITE_ACCOUNT_INFO` and returns `true` if
@@ -80,13 +92,18 @@ response is 200, `false` otherwise. Does not throw.
 ### `src/stores/searchStore.ts`
 
 State:
-- `filters: BeaconQueryFilter[]` — active filters to be sent in query
+- `draftFilters: BeaconQueryFilter[]` — form state, updated on every field change
+- `committedFilters: BeaconQueryFilter[]` — query state, updated only on commit
+
+Computed:
+- `hasCommittedFilters` — true when `committedFilters.length > 0`
 
 Actions:
 - `setFilter(id, value: string | string[], includeDescendantTerms?: boolean)` — add or replace
-  filter for field id. Remove the filter entirely if value is empty string or empty array.
+  filter for field id in `draftFilters`. Remove the filter entirely if value is empty string or empty array.
   `includeDescendantTerms` defaults to `true` — only relevant for `ontology` and `ontologyOrValue` fields.
-- `clearFilters()` — reset filters to empty array
+- `commit()` — copies `draftFilters` to `committedFilters`
+- `clearFilters()` — resets both arrays to `[]`
 
 No loading, error, or server data in this store. See `state.md`.
 
@@ -126,9 +143,12 @@ useSuggestions(fieldId: string, term: Ref<string>): { data, isLoading }
 File: `src/composables/useSearch.ts`
 
 ```ts
-// enabled only when filters.length > 0
-// queryKey includes full filters array so each unique query is cached separately
-useSearch(filters: Ref<BeaconQueryFilter[]>): { data, isLoading, isError }
+Reads `committedFilters` and `hasCommittedFilters` directly from `searchStore` via `storeToRefs`.
+No parameters.
+
+// enabled only when committedFilters.length > 0
+// queryKey includes full committedFilters array so each unique query is cached separately
+useSearch(): { data, isLoading, isError }
 ```
 
 ---
@@ -279,8 +299,7 @@ Renders:
 Layout: dark blue background panel (`--color-dark-blue`). Two rows of four fields.
 Below fields: pink Search button (`--color-pink`) + "Clear search" text button.
 
-Search button: calls `searchStore` — no action needed, `useSearch` reacts to
-`filters` automatically.
+Search button: calls `searchStore.commit()`.
 Clear button: calls `searchStore.clearFilters()`.
 
 
@@ -291,7 +310,7 @@ Clear button: calls `searchStore.clearFilters()`.
 ### `src/components/ResultsBanner.vue`
 
 Shows active filter tags above the results list.
-Reads from `searchStore.filters`.
+Reads from `searchStore.committedFilters`.
 Each tag displays the filter id and value. Not interactive.
 
 ### `src/components/ResultsItem.vue`
