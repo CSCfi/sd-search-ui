@@ -3,9 +3,9 @@ import { mount } from '@vue/test-utils'
 import { type Ref, nextTick } from 'vue'
 import MultiSelect from './MultiSelect.vue'
 import { useFieldValues } from '@/composables/useFieldValues'
-import type { FieldValueCount } from '@/types/beacon'
+import type { FieldValue } from '@/types/beacon'
 
-const MOCK_VALUES = vi.hoisted((): FieldValueCount[] => [
+const MOCK_VALUES = vi.hoisted((): FieldValue[] => [
   { value: 'Male', count: 42, concept_id: null },
   { value: 'Female', count: 38, concept_id: null },
   { value: 'Unknown', count: 5, concept_id: null },
@@ -15,7 +15,7 @@ vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
     useFieldValues: vi.fn<
-      () => { data: Ref<FieldValueCount[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+      () => { data: Ref<FieldValue[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }
     >(() => ({
       data: ref(MOCK_VALUES),
       isLoading: ref(false),
