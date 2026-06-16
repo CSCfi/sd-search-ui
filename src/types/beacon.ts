@@ -71,12 +71,7 @@ export interface BeaconResultSetsResponse {
   response: BeaconResultSets
 }
 
-export interface FieldValueSuggestion {
-  term: string
-  concept_id: string | null
-}
-
-export interface FieldValueCount {
+export interface FieldValue {
   value: string
   count: number
   concept_id: string | null

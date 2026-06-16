@@ -37,8 +37,7 @@ Required types:
 - `BeaconResultSet` — dataset wrapper with `id` and `results`
 - `BeaconResultSets` — wrapper containing `resultSet: BeaconResultSet[]`
 - `BeaconResultSetsResponse` — full query response with `meta`, `responseSummary`, `response`
-- `FieldValueSuggestion` — item from `/suggestions`
-- `FieldValueCount` — item from `/values`
+- `FieldValue` — item from `/filtering_terms/{field_id}/suggestions` and `/filtering_terms/{field_id}/values`
 
 Do not define `BeaconBooleanResponse`, `BeaconCountResponse`, or `BeaconQueryGranularity` —
 frontend always uses `record` granularity. No type guards needed.

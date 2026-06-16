@@ -2,8 +2,7 @@ import type {
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconResultSetsResponse,
-  FieldValueCount,
-  FieldValueSuggestion,
+  FieldValue,
 } from '@/types/beacon'
 import apiClient from './apiClient'
 
@@ -11,17 +10,17 @@ export async function getFilteringTerms(): Promise<BeaconFilteringTermsResponse>
   return apiClient.get<BeaconFilteringTermsResponse>('/filtering_terms').then((r) => r.data)
 }
 
-export async function getFieldValues(fieldId: string): Promise<FieldValueCount[]> {
-  return apiClient.get<FieldValueCount[]>(`/filtering_terms/${fieldId}/values`).then((r) => r.data)
+export async function getFieldValues(fieldId: string): Promise<FieldValue[]> {
+  return apiClient.get<FieldValue[]>(`/filtering_terms/${fieldId}/values`).then((r) => r.data)
 }
 
 export async function getSuggestions(
   fieldId: string,
   term: string,
   signal: AbortSignal,
-): Promise<FieldValueSuggestion[]> {
+): Promise<FieldValue[]> {
   return apiClient
-    .get<FieldValueSuggestion[]>(`/filtering_terms/${fieldId}/suggestions`, {
+    .get<FieldValue[]>(`/filtering_terms/${fieldId}/suggestions`, {
       params: { term, word_match: true },
       signal,
     })

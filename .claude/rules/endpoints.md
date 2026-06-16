@@ -26,13 +26,13 @@ Swagger UI: `http://localhost:8000/docs`
 
 ## Filter Field Types → UI Components
 
-| `type` | Component | Fields                                                                    |
-|---|---|---------------------------------------------------------------------------|
-| `text` | `<TextInput>` | `dataset_title`, `dataset_description`, `staining_target`                 |
-| `controlledValue` | `<MultiSelect>` | `sex`                                                                     |
-| `ontology` | `<MultiSelect>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
-| `ontologyOrValue` | `<MultiSelect>` | `fixation_type`, `staining_procedure`, `staining_substance`               |
-| `iso8601Range` | `<RangePicker>` | `age_at_extraction`                                                       |
+| `type` | Component          | Fields                                                                    |
+|---|--------------------|---------------------------------------------------------------------------|
+| `text` | `<TextInput>`      | `dataset_title`, `dataset_description`, `staining_target`                 |
+| `controlledValue` | `<MultiSelect>`    | `sex`                                                                     |
+| `ontology` | `<OntologyPicker>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
+| `ontologyOrValue` | `<OntologyPicker>` | `fixation_type`, `staining_procedure`, `staining_substance`               |
+| `iso8601Range` | `<RangePicker>`    | `age_at_extraction`                                                       |
 
 ## POST /query — Request
 
@@ -137,10 +137,11 @@ Swagger UI: `http://localhost:8000/docs`
 ## GET /filtering_terms/{field_id}/suggestions — Response
 
 ```ts
-// query param: ?term=lun&word_match=true
+// query param: ?term=lun
 [
     {
-        term: string            // display label e.g. "Lung structure"
+        value: string           // display label e.g. "Lung structure"
+        count: number
         concept_id: string | null  // SNOMED ID if ontology match, null if free-text
     }
 ]

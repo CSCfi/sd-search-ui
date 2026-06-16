@@ -8,12 +8,7 @@ import { useDropdown } from '@/composables/useDropdown'
 import { useFieldValues } from '@/composables/useFieldValues'
 import { useListKeyboardNav } from '@/composables/useListKeyboardNav'
 import { useSuggestions } from '@/composables/useSuggestions'
-
-interface PickerItem {
-  term: string
-  concept_id: string | null
-  count?: number
-}
+import type { FieldValue } from '@/types/beacon.ts'
 
 const props = defineProps<{
   label: string
@@ -28,8 +23,8 @@ const emit = defineEmits<{
 }>()
 
 const searchTerm = ref('')
-const selectedItems = ref<PickerItem[]>([])
-const includeDescendantTerms = ref(true)
+const selectedItems = ref<FieldValue[]>([])
+const includeDescendantTerms = ref(false)
 
 const debouncedTerm = refDebounced(searchTerm, 500)
 
@@ -54,13 +49,11 @@ const isLoading = computed(() =>
   searchTerm.value.length >= 2 ? suggestionsLoading.value : valuesLoading.value,
 )
 
-const rawItems = computed<PickerItem[]>(() => {
-  if (searchTerm.value.length >= 2) return suggestionsData.value ?? []
-  return (valuesData.value ?? []).map((item) => ({
-    term: item.value,
-    count: item.count,
-    concept_id: item.concept_id,
-  }))
+const rawItems = computed<FieldValue[]>(() => {
+  if (searchTerm.value.length >= 2) {
+    return suggestionsData.value ?? []
+  }
+  return valuesData.value ?? []
 })
 
 const filteredSuggestions = computed(() => {
@@ -76,17 +69,17 @@ const additionalCount = computed(() =>
   selectedItems.value.length > 1 ? selectedItems.value.length - 1 : 0,
 )
 
-function isSelected(item: PickerItem): boolean {
-  const key = item.concept_id ?? item.term
-  return selectedItems.value.some((s) => (s.concept_id ?? s.term) === key)
+function isSelected(item: FieldValue): boolean {
+  const key = item.concept_id ?? item.value
+  return selectedItems.value.some((s) => (s.concept_id ?? s.value) === key)
 }
 
-function toggleItem(item: PickerItem) {
-  const key = item.concept_id ?? item.term
-  const exists = selectedItems.value.some((s) => (s.concept_id ?? s.term) === key)
+function toggleItem(item: FieldValue) {
+  const key = item.concept_id ?? item.value
+  const exists = selectedItems.value.some((s) => (s.concept_id ?? s.value) === key)
 
   if (exists) {
-    selectedItems.value = selectedItems.value.filter((s) => (s.concept_id ?? s.term) !== key)
+    selectedItems.value = selectedItems.value.filter((s) => (s.concept_id ?? s.value) !== key)
   } else {
     selectedItems.value.push(item)
     searchTerm.value = ''
@@ -94,7 +87,7 @@ function toggleItem(item: PickerItem) {
 
   emit(
     'update:modelValue',
-    selectedItems.value.map((s) => s.concept_id ?? s.term),
+    selectedItems.value.map((s) => s.concept_id ?? s.value),
   )
 }
 
@@ -151,7 +144,7 @@ watch(
     >
       <span class="trigger-value">
         <template v-if="selectedItems.length > 0">
-          <span class="selected-first">{{ selectedItems[0]?.term }}</span>
+          <span class="selected-first">{{ selectedItems[0]?.value }}</span>
           <Badge v-if="additionalCount > 0" :count="additionalCount" />
         </template>
         <span v-else class="placeholder">All</span>
@@ -199,7 +192,7 @@ watch(
       >
         <li
           v-for="(item, index) in filteredSuggestions"
-          :key="item.concept_id ?? item.term"
+          :key="item.concept_id ?? item.value"
           :id="`${fieldId}-option-${index}`"
           role="option"
           :aria-selected="isSelected(item)"
@@ -209,8 +202,8 @@ watch(
           @click="toggleItem(item)"
           @keydown="onOptionKeydown($event, index)"
         >
-          <span class="option-label">{{ item.term }}</span>
-          <span v-if="item.count !== undefined" class="option-count">{{ item.count }}</span>
+          <span class="option-label">{{ item.value }}</span>
+          <span v-if="item.count > 0" class="option-count">{{ item.count }}</span>
         </li>
         <li v-if="filteredSuggestions.length === 0 && searchTerm.length >= 2" class="no-options">
           No results found

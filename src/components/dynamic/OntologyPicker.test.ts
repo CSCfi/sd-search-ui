@@ -2,19 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { type Ref, nextTick } from 'vue'
 import OntologyPicker from './OntologyPicker.vue'
+import type { FieldValue } from '@/types/beacon'
 
-const MOCK_SUGGESTIONS = vi.hoisted((): { term: string; concept_id: string | null }[] => [
-  { term: 'Breast structure', concept_id: '80248007' },
-  { term: 'Lung structure', concept_id: '39607008' },
-  { term: 'Antibody', concept_id: null },
+const MOCK_SUGGESTIONS = vi.hoisted((): FieldValue[] => [
+  { value: 'Breast structure', count: 0, concept_id: '80248007' },
+  { value: 'Lung structure', count: 0, concept_id: '39607008' },
+  { value: 'Antibody', count: 0, concept_id: null },
 ])
 
-const MOCK_VALUES = vi.hoisted(
-  (): { value: string; count: number; concept_id: string | null }[] => [
-    { value: 'Breast structure', count: 42, concept_id: '80248007' },
-    { value: 'Lung structure', count: 38, concept_id: '39607008' },
-  ],
-)
+const MOCK_VALUES = vi.hoisted((): FieldValue[] => [
+  { value: 'Breast structure', count: 42, concept_id: '80248007' },
+  { value: 'Lung structure', count: 38, concept_id: '39607008' },
+])
 
 // jsdom composedPath() doesn't work with vueuse's capture listener.
 // Capture the callback and invoke it directly in the outside-click test.
@@ -37,7 +36,7 @@ vi.mock('@/composables/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
     useFieldValues: vi.fn<
-      () => { data: Ref<typeof MOCK_VALUES>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+      () => { data: Ref<FieldValue[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }
     >(() => ({
       data: ref(MOCK_VALUES),
       isLoading: ref(false),
@@ -54,9 +53,9 @@ vi.mock('@/composables/useSuggestions', async () => {
       (
         _fieldId: string,
         searchTerm: { value: string },
-      ) => { data: Ref<typeof MOCK_SUGGESTIONS>; isLoading: Ref<boolean>; isError: Ref<boolean> }
+      ) => { data: Ref<FieldValue[]>; isLoading: Ref<boolean>; isError: Ref<boolean> }
     >((_fieldId: string, searchTerm: { value: string }) => {
-      const data = ref([] as typeof MOCK_SUGGESTIONS)
+      const data = ref([] as FieldValue[])
       watchEffect(() => {
         data.value = searchTerm.value.length >= 2 ? MOCK_SUGGESTIONS : []
       })
@@ -248,11 +247,11 @@ describe('OntologyPicker', () => {
     expect(w.find('[role="listbox"]').exists()).toBe(true)
   })
 
-  it('emits includeDescendantTerms=true by default', async () => {
+  it('checkbox is unchecked by default', async () => {
     const w = mountComponent()
     await openDropdown(w)
     const checkbox = w.find('input[type="checkbox"]').element as HTMLInputElement
-    expect(checkbox.checked).toBe(true)
+    expect(checkbox.checked).toBe(false)
   })
 
   it('emits includeDescendantTerms=false when checkbox unchecked', async () => {
