@@ -86,7 +86,7 @@ async function onModalClose(open: boolean) {
           <tr>
             <th scope="col">Title</th>
             <th scope="col">Description</th>
-            <th scope="col">Images</th>
+            <th scope="col">Matching images</th>
             <th scope="col"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
