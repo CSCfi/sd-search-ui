@@ -41,7 +41,12 @@ function handleArrayUpdate(value: string[]) {
 
 function handleOntologyUpdate(value: string[]) {
   if (ontologyDisplayLabels.value.length > 0) {
-    store.setFilter(props.field.id, value, includeDescendantTerms.value, ontologyDisplayLabels.value)
+    store.setFilter(
+      props.field.id,
+      value,
+      includeDescendantTerms.value,
+      ontologyDisplayLabels.value,
+    )
   } else {
     store.setFilter(props.field.id, value, includeDescendantTerms.value)
   }
