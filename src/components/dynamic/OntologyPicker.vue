@@ -20,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]
   'update:includeDescendantTerms': [value: boolean]
+  'update:displayLabels': [labels: string[]]
 }>()
 
 const searchTerm = ref('')
@@ -85,6 +86,10 @@ function toggleItem(item: FieldValue) {
     searchTerm.value = ''
   }
 
+  emit(
+    'update:displayLabels',
+    selectedItems.value.map((s) => s.value),
+  )
   emit(
     'update:modelValue',
     selectedItems.value.map((s) => s.concept_id ?? s.value),

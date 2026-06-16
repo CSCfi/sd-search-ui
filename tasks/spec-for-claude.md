@@ -312,35 +312,56 @@ Shows active filter tags above the results list.
 Reads from `searchStore.committedFilters`.
 Each tag displays the filter id and value. Not interactive.
 
-### `src/components/ResultsItem.vue`
+### `src/components/ResultsTable.vue` (replaces ResultsList.vue and ResultsItem.vue)
 
-Props: `result: BeaconResultSetResult`
+Renders search results as a semantic HTML table.
 
-Displays:
-- Dataset title (or dataset ID if title is null)
-- Description truncated to 150 characters with "Show more" toggle
-- Matching / total image count: `{matchingImageCount} / {totalImageCount}`
-- "Request access" button
+States:
+- No filters committed: render nothing
+- Loading: loading indicator
+- Error: banner with "Search failed. Please try again." (see `errors.md`)
+- Empty results: "No results found"
+- Results: table with one row per result
+
+Table structure:
+- Wrapper div with `overflow-x: auto` for narrow viewports
+- `<caption>` with "Search results", visually hidden
+- Column headers: `<th scope="col">` for Title, Description, Images, (empty for action)
+- One `<tr>` per `BeaconResultSetResult` (flatMap over `resultSet`)
+
+Columns per row:
+- Title: `datasetTitle` or `datasetId` if title is null
+- Description: truncated to 80 characters. "Show more" button opens `<DescriptionModal>`
+- Images: `{matchingImageCount} / {totalImageCount}`
+- Action: "Request access" outlined button, `aria-label="Request access for {datasetTitle}"`
 
 "Request access" opens REMS in a new tab:
 ```ts
 window.open(
-    `https://bp-rems.sd.csc.fi/apply-for?resource=${result.datasetId}`,
-    '_blank',
-    'noopener,noreferrer'
+  `https://bp-rems.sd.csc.fi/apply-for?resource=${result.datasetId}`,
+  '_blank',
+  'noopener,noreferrer'
 )
 ```
+Note: `accessionId` not yet in backend response — using `datasetId` as fallback.
+Update when backend adds `accessionId` to `BeaconResultSetResult`.
 
-### `src/components/ResultsList.vue`
+Uses `useSearch()`.
 
-Uses `useSearch(searchStore.filters)`.
+### `src/components/DescriptionModal.vue`
 
-States:
-- No filters set: render nothing
-- Loading: loading indicator
-- Error: banner with "Search failed. Please try again." (see `errors.md`)
-- Empty results: "No results found"
-- Results: list of `<ResultsItem>`
+Props: `description: string`, `title: string`, `modelValue: boolean` (open state)
+Emits: `update:modelValue`
+
+Displays full dataset description in a modal dialog.
+
+Accessibility:
+- `role="dialog"`
+- `aria-modal="true"`
+- `aria-labelledby` pointing to modal title element
+- Focus trap while open
+- Escape key closes modal
+- Returns focus to trigger element on close
 
 ---
 

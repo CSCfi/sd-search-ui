@@ -3,10 +3,6 @@ import { Loader, RefreshCw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
-import { useSearch } from '@/composables/useSearch.ts'
-
-// TODO: remove when ResultsList is implemented — it will register the query. This is only to test query until implemented.
-useSearch()
 
 const { data, isLoading, isError } = useFilteringTerms()
 const store = useSearchStore()
@@ -79,17 +75,27 @@ const store = useSearchStore()
 }
 
 .btn-search {
-  background-color: var(--color-pink);
-  color: var(--color-white);
+  --c-button-background-color: var(--color-pink);
+  --c-button-background-color-hover: #ff2567;
+  --c-button-text-color: var(--color-white);
+  --c-button-loader-color: transparent;
 
-  &:hover {
-    background-color: #ff2567;
+  &:focus-within {
+    outline: 2px solid var(--color-pink);
+    outline-offset: 2px;
   }
 }
 
 .btn-clear {
-  color: var(--color-white);
-  border-color: var(--color-white);
+  --c-button-outlined-text-color: var(--color-white);
+  --c-button-outlined-border-color: var(--color-white);
+  --c-button-outlined-background-color-hover: rgba(255, 255, 255, 0.1);
+  --c-button-outlined-loader-color: transparent;
+
+  &:focus-within {
+    outline: 2px solid var(--color-pink);
+    outline-offset: 2px;
+  }
 }
 
 @keyframes spin {
