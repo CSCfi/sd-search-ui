@@ -36,6 +36,7 @@ export interface BeaconQueryFilter {
   value: string | string[]
   operator: '='
   includeDescendantTerms?: boolean
+  label?: string[]
 }
 
 export interface BeaconResultSetResult {

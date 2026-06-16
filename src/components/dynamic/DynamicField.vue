@@ -29,6 +29,7 @@ const currentArrayValue = computed(() => {
 const includeDescendantTerms = ref(
   store.draftFilters.find((f) => f.id === props.field.id)?.includeDescendantTerms ?? true,
 )
+const ontologyDisplayLabels = ref<string[]>([])
 
 function handleStringUpdate(value: string) {
   store.setFilter(props.field.id, value)
@@ -39,13 +40,26 @@ function handleArrayUpdate(value: string[]) {
 }
 
 function handleOntologyUpdate(value: string[]) {
-  store.setFilter(props.field.id, value, includeDescendantTerms.value)
+  if (ontologyDisplayLabels.value.length > 0) {
+    store.setFilter(
+      props.field.id,
+      value,
+      includeDescendantTerms.value,
+      ontologyDisplayLabels.value,
+    )
+  } else {
+    store.setFilter(props.field.id, value, includeDescendantTerms.value)
+  }
+}
+
+function handleDisplayLabels(labels: string[]) {
+  ontologyDisplayLabels.value = labels
 }
 
 function handleIncludeDescendants(include: boolean) {
   includeDescendantTerms.value = include
   if (currentArrayValue.value.length > 0) {
-    store.setFilter(props.field.id, currentArrayValue.value, include)
+    store.setFilter(props.field.id, currentArrayValue.value, include, ontologyDisplayLabels.value)
   }
 }
 
@@ -91,6 +105,7 @@ onMounted(() => {
     :allow-free-text="false"
     @update:model-value="handleOntologyUpdate"
     @update:include-descendant-terms="handleIncludeDescendants"
+    @update:display-labels="handleDisplayLabels"
   />
 
   <OntologyPicker
@@ -101,6 +116,7 @@ onMounted(() => {
     :allow-free-text="true"
     @update:model-value="handleOntologyUpdate"
     @update:include-descendant-terms="handleIncludeDescendants"
+    @update:display-labels="handleDisplayLabels"
   />
 
   <RangePicker

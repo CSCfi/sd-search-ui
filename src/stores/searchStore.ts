@@ -6,7 +6,12 @@ export const useSearchStore = defineStore('search', () => {
   const draftFilters = ref<BeaconQueryFilter[]>([])
   const committedFilters = ref<BeaconQueryFilter[]>([])
 
-  const setFilter = (id: string, value: string | string[], includeDescendantTerms?: boolean) => {
+  const setFilter = (
+    id: string,
+    value: string | string[],
+    includeDescendantTerms?: boolean,
+    label?: string[],
+  ) => {
     const existing = draftFilters.value.findIndex((f) => f.id === id)
     const isEmpty = Array.isArray(value) ? value.length === 0 : value === ''
 
@@ -16,6 +21,7 @@ export const useSearchStore = defineStore('search', () => {
       const entry: BeaconQueryFilter = { id, value, operator: '=' }
       if (includeDescendantTerms !== undefined)
         entry.includeDescendantTerms = includeDescendantTerms
+      if (label !== undefined) entry.label = label
 
       if (existing >= 0) {
         draftFilters.value[existing] = entry
