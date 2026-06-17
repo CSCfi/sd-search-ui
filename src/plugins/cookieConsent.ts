@@ -28,6 +28,13 @@ const config: CookieConsent.CookieConsentConfig = {
           acceptAllBtn: 'OK',
           footer: `<a href="https://bigpicture.eu/bigpicture-privacy-notice" target="_blank" rel="noopener noreferrer">Privacy policy</a>`,
         },
+        preferencesModal: {
+          title: 'Cookie preferences',
+          acceptAllBtn: 'OK',
+          savePreferencesBtn: 'Save',
+          closeIconLabel: 'Close',
+          sections: [],
+        },
       },
     },
   },
