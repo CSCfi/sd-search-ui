@@ -4,7 +4,13 @@
       <div class="footer-col-links">
         <a href="https://discovery.bigpicture.eu/" class="footer-link">About</a>
         <a href="https://datasets.bp.nbis.se/index.html" class="footer-link">Datasets</a>
-        <a href="https://bigpicture.eu/bigpicture-privacy-notice" class="footer-link" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+        <a
+          href="https://bigpicture.eu/bigpicture-privacy-notice"
+          class="footer-link"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Privacy policy</a
+        >
         <div class="footer-contact">
           <span class="footer-col-heading">Contact</span>
           <a href="mailto:support@bigpicture.eu" class="footer-link">support@bigpicture.eu</a>
