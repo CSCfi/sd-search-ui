@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Loader, RefreshCw, Search } from '@lucide/vue'
+import { Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
@@ -34,7 +34,7 @@ const store = useSearchStore()
           Search
         </c-button>
         <c-button class="btn-clear" variant="outlined" @click="store.clearFilters()">
-          <RefreshCw :size="16" aria-hidden="true" />
+          <RotateCcw :size="16" aria-hidden="true" />
           Clear search
         </c-button>
       </div>
