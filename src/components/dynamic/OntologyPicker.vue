@@ -70,6 +70,10 @@ const additionalCount = computed(() =>
   selectedItems.value.length > 1 ? selectedItems.value.length - 1 : 0,
 )
 
+const hasOntologyItems = computed(() => {
+  return filteredSuggestions.value.some((item) => item.concept_id !== null)
+})
+
 function isSelected(item: FieldValue): boolean {
   const key = item.concept_id ?? item.value
   return selectedItems.value.some((s) => (s.concept_id ?? s.value) === key)
@@ -215,7 +219,7 @@ watch(
         </li>
       </ul>
 
-      <div class="descendants-toggle">
+      <div v-if="hasOntologyItems" class="descendants-toggle">
         <label class="descendants-label">
           <input type="checkbox" :checked="includeDescendantTerms" @change="onDescendantsChange" />
           Include descendant terms
