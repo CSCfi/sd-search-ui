@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Search } from '@lucide/vue'
+import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useSearch } from '@/composables/useSearch'
 import type { BeaconResultSetResult } from '@/types/beacon'
@@ -9,10 +9,18 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
 
-const { hasCommittedFilters } = storeToRefs(useSearchStore())
+const { hasCommittedFilters, committedFilters } = storeToRefs(useSearchStore())
 const { data, isLoading, isError } = useSearch()
 
 const errorDismissed = ref(false)
+const selectedDatasetRows = ref<Set<string>>(new Set())
+
+watch(committedFilters, () => {
+  selectedDatasetRows.value = new Set()
+})
+
+const selectedCount = computed(() => selectedDatasetRows.value.size)
+const selectedIdsArray = computed(() => Array.from(selectedDatasetRows.value))
 
 const flatResults = computed<BeaconResultSetResult[]>(
   () => data.value?.response.resultSet.flatMap((rs) => rs.results) ?? [],
@@ -35,6 +43,26 @@ function requestAccess(datasetId: string) {
     '_blank',
     'noopener,noreferrer',
   )
+}
+
+function openBulkRems(ids: string[]) {
+  const url = new URL('https://bp-rems.sd.csc.fi/apply-for')
+  ids.forEach((id) => url.searchParams.append('resource', id))
+  window.open(url.toString(), '_blank', 'noopener,noreferrer')
+}
+
+function isSelected(id: string): boolean {
+  return selectedDatasetRows.value.has(id)
+}
+
+function toggleSelection(id: string) {
+  const next = new Set(selectedDatasetRows.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  selectedDatasetRows.value = next
 }
 
 const modalOpen = ref(false)
@@ -77,53 +105,83 @@ async function onModalClose(open: boolean) {
 
     <p v-else-if="isEmpty" class="empty-state">No results found.</p>
 
-    <div v-else class="table-wrapper">
-      <table class="results-table">
-        <caption class="sr-only">
-          Search results
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Title</th>
-            <th scope="col">Description</th>
-            <th scope="col">Matching images</th>
-            <th scope="col"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(result, index) in flatResults" :key="result.datasetId">
-            <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
-            <td class="col-description">
-              <span>{{ truncate(result.datasetDescription, 80) }}</span>
-              <button
-                v-if="result.datasetDescription && result.datasetDescription.length > 80"
-                :ref="
-                  (el) => {
-                    if (el) triggerRefs[index] = el as HTMLButtonElement
-                  }
-                "
-                class="show-more-btn"
-                @click="openModal(result, index)"
-              >
-                Show more
-              </button>
-            </td>
-            <td class="col-images" aria-label="Matching images">
-              {{ result.matchingImageCount }} / {{ result.totalImageCount }}
-            </td>
-            <td class="col-action">
-              <c-button
-                variant="outlined"
-                class="btn-access"
-                :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
-                @click="requestAccess(result.datasetId)"
-              >
-                Request access
-              </c-button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else class="results-container">
+      <Transition name="bulk-bar">
+        <div
+          v-if="selectedCount > 0"
+          class="bulk-action-bar"
+          role="region"
+          aria-label="Bulk actions"
+        >
+          <span class="bulk-count">{{ selectedCount }} selected</span>
+          <c-button
+            class="btn-bulk-access"
+            :aria-label="`Apply for access to ${selectedCount} selected datasets`"
+            @click="openBulkRems(selectedIdsArray)"
+          >
+            <Key :size="16" aria-hidden="true" />
+            Apply for access ({{ selectedCount }})
+          </c-button>
+        </div>
+      </Transition>
+      <div class="table-wrapper">
+        <table class="results-table">
+          <caption class="sr-only">
+            Search results
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr-only">Select row</span></th>
+              <th scope="col">Title</th>
+              <th scope="col">Description</th>
+              <th scope="col">Matching images</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(result, index) in flatResults" :key="result.datasetId">
+              <td class="col-select">
+                <input
+                  type="checkbox"
+                  :checked="isSelected(result.datasetId)"
+                  :id="`select-${result.datasetId}`"
+                  :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
+                  @change="toggleSelection(result.datasetId)"
+                />
+              </td>
+              <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
+              <td class="col-description">
+                <span>{{ truncate(result.datasetDescription, 80) }}</span>
+                <button
+                  v-if="result.datasetDescription && result.datasetDescription.length > 80"
+                  :ref="
+                    (el) => {
+                      if (el) triggerRefs[index] = el as HTMLButtonElement
+                    }
+                  "
+                  class="show-more-btn"
+                  @click="openModal(result, index)"
+                >
+                  Show more
+                </button>
+              </td>
+              <td class="col-images" aria-label="Matching images">
+                {{ result.matchingImageCount }} / {{ result.totalImageCount }}
+              </td>
+              <td class="col-action">
+                <c-button
+                  variant="outlined"
+                  class="btn-access"
+                  :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
+                  @click="requestAccess(result.datasetId)"
+                >
+                  Request access
+                </c-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <DescriptionModal
@@ -178,6 +236,52 @@ async function onModalClose(open: boolean) {
   margin: 0;
 }
 
+.results-container {
+  overflow-y: auto;
+  max-height: calc(100vh - 32rem);
+  position: relative;
+}
+
+.bulk-bar-enter-active,
+.bulk-bar-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease-out;
+}
+
+.bulk-bar-enter-from,
+.bulk-bar-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.bulk-action-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.bulk-count {
+  font-weight: var(--font-weight-subheading);
+  color: var(--color-dark-blue);
+}
+
+.btn-bulk-access {
+  --c-button-background-color: var(--color-dark-blue);
+  --c-button-background-color-hover: #2d0099;
+  --c-button-text-color: var(--color-white);
+  --c-button-loader-color: transparent;
+  --c-button-outline-color: var(--color-pink);
+  color: var(--color-white);
+}
+
 .table-wrapper {
   overflow-x: auto;
 }
@@ -213,6 +317,20 @@ async function onModalClose(open: boolean) {
 .results-table tbody td {
   padding: 0.875rem 1rem;
   vertical-align: top;
+}
+
+.col-select {
+  input[type='checkbox'] {
+    cursor: pointer;
+    accent-color: var(--color-dark-blue);
+    width: 1.125rem;
+    height: 1.125rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-pink);
+      outline-offset: 2px;
+    }
+  }
 }
 
 .col-title {
