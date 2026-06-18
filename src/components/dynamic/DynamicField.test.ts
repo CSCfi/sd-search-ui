@@ -118,6 +118,17 @@ describe('DynamicField', () => {
     expect(wrapper.findComponent(OntologyPicker).props('allowFreeText')).toBe(true)
   })
 
+  it('renders OntologyPicker for type=keyword', () => {
+    const wrapper = mountField(makeField({ type: 'keyword' }))
+    expect(wrapper.findComponent(OntologyPicker).exists()).toBe(true)
+    expect(wrapper.findComponent(TextInput).exists()).toBe(false)
+  })
+
+  it('passes allowFreeText=true to OntologyPicker for type=keyword', () => {
+    const wrapper = mountField(makeField({ type: 'keyword' }))
+    expect(wrapper.findComponent(OntologyPicker).props('allowFreeText')).toBe(true)
+  })
+
   it('defaults includeDescendantTerms=true when no toggle emitted', () => {
     const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
     const store = useSearchStore()

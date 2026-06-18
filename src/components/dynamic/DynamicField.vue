@@ -65,6 +65,7 @@ function handleIncludeDescendants(include: boolean) {
 
 const KNOWN_TYPES: BeaconFilteringTerm['type'][] = [
   'text',
+  'keyword',
   'controlledValue',
   'ontology',
   'ontologyOrValue',
@@ -109,7 +110,7 @@ onMounted(() => {
   />
 
   <OntologyPicker
-    v-else-if="field.type === 'ontologyOrValue'"
+    v-else-if="field.type === 'ontologyOrValue' || field.type === 'keyword'"
     :label="field.label"
     :field-id="field.id"
     :model-value="currentArrayValue"

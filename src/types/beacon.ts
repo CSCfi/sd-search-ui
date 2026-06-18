@@ -1,5 +1,6 @@
 export type BeaconFilteringTermType =
   | 'text'
+  | 'keyword'
   | 'controlledValue'
   | 'ontology'
   | 'ontologyOrValue'
