@@ -134,6 +134,7 @@ async function onModalClose(open: boolean) {
               <th scope="col"><span class="sr-only">Select row</span></th>
               <th scope="col">Title</th>
               <th scope="col">Description</th>
+              <th scope="col">More details</th>
               <th scope="col">Matching images</th>
               <th scope="col"><span class="sr-only">Actions</span></th>
             </tr>
@@ -164,6 +165,17 @@ async function onModalClose(open: boolean) {
                 >
                   Show more
                 </button>
+              </td>
+              <td class="col-more-details">
+                <a
+                  v-if="result.datasetUrl"
+                  :href="result.datasetUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :aria-label="`View details for ${result.datasetTitle ?? result.datasetId}`"
+                >
+                  View Details
+                </a>
               </td>
               <td class="col-images" aria-label="Matching images">
                 {{ result.matchingImageCount }} / {{ result.totalImageCount }}
