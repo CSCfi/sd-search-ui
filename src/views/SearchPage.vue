@@ -11,14 +11,23 @@ const route = useRoute()
 const store = useSearchStore()
 const { resolveLabelsFromUrl } = useResolveUrlLabels()
 
-const parsed: BeaconQueryFilter[] = Object.entries(route.query)
-  .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== '')
-  .map(([id, raw]) => ({
+function parseFilterValue(raw: string): string | string[] {
+  return raw.includes(',') ? raw.split(',') : raw
+}
+
+const entries = Object.entries(route.query)
+
+const parsed: BeaconQueryFilter[] = []
+
+for (const [id, raw] of entries) {
+  if (typeof raw !== 'string' || raw === '') continue
+  parsed.push({
     id,
-    value: raw.includes(',') ? raw.split(',') : raw,
+    value: parseFilterValue(raw),
     operator: '=',
     includeDescendantTerms: true,
-  }))
+  })
+}
 
 if (parsed.length > 0) {
   store.initFromUrl(parsed)
