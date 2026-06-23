@@ -130,11 +130,28 @@ function onOptionKeydown(event: KeyboardEvent, index: number) {
 
 watch(searchTerm, resetActiveIndex)
 
+// Resolves selectedItems from an externally-set modelValue (e.g. URL query params
+// via initFromUrl) when the picker mounts with a pre-filled value.
 watch(
-  () => props.modelValue,
-  (values) => {
-    if (values.length === 0) selectedItems.value = []
+  [() => props.modelValue, valuesData],
+  ([values]) => {
+    if (values.length === 0) {
+      selectedItems.value = []
+      return
+    }
+
+    // Resolve only on first population — toggleItem owns updates after that.
+    if (selectedItems.value.length > 0) return
+
+    const data = valuesData.value
+    if (!data) return
+
+    selectedItems.value = values.map((v) => {
+      const match = data.find((d) => (d.concept_id ?? d.value) === v)
+      return match ?? { value: v, count: 0, concept_id: null }
+    })
   },
+  { immediate: true },
 )
 </script>
 

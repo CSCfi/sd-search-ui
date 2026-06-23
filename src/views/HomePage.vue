@@ -13,7 +13,7 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
           large-scale data and Artificial Intelligence (AI) algorithms will coexist.
         </p>
         <a :href="loginUrl">
-          <c-button class="login-button" type="is-primary" size="is-medium"> Login </c-button>
+          <c-button class="login-button"> Login </c-button>
         </a>
       </div>
 

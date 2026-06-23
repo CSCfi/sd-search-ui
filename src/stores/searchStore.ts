@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { router } from '@/router'
 import type { BeaconQueryFilter } from '@/types/beacon.ts'
 
 export const useSearchStore = defineStore('search', () => {
@@ -36,11 +37,41 @@ export const useSearchStore = defineStore('search', () => {
   const clearFilters = () => {
     draftFilters.value = []
     committedFilters.value = []
+    router.replace({ query: {} })
   }
 
   const commit = () => {
     committedFilters.value = [...draftFilters.value]
+    router.replace({
+      query: Object.fromEntries(
+        committedFilters.value.map((f) => [
+          f.id,
+          Array.isArray(f.value) ? f.value.join(',') : f.value,
+        ]),
+      ),
+    })
   }
 
-  return { draftFilters, committedFilters, hasCommittedFilters, setFilter, clearFilters, commit }
+  const initFromUrl = (filters: BeaconQueryFilter[]) => {
+    draftFilters.value = filters
+    committedFilters.value = [...filters]
+  }
+
+  const setUrlLabel = (id: string, label: string[]) => {
+    const f = draftFilters.value.find((f) => f.id === id)
+    if (f) f.label = label
+    const cf = committedFilters.value.find((f) => f.id === id)
+    if (cf) cf.label = label
+  }
+
+  return {
+    draftFilters,
+    committedFilters,
+    hasCommittedFilters,
+    setFilter,
+    clearFilters,
+    commit,
+    initFromUrl,
+    setUrlLabel,
+  }
 })
