@@ -1,11 +1,30 @@
 <script setup lang="ts">
-import { Loader, RotateCcw, Search } from '@lucide/vue'
+import { ref } from 'vue'
+import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
 
 const { data, isLoading, isError } = useFilteringTerms()
 const store = useSearchStore()
+
+const copied = ref(false)
+
+async function copySearch() {
+  const params = new URLSearchParams(
+    store.draftFilters.map((f) => [f.id, Array.isArray(f.value) ? f.value.join(',') : f.value]),
+  )
+  const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  try {
+    await navigator.clipboard.writeText(url)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch {
+    // clipboard API unavailable (non-HTTPS non-localhost)
+  }
+}
 </script>
 
 <template>
@@ -33,9 +52,18 @@ const store = useSearchStore()
           <Search :size="16" aria-hidden="true" />
           Search
         </c-button>
-        <c-button class="btn-clear" variant="outlined" @click="store.clearFilters()">
+        <c-button class="btn-clear" ghost @click="store.clearFilters()">
           <RotateCcw :size="16" aria-hidden="true" />
           Clear search
+        </c-button>
+        <c-button
+          class="btn-copy"
+          ghost
+          :disabled="store.draftFilters.length === 0"
+          @click="copySearch"
+        >
+          <Link :size="16" aria-hidden="true" />
+          {{ copied ? 'Copied!' : 'Copy filters' }}
         </c-button>
       </div>
     </form>
@@ -86,15 +114,29 @@ const store = useSearchStore()
   }
 }
 
-.btn-clear {
+.btn-clear,
+.btn-copy {
+  --c-button-background-color: transparent;
   --c-button-outlined-text-color: var(--color-white);
   --c-button-outlined-border-color: var(--color-white);
   --c-button-outlined-background-color-hover: rgba(255, 255, 255, 0.1);
   --c-button-outlined-loader-color: transparent;
 
+  svg {
+    fill: none !important;
+  }
+
   &:focus-within {
     outline: 2px solid var(--color-pink);
     outline-offset: 2px;
+  }
+}
+
+.btn-copy {
+  transition: opacity 0.2s ease;
+
+  &[disabled] {
+    opacity: 0.4;
   }
 }
 
