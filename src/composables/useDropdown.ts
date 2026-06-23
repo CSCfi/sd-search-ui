@@ -1,6 +1,6 @@
 import { nextTick, ref } from 'vue'
 import type { Ref } from 'vue'
-import { onClickOutside } from '@vueuse/core'
+import { onClickOutside, useEventListener } from '@vueuse/core'
 
 interface UseDropdownOptions {
   searchRef: Readonly<Ref<HTMLInputElement | null>>
@@ -21,13 +21,13 @@ export function useDropdown({ searchRef, triggerRef }: UseDropdownOptions): UseD
 
   function openDropdown() {
     isOpen.value = true
-    nextTick(() => searchRef.value?.focus())
+    void nextTick(() => searchRef.value?.focus())
   }
 
   function closeDropdown(refocusTrigger = true) {
     isOpen.value = false
     if (refocusTrigger) {
-      nextTick(() => triggerRef.value?.focus())
+      void nextTick(() => triggerRef.value?.focus())
     }
   }
 
@@ -40,6 +40,12 @@ export function useDropdown({ searchRef, triggerRef }: UseDropdownOptions): UseD
   }
 
   onClickOutside(containerRef, () => closeDropdown(false))
+
+  useEventListener(containerRef, 'focusout', (e: FocusEvent) => {
+    if (!containerRef.value?.contains(e.relatedTarget as Node)) {
+      closeDropdown(false)
+    }
+  })
 
   return { isOpen, containerRef, openDropdown, closeDropdown, toggleDropdown }
 }

@@ -50,9 +50,6 @@ export function useListKeyboardNav(options: UseListKeyboardNavOptions): UseListK
       case 'Escape':
         onClose(true)
         break
-      case 'Tab':
-        isOpen.value = false
-        break
     }
   }
 
@@ -77,9 +74,6 @@ export function useListKeyboardNav(options: UseListKeyboardNavOptions): UseListK
         break
       case 'Escape':
         onClose(true)
-        break
-      case 'Tab':
-        isOpen.value = false
         break
     }
   }
