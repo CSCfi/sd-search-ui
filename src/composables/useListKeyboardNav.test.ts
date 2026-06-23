@@ -70,9 +70,9 @@ describe('useListKeyboardNav', () => {
     expect(onClose).toHaveBeenCalledWith(true)
   })
 
-  it('closes the dropdown on Tab from search without calling onClose', () => {
+  it('does not close the dropdown on Tab from search (focusout handles close)', () => {
     nav.onSearchKeydown(key('Tab'))
-    expect(isOpen.value).toBe(false)
+    expect(isOpen.value).toBe(true)
     expect(onClose).not.toHaveBeenCalled()
   })
 
@@ -109,9 +109,9 @@ describe('useListKeyboardNav', () => {
     expect(onClose).toHaveBeenCalledWith(true)
   })
 
-  it('closes the dropdown on Tab from an option without calling onClose', () => {
+  it('does not close the dropdown on Tab from an option (focusout handles close)', () => {
     nav.onOptionKeydown(key('Tab'), 1)
-    expect(isOpen.value).toBe(false)
+    expect(isOpen.value).toBe(true)
     expect(onClose).not.toHaveBeenCalled()
   })
 
