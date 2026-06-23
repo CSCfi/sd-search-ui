@@ -182,7 +182,7 @@ async function onModalClose(open: boolean) {
               </td>
               <td class="col-action">
                 <c-button
-                  variant="outlined"
+                  ghost
                   class="btn-access"
                   :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
                   @click="requestAccess(result.datasetId)"
