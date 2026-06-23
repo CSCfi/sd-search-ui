@@ -1,7 +1,38 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
 import SearchForm from '@/components/SearchForm.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/ResultsTable.vue'
+import { useSearchStore } from '@/stores/searchStore'
+import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
+import type { BeaconQueryFilter } from '@/types/beacon'
+
+const route = useRoute()
+const store = useSearchStore()
+const { resolveLabelsFromUrl } = useResolveUrlLabels()
+
+function parseFilterValue(raw: string): string | string[] {
+  return raw.includes(',') ? raw.split(',') : raw
+}
+
+const entries = Object.entries(route.query)
+
+const parsed: BeaconQueryFilter[] = []
+
+for (const [id, raw] of entries) {
+  if (typeof raw !== 'string' || raw === '') continue
+  parsed.push({
+    id,
+    value: parseFilterValue(raw),
+    operator: '=',
+    includeDescendantTerms: true,
+  })
+}
+
+if (parsed.length > 0) {
+  store.initFromUrl(parsed)
+  resolveLabelsFromUrl(parsed)
+}
 </script>
 
 <template>

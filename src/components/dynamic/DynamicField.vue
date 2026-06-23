@@ -13,16 +13,17 @@ const props = defineProps<{
 
 const store = useSearchStore()
 
+const currentFilter = computed(() => store.draftFilters.find((f) => f.id === props.field.id))
+
 const currentStringValue = computed(() => {
-  const f = store.draftFilters.find((f) => f.id === props.field.id)
-  if (!f) return ''
-  return typeof f.value === 'string' ? f.value : ''
+  const value = currentFilter.value?.value
+  return typeof value === 'string' ? value : ''
 })
 
 const currentArrayValue = computed(() => {
-  const f = store.draftFilters.find((f) => f.id === props.field.id)
-  if (!f) return []
-  return Array.isArray(f.value) ? f.value : []
+  const value = currentFilter.value?.value
+  if (Array.isArray(value)) return value
+  return value ? [value] : []
 })
 
 // Tracked locally so unchecking before any selection is honoured on first pick

@@ -47,3 +47,6 @@ __screenshots__/
 
 # Web components manifest
 custom-elements.json
+
+# Claude related files
+todo.md
