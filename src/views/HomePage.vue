@@ -29,10 +29,10 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
   flex: 1;
 
   .home-hero {
-    background-color: var(--color-dark-blue);
-    color: var(--color-white);
     display: flex;
     flex-direction: column;
+    background-color: var(--color-dark-blue);
+    color: var(--color-white);
   }
 
   .image-container {
@@ -40,9 +40,9 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
     width: 100%;
 
     img {
+      display: block;
       width: 100%;
       height: auto;
-      display: block;
     }
   }
 
@@ -51,9 +51,9 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
   }
 
   .header {
-    font-size: 1.75rem;
-    font-weight: var(--font-weight-heading);
     color: var(--color-white);
+    font-weight: var(--font-weight-heading);
+    font-size: 1.75rem;
     line-height: 2.25rem;
     letter-spacing: 0;
     text-align: left;
@@ -61,8 +61,8 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
 
   .text {
     margin-top: 1.25rem;
-    font-size: 1rem;
     font-weight: var(--font-weight-body);
+    font-size: 1rem;
     line-height: 1.5rem;
     letter-spacing: 0;
     text-align: left;
@@ -76,9 +76,9 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
     color: var(--color-white);
 
     &:hover {
-      background-color: #ff2567;
-      border-color: #000000;
       border-width: 1px;
+      border-color: #000000;
+      background-color: #ff2567;
     }
   }
 }
@@ -91,8 +91,8 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
     }
 
     .image-container {
-      order: 0;
       flex: 1;
+      order: 0;
 
       img {
         width: 100%;
@@ -104,8 +104,8 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
 
     .text-container {
       flex-shrink: 0;
-      max-width: 35rem;
       margin: 3rem 2.5rem;
+      max-width: 35rem;
     }
 
     .header {

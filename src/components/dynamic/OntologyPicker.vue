@@ -254,30 +254,30 @@ watch(
 
 .field-label {
   display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-subheading);
-  color: var(--color-white);
   opacity: 0.8;
-  white-space: nowrap;
   cursor: default;
+  margin-bottom: 0.25rem;
+  color: var(--color-white);
+  font-weight: var(--font-weight-subheading);
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .trigger {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  background: var(--color-surface);
+  transition: border-color 0.15s;
+  cursor: pointer;
   border: 1px solid var(--color-light-grey);
   border-radius: 4px;
+  background: var(--color-surface);
+  padding: 0.625rem 0.75rem;
+  width: 100%;
   color: var(--color-text);
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-family);
   font-size: 0.875rem;
-  transition: border-color 0.15s;
+  font-family: var(--font-family);
+  text-align: left;
 
   &:hover {
     border-color: var(--color-bright-blue);
@@ -290,8 +290,8 @@ watch(
 }
 
 .trigger-value {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 0.375rem;
   overflow: hidden;
@@ -302,27 +302,27 @@ watch(
 }
 
 .selected-first {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chevron {
   flex-shrink: 0;
-  color: var(--color-text);
   opacity: 0.6;
+  color: var(--color-text);
 }
 
 .dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
   right: 0;
+  left: 0;
   z-index: 100;
-  background: var(--color-white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--color-light-grey);
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  background: var(--color-white);
   min-width: 200px;
 }
 
@@ -330,19 +330,19 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.5rem;
   border-bottom: 1px solid var(--color-light-grey);
+  padding: 0.5rem;
 }
 
 .search-input {
   flex: 1;
-  padding: 0.375rem 0.5rem;
   border: 1px solid var(--color-light-grey);
   border-radius: 3px;
+  background: var(--color-white);
+  padding: 0.375rem 0.5rem;
+  color: var(--color-text);
   font-size: 0.875rem;
   font-family: var(--font-family);
-  color: var(--color-text);
-  background: var(--color-white);
 
   &:focus {
     outline: 2px solid var(--color-pink);
@@ -352,14 +352,14 @@ watch(
 
 .reset-btn {
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 0.375rem;
-  border: none;
-  background: transparent;
+  align-items: center;
   cursor: pointer;
-  color: var(--color-bright-blue);
+  border: none;
   border-radius: 3px;
+  background: transparent;
+  padding: 0.375rem;
+  color: var(--color-bright-blue);
 
   &:hover {
     background: var(--color-light-pink);
@@ -372,27 +372,27 @@ watch(
 }
 
 .options-list {
-  list-style: none;
   margin: 0;
   padding: 0.25rem 0;
   max-height: 240px;
   overflow-y: auto;
+  list-style: none;
 }
 
 .option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
   cursor: pointer;
+  padding: 0.5rem 0.75rem;
   color: var(--color-text);
   font-size: 0.875rem;
   font-family: var(--font-family);
 
   &::before {
-    content: '';
-    width: 1em;
     flex-shrink: 0;
+    width: 1em;
+    content: '';
   }
 
   &:hover {
@@ -420,31 +420,31 @@ watch(
 }
 
 .option-count {
-  font-size: 0.75rem;
-  opacity: 0.6;
   flex-shrink: 0;
+  opacity: 0.6;
+  font-size: 0.75rem;
 }
 
 .no-options {
   padding: 0.75rem;
-  text-align: center;
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
   font-style: italic;
+  font-size: 0.875rem;
+  text-align: center;
 }
 
 .descendants-toggle {
-  padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--color-light-grey);
+  padding: 0.5rem 0.75rem;
 }
 
 .descendants-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--color-text);
   cursor: pointer;
+  color: var(--color-text);
+  font-size: 0.8125rem;
 
   input[type='checkbox'] {
     cursor: pointer;

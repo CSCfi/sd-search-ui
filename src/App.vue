@@ -21,8 +21,8 @@ import AppFooter from '@/components/AppFooter.vue'
 }
 
 .app-content {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
 }
 </style>

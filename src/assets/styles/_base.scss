@@ -7,10 +7,10 @@
 }
 
 body {
-  font-family: var(--font-family);
-  font-weight: var(--font-weight-body);
-  color: var(--color-dark-blue);
   margin: 0;
+  color: var(--color-dark-blue);
+  font-weight: var(--font-weight-body);
+  font-family: var(--font-family);
 }
 
 h1,
@@ -19,15 +19,15 @@ h3,
 h4,
 h5,
 h6 {
+  margin: 0;
+  color: var(--color-dark-blue);
   font-weight: var(--font-weight-heading);
   letter-spacing: 0.15em;
-  color: var(--color-dark-blue);
-  margin: 0;
 }
 
 p {
-  font-weight: var(--font-weight-body);
   margin: 0;
+  font-weight: var(--font-weight-body);
 }
 
 a {

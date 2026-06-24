@@ -45,35 +45,35 @@ function displayValue(filter: { value: string | string[]; label?: string[] }): s
 }
 
 .banner-label {
+  color: var(--color-text);
   font-weight: var(--font-weight-heading);
   font-size: 0.875rem;
-  color: var(--color-text);
 }
 
 .filter-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  list-style: none;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
 .filter-tag {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background-color: var(--color-white);
   border: 1px solid var(--color-light-grey);
   border-radius: 9999px;
+  background-color: var(--color-white);
   padding: 0.2rem 0.625rem;
-  font-size: 0.8125rem;
   color: var(--color-text);
+  font-size: 0.8125rem;
 }
 
 .tag-id {
-  font-weight: var(--font-weight-heading);
   color: var(--color-dark-blue);
+  font-weight: var(--font-weight-heading);
   font-size: 0.75rem;
 }
 

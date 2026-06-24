@@ -13,13 +13,13 @@ defineEmits<{ dismiss: [] }>()
 <style scoped>
 .error-banner {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
-  background-color: var(--color-pink);
-  color: var(--color-white);
-  padding: 0.75rem 1.25rem;
   border-radius: 0.25rem;
+  background-color: var(--color-pink);
+  padding: 0.75rem 1.25rem;
+  color: var(--color-white);
 }
 
 .error-message {
@@ -29,12 +29,12 @@ defineEmits<{ dismiss: [] }>()
 
 .dismiss-btn {
   flex-shrink: 0;
-  background: none;
+  cursor: pointer;
   border: none;
+  background: none;
+  padding: 0.25rem;
   color: var(--color-white);
   font-size: 1rem;
-  cursor: pointer;
-  padding: 0.25rem;
   line-height: 1;
 
   &:hover {

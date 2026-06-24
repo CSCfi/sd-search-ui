@@ -212,8 +212,8 @@ async function onModalClose(open: boolean) {
   align-items: center;
   gap: 0.75rem;
   padding: 4rem 1.5rem;
-  text-align: center;
   color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .no-filters-icon {
@@ -221,38 +221,38 @@ async function onModalClose(open: boolean) {
 }
 
 .no-filters-heading {
-  font-size: 1.25rem;
-  font-weight: var(--font-weight-heading);
-  color: var(--color-dark-blue);
   margin: 0;
+  color: var(--color-dark-blue);
+  font-weight: var(--font-weight-heading);
+  font-size: 1.25rem;
 }
 
 .no-filters-subtext {
-  font-size: 0.9375rem;
-  color: var(--color-text-secondary);
   margin: 0;
   max-width: 32rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
 }
 
 .results-table-section {
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding: 1.5rem;
 }
 
 .empty-state {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 3rem 0;
   margin: 0;
+  padding: 3rem 0;
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .results-container {
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: calc(100vh - 32rem);
   position: relative;
+  max-height: calc(100vh - 32rem);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .bulk-bar-enter-active,
@@ -264,26 +264,26 @@ async function onModalClose(open: boolean) {
 
 .bulk-bar-enter-from,
 .bulk-bar-leave-to {
-  opacity: 0;
   transform: translateY(-100%);
+  opacity: 0;
 }
 
 .bulk-action-bar {
+  display: flex;
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  display: flex;
-  align-items: center;
   justify-content: flex-end;
+  align-items: center;
   gap: 1rem;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #fff;
   padding: 0.75rem 1rem;
 }
 
 .bulk-count {
-  font-weight: var(--font-weight-subheading);
   color: var(--color-dark-blue);
+  font-weight: var(--font-weight-subheading);
 }
 
 .btn-bulk-access {
@@ -300,18 +300,18 @@ async function onModalClose(open: boolean) {
 }
 
 .results-table {
-  width: 100%;
   border-collapse: collapse;
-  font-size: 0.9375rem;
+  width: 100%;
   color: var(--color-text);
+  font-size: 0.9375rem;
 }
 
 .results-table thead th {
-  text-align: left;
-  padding: 0.75rem 1rem;
   border-bottom: 2px solid var(--color-light-grey);
-  font-weight: var(--font-weight-heading);
+  padding: 0.75rem 1rem;
   color: var(--color-dark-blue);
+  font-weight: var(--font-weight-heading);
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -328,16 +328,16 @@ async function onModalClose(open: boolean) {
 }
 
 .results-table tbody td {
-  padding: 0.875rem 1rem;
   vertical-align: top;
+  padding: 0.875rem 1rem;
 }
 
 .col-select {
   input[type='checkbox'] {
     cursor: pointer;
-    accent-color: var(--color-dark-blue);
     width: 1.125rem;
     height: 1.125rem;
+    accent-color: var(--color-dark-blue);
 
     &:focus-visible {
       outline: 2px solid var(--color-pink);
@@ -347,19 +347,19 @@ async function onModalClose(open: boolean) {
 }
 
 .col-title {
-  font-weight: var(--font-weight-subheading);
-  color: var(--color-dark-blue);
   min-width: 10rem;
+  color: var(--color-dark-blue);
+  font-weight: var(--font-weight-subheading);
 }
 
 .col-description {
-  color: var(--color-text);
   max-width: 24rem;
+  color: var(--color-text);
 }
 
 .col-images {
-  white-space: nowrap;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .col-action {
@@ -368,14 +368,14 @@ async function onModalClose(open: boolean) {
 
 .show-more-btn {
   display: inline;
-  background: none;
-  border: none;
-  padding: 0;
+  cursor: pointer;
   margin-left: 0.25rem;
+  border: none;
+  background: none;
+  padding: 0;
   color: var(--color-bright-blue);
   font-size: 0.875rem;
   font-family: var(--font-family);
-  cursor: pointer;
 
   &:hover {
     text-decoration: underline;
@@ -389,8 +389,8 @@ async function onModalClose(open: boolean) {
 }
 
 .btn-access {
-  color: var(--color-dark-blue);
   border-color: var(--color-dark-blue);
+  color: var(--color-dark-blue);
 
   &:focus-within {
     outline: 2px solid var(--color-pink);
@@ -400,13 +400,13 @@ async function onModalClose(open: boolean) {
 
 .sr-only {
   position: absolute;
+  margin: -1px;
+  padding: 0;
   width: 1px;
   height: 1px;
-  padding: 0;
-  margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
   border: 0;
+  white-space: nowrap;
 }
 </style>

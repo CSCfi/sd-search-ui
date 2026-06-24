@@ -23,7 +23,7 @@
 }
 
 @mixin container {
-  max-width: 80rem;
   margin-inline: auto;
   width: 100%;
+  max-width: 80rem;
 }
