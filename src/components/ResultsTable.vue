@@ -250,6 +250,7 @@ async function onModalClose(open: boolean) {
 
 .results-container {
   overflow-y: auto;
+  overflow-x: hidden;
   max-height: calc(100vh - 32rem);
   position: relative;
 }
