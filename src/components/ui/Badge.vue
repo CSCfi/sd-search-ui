@@ -13,11 +13,11 @@ defineProps<{
 <style scoped>
 .badge {
   flex-shrink: 0;
+  border-radius: 9999px;
   background: var(--color-pink);
+  padding: 0.125rem 0.375rem;
   color: var(--color-white);
   font-size: 0.75rem;
   line-height: 1;
-  padding: 0.125rem 0.375rem;
-  border-radius: 9999px;
 }
 </style>

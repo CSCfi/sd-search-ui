@@ -58,12 +58,12 @@ function onCancel(event: Event) {
 
 <style scoped>
 .description-modal {
-  width: min(90vw, 40rem);
-  max-height: 80vh;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.2);
   border: none;
   border-radius: 0.5rem;
   padding: 0;
-  box-shadow: 0 8px 32px rgb(0 0 0 / 0.2);
+  width: min(90vw, 40rem);
+  max-height: 80vh;
   overflow: hidden;
 }
 
@@ -79,31 +79,31 @@ function onCancel(event: Event) {
 
 .modal-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--color-white);
-  border-bottom: 1px solid var(--color-light-grey);
   flex-shrink: 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-light-grey);
+  background-color: var(--color-white);
+  padding: 0.75rem 1.5rem;
 }
 
 .modal-title {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: var(--font-weight-heading);
   color: var(--color-dark-blue);
+  font-weight: var(--font-weight-heading);
+  font-size: 0.875rem;
 }
 
 .close-btn {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: var(--color-dark-blue);
-  cursor: pointer;
-  padding: 0.25rem;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0.25rem;
+  color: var(--color-dark-blue);
 
   &:hover {
     opacity: 0.6;

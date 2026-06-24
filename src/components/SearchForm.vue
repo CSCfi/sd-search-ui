@@ -73,8 +73,8 @@ async function copySearch() {
 <style scoped lang="scss">
 .search-form {
   background-color: var(--color-dark-blue);
-  color: var(--color-white);
   padding: 2rem 1.5rem;
+  color: var(--color-white);
 }
 
 .state-loading {
@@ -84,9 +84,9 @@ async function copySearch() {
 }
 
 .state-error {
+  padding: 3rem 0;
   color: var(--color-white);
   text-align: center;
-  padding: 3rem 0;
 }
 
 .fields-grid {

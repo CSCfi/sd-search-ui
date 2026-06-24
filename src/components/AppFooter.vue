@@ -58,17 +58,17 @@
 }
 
 .footer-col-heading {
+  color: var(--color-dark-blue);
   font-weight: var(--font-weight-heading);
   font-size: 0.875rem;
   letter-spacing: 0.1em;
-  color: var(--color-dark-blue);
   text-transform: uppercase;
 }
 
 .footer-link {
   color: var(--color-bright-blue);
-  text-decoration: none;
   font-size: 0.9375rem;
+  text-decoration: none;
 
   &:hover {
     text-decoration: underline;
@@ -84,29 +84,29 @@
 }
 
 .footer-funding-text {
-  font-size: 0.8125rem;
-  color: var(--color-dark-blue);
-  line-height: 1.6;
   max-width: 36rem;
+  color: var(--color-dark-blue);
+  font-size: 0.8125rem;
+  line-height: 1.6;
 }
 
 .footer-images {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
 }
 
 .eu-flag {
-  height: 3rem;
   width: auto;
+  height: 3rem;
 }
 
 .partner-logos {
-  height: 3rem;
   width: auto;
+  height: 3rem;
 }
 
 @include tablet {

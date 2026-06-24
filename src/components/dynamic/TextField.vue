@@ -32,27 +32,27 @@ defineEmits<{
 
 .field-label {
   display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-subheading);
-  color: var(--color-white);
   opacity: 0.8;
-  white-space: nowrap;
   cursor: default;
+  margin-bottom: 0.25rem;
+  color: var(--color-white);
+  font-weight: var(--font-weight-subheading);
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .input {
   display: block;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-light-grey);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: var(--font-family);
-  font-size: 0.875rem;
   transition: border-color 0.15s;
   box-sizing: border-box;
+  border: 1px solid var(--color-light-grey);
+  border-radius: 4px;
+  background: var(--color-surface);
+  padding: 0.625rem 0.75rem;
+  width: 100%;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-family: var(--font-family);
 
   &::placeholder {
     opacity: 0.5;

@@ -28,12 +28,12 @@ const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
 
 <style scoped lang="scss">
 .app-navbar {
-  background-color: var(--color-white);
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0.75rem 1.5rem;
   position: relative;
+  justify-content: flex-end;
+  align-items: center;
+  background-color: var(--color-white);
+  padding: 0.75rem 1.5rem;
   overflow: visible;
 }
 
@@ -41,13 +41,13 @@ const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
   position: absolute;
   top: 5%;
   left: 2.5%;
-  width: 220px;
   z-index: 1;
+  width: 220px;
 }
 
 .app-logo {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
 }
 </style>

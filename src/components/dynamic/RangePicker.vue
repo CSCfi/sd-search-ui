@@ -225,30 +225,30 @@ watch([from, to, unit], () => {
 
 .field-label {
   display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-subheading);
-  color: var(--color-white);
   opacity: 0.8;
-  white-space: nowrap;
   cursor: default;
+  margin-bottom: 0.25rem;
+  color: var(--color-white);
+  font-weight: var(--font-weight-subheading);
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .trigger {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  background: var(--color-surface);
+  transition: border-color 0.15s;
+  cursor: pointer;
   border: 1px solid var(--color-light-grey);
   border-radius: 4px;
+  background: var(--color-surface);
+  padding: 0.625rem 0.75rem;
+  width: 100%;
   color: var(--color-text);
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-family);
   font-size: 0.875rem;
-  transition: border-color 0.15s;
+  font-family: var(--font-family);
+  text-align: left;
 
   &:hover {
     border-color: var(--color-bright-blue);
@@ -261,8 +261,8 @@ watch([from, to, unit], () => {
 }
 
 .trigger-value {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 0.375rem;
   overflow: hidden;
@@ -273,27 +273,27 @@ watch([from, to, unit], () => {
 }
 
 .selected-first {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chevron {
   flex-shrink: 0;
-  color: var(--color-text);
   opacity: 0.6;
+  color: var(--color-text);
 }
 
 .dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
   right: 0;
+  left: 0;
   z-index: 100;
-  background: var(--color-white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--color-light-grey);
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  background: var(--color-white);
   min-width: 200px;
 }
 
@@ -303,36 +303,36 @@ watch([from, to, unit], () => {
 
 .inputs-row {
   display: flex;
-  gap: 0.5rem;
   align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .input-group {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.25rem;
-  flex: 1;
 }
 
 .input-label {
-  font-size: 0.6875rem;
-  font-weight: var(--font-weight-body);
-  color: var(--color-text);
   opacity: 0.7;
+  color: var(--color-text);
+  font-weight: var(--font-weight-body);
+  font-size: 0.6875rem;
 }
 
 .number-input,
 .unit-select {
-  width: 100%;
-  padding: 0.5rem;
-  background: var(--color-white);
-  border: 1px solid var(--color-light-grey);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: var(--font-family);
-  font-size: 0.875rem;
   transition: border-color 0.15s;
   box-sizing: border-box;
+  border: 1px solid var(--color-light-grey);
+  border-radius: 4px;
+  background: var(--color-white);
+  padding: 0.5rem;
+  width: 100%;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-family: var(--font-family);
 
   &:hover {
     border-color: var(--color-bright-blue);
@@ -349,25 +349,25 @@ watch([from, to, unit], () => {
 }
 
 .unit-select {
-  cursor: pointer;
   appearance: auto;
+  cursor: pointer;
 }
 
 .error-message {
   display: block;
   margin-top: 0.5rem;
-  font-size: 0.75rem;
   color: var(--color-pink);
   font-weight: var(--font-weight-body);
+  font-size: 0.75rem;
 }
 
 .visually-hidden {
   clip: rect(0 0 0 0);
+  position: absolute;
   clip-path: inset(50%);
+  width: 1px;
   height: 1px;
   overflow: hidden;
-  position: absolute;
   white-space: nowrap;
-  width: 1px;
 }
 </style>
