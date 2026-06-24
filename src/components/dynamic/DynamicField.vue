@@ -87,6 +87,7 @@ onMounted(() => {
     v-if="field.type === 'text'"
     :label="field.label"
     :field-id="field.id"
+    :description="field.description"
     :model-value="currentStringValue"
     @update:model-value="handleStringUpdate"
   />
@@ -95,6 +96,7 @@ onMounted(() => {
     v-else-if="field.type === 'controlledValue'"
     :label="field.label"
     :field-id="field.id"
+    :description="field.description"
     :model-value="currentArrayValue"
     @update:model-value="handleArrayUpdate"
   />
@@ -103,6 +105,7 @@ onMounted(() => {
     v-else-if="field.type === 'ontology'"
     :label="field.label"
     :field-id="field.id"
+    :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="false"
     @update:model-value="handleOntologyUpdate"
@@ -114,6 +117,7 @@ onMounted(() => {
     v-else-if="field.type === 'ontologyOrValue' || field.type === 'keyword'"
     :label="field.label"
     :field-id="field.id"
+    :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="true"
     @update:model-value="handleOntologyUpdate"
@@ -124,6 +128,8 @@ onMounted(() => {
   <RangePicker
     v-else-if="field.type === 'iso8601Range'"
     :label="field.label"
+    :field-id="field.id"
+    :description="field.description"
     :model-value="currentStringValue"
     @update:model-value="handleStringUpdate"
   />

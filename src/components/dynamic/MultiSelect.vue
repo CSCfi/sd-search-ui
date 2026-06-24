@@ -2,6 +2,7 @@
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { ChevronDown, ChevronUp, RotateCcw } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
+import FieldLabel from '@/components/ui/FieldLabel.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import { useDropdown } from '@/composables/useDropdown'
 import { useFieldValues } from '@/composables/useFieldValues'
@@ -11,6 +12,7 @@ const props = defineProps<{
   label: string
   fieldId: string
   modelValue: string[]
+  description?: string
 }>()
 
 const emit = defineEmits<{
@@ -82,7 +84,7 @@ watch(searchTerm, resetActiveIndex)
 
 <template>
   <div ref="containerRef" class="multiselect">
-    <label :id="`${fieldId}-label`" class="field-label">{{ label }}</label>
+    <FieldLabel :field-id="fieldId" :label="label" :description="description" />
     <button
       :id="`${fieldId}-trigger`"
       ref="trigger"
@@ -91,7 +93,6 @@ watch(searchTerm, resetActiveIndex)
       :aria-expanded="isOpen"
       aria-haspopup="listbox"
       :aria-controls="listboxId"
-      :aria-labelledby="`${fieldId}-label`"
       @click="toggleDropdown"
     >
       <span class="trigger-value">
@@ -192,17 +193,6 @@ watch(searchTerm, resetActiveIndex)
     outline: 2px solid var(--color-pink);
     outline-offset: 2px;
   }
-}
-
-.field-label {
-  display: block;
-  opacity: 0.8;
-  cursor: default;
-  margin-bottom: 0.25rem;
-  color: var(--color-white);
-  font-weight: var(--font-weight-subheading);
-  font-size: 0.75rem;
-  white-space: nowrap;
 }
 
 .trigger-value {
