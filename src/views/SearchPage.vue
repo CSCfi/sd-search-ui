@@ -68,10 +68,10 @@ if (parsed.length > 0) {
   }
 
   .title {
-    color: var(--color-white);
     padding-top: 3rem;
-    font-size: 1.5rem;
+    color: var(--color-white);
     font-weight: var(--font-weight-heading);
+    font-size: 1.5rem;
     text-align: center;
   }
 }
