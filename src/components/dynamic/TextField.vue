@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import FieldLabel from '@/components/ui/FieldLabel.vue'
+
 defineProps<{
   label: string
   fieldId: string
   modelValue: string
+  description?: string
 }>()
 
 defineEmits<{
@@ -12,9 +15,9 @@ defineEmits<{
 
 <template>
   <div class="textfield">
-    <label :for="fieldId" class="field-label">{{ label }}</label>
+    <FieldLabel :field-id="fieldId" :label="label" :description="description" />
     <input
-      :id="fieldId"
+      :id="`${fieldId}-trigger`"
       type="text"
       class="input"
       placeholder="Search..."
@@ -28,17 +31,6 @@ defineEmits<{
 .textfield {
   position: relative;
   width: 100%;
-}
-
-.field-label {
-  display: block;
-  opacity: 0.8;
-  cursor: default;
-  margin-bottom: 0.25rem;
-  color: var(--color-white);
-  font-weight: var(--font-weight-subheading);
-  font-size: 0.75rem;
-  white-space: nowrap;
 }
 
 .input {

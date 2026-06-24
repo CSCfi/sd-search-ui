@@ -28,7 +28,7 @@ describe('RangePicker', () => {
 
   function mountComponent(modelValue = '') {
     return mount(RangePicker, {
-      props: { label: 'Age at extraction', modelValue },
+      props: { label: 'Age at extraction', fieldId: 'age_at_extraction', modelValue },
     })
   }
 

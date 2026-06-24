@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, useId, useTemplateRef, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { ChevronDown, ChevronUp } from '@lucide/vue'
+import FieldLabel from '@/components/ui/FieldLabel.vue'
 import { useDropdown } from '@/composables/useDropdown'
 
 const props = defineProps<{
   label: string
+  fieldId: string
   modelValue: string
+  description?: string
 }>()
 
 const emit = defineEmits<{
@@ -25,19 +28,11 @@ const unitOptions: { value: Unit; label: string }[] = [
   { value: 'D', label: 'Days' },
 ]
 
-const instanceId = useId()
-const fieldId = computed(
-  () =>
-    `${props.label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')}-${instanceId}`,
-)
-const fromId = computed(() => `${fieldId.value}-from`)
-const toId = computed(() => `${fieldId.value}-to`)
-const unitId = computed(() => `${fieldId.value}-unit`)
-const hintId = computed(() => `${fieldId.value}-hint`)
-const errorId = computed(() => `${fieldId.value}-error`)
+const fromId = computed(() => `${props.fieldId}-from`)
+const toId = computed(() => `${props.fieldId}-to`)
+const unitId = computed(() => `${props.fieldId}-unit`)
+const hintId = computed(() => `${props.fieldId}-hint`)
+const errorId = computed(() => `${props.fieldId}-error`)
 
 const hasError = computed(() => from.value !== null && to.value !== null && from.value > to.value)
 
@@ -130,7 +125,7 @@ watch([from, to, unit], () => {
 
 <template>
   <div ref="containerRef" class="range-picker">
-    <label :for="`${fieldId}-trigger`" class="field-label">{{ label }}</label>
+    <FieldLabel :field-id="fieldId" :label="label" :description="description" />
     <button
       :id="`${fieldId}-trigger`"
       ref="trigger"
@@ -221,17 +216,6 @@ watch([from, to, unit], () => {
 .range-picker {
   position: relative;
   width: 100%;
-}
-
-.field-label {
-  display: block;
-  opacity: 0.8;
-  cursor: default;
-  margin-bottom: 0.25rem;
-  color: var(--color-white);
-  font-weight: var(--font-weight-subheading);
-  font-size: 0.75rem;
-  white-space: nowrap;
 }
 
 .trigger {

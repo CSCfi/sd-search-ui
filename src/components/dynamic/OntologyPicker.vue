@@ -3,6 +3,7 @@ import { computed, ref, useTemplateRef, watch } from 'vue'
 import { ChevronDown, ChevronUp, RotateCcw } from '@lucide/vue'
 import { refDebounced } from '@vueuse/core'
 import Badge from '@/components/ui/Badge.vue'
+import FieldLabel from '@/components/ui/FieldLabel.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import { useDropdown } from '@/composables/useDropdown'
 import { useFieldValues } from '@/composables/useFieldValues'
@@ -15,6 +16,7 @@ const props = defineProps<{
   fieldId: string
   modelValue: string[]
   allowFreeText: boolean
+  description?: string
 }>()
 
 const emit = defineEmits<{
@@ -157,7 +159,7 @@ watch(
 
 <template>
   <div ref="containerRef" class="ontology-picker">
-    <label :for="`${fieldId}-trigger`" class="field-label">{{ label }}</label>
+    <FieldLabel :field-id="fieldId" :label="label" :description="description" />
     <button
       :id="`${fieldId}-trigger`"
       ref="trigger"
@@ -250,17 +252,6 @@ watch(
 .ontology-picker {
   position: relative;
   width: 100%;
-}
-
-.field-label {
-  display: block;
-  opacity: 0.8;
-  cursor: default;
-  margin-bottom: 0.25rem;
-  color: var(--color-white);
-  font-weight: var(--font-weight-subheading);
-  font-size: 0.75rem;
-  white-space: nowrap;
 }
 
 .trigger {
