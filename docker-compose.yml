@@ -1,0 +1,19 @@
+services:
+  sd-search-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build args, not runtime env — Vite inlines these into the JS bundle
+        # at build time. Changing a value requires a rebuild, not just a restart.
+        # Set real values via a local .env file (gitignored).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_LOGIN_URL: ${VITE_LOGIN_URL}
+        VITE_LOGOUT_URL: ${VITE_LOGOUT_URL}
+        VITE_ACCOUNT_INFO: ${VITE_ACCOUNT_INFO}
+    ports:
+      - "8081:8081"
+    environment:
+      # Backend container runs in another network, so use the docker internal hostname to reach it from the frontend container.
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8000}
+    restart: unless-stopped

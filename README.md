@@ -25,6 +25,30 @@ cp .env.example .env
 pnpm dev
 ```
 
+## Docker
+
+### Dockerfile
+
+Multi-stage build:
+
+1. **build** (`node:26-alpine`) — installs dependencies with pnpm and runs `pnpm build`. The `VITE_*` variables are passed as `ARG`s because Vite inlines them at build time; they cannot be injected at runtime.
+2. **serve** (`nginx:1.27-alpine`) — copies the built `dist/` into nginx. Configured for Rahti/OpenShift: the nginx process runs as an arbitrary UID in the root group (no fixed user), and listens on port **8081** (non-root cannot bind ports below 1024).
+
+`nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html` itself.
+
+### Running with docker-compose
+
+```bash
+cp .env.example .env
+# Fill in VITE_API_BASE_URL, VITE_LOGIN_URL, VITE_LOGOUT_URL, VITE_ACCOUNT_INFO
+
+docker compose up --build
+```
+
+The app is served at `http://localhost:8081`.
+
+`VITE_API_BASE_URL` defaults to `/api` if not set — useful when the search API runs behind the same reverse proxy. All other variables are required.
+
 ## Environment Variables
 
 | Variable | Description |
