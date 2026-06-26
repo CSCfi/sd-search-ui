@@ -13,7 +13,7 @@ const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
       aria-label="CSC Discovery home"
       class="app-logo-link"
     >
-      <img src="@/assets/images/bg-logo.png" alt="CSC Discovery" class="app-logo" />
+      <img src="@/assets/images/bg-logo.png" alt="" class="app-logo" />
     </RouterLink>
     <nav class="app-nav" aria-label="Main navigation">
       <a v-if="!auth.isLoggedIn" :href="loginUrl">

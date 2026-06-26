@@ -24,7 +24,11 @@
           www.imi.europa.eu
         </p>
         <div class="footer-images">
-          <img src="@/assets/images/footer_logos.png" alt="Partner logos" class="partner-logos" />
+          <img
+            src="@/assets/images/footer_logos.png"
+            alt="Logos of BigPicture project partners including EU, IMI, and EFPIA"
+            class="partner-logos"
+          />
         </div>
       </div>
     </div>

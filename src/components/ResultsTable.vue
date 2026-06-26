@@ -161,6 +161,7 @@ async function onModalClose(open: boolean) {
                     }
                   "
                   class="show-more-btn"
+                  :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
                   @click="openModal(result, index)"
                 >
                   Show more
@@ -172,7 +173,7 @@ async function onModalClose(open: boolean) {
                   :href="result.datasetUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  :aria-label="`View details for ${result.datasetTitle ?? result.datasetId}`"
+                  :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
                 >
                   View Details
                 </a>

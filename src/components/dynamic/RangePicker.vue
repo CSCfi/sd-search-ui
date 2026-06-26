@@ -163,6 +163,7 @@ watch([from, to, unit], () => {
               min="0"
               class="number-input"
               :class="{ error: hasError }"
+              :aria-invalid="hasError || undefined"
               :aria-describedby="`${hintId}${hasError ? ' ' + errorId : ''}`"
               :value="from ?? ''"
               @input="onFromInput"
@@ -178,6 +179,7 @@ watch([from, to, unit], () => {
               min="0"
               class="number-input"
               :class="{ error: hasError }"
+              :aria-invalid="hasError || undefined"
               :aria-describedby="`${hintId}${hasError ? ' ' + errorId : ''}`"
               :value="to ?? ''"
               @input="onToInput"
@@ -253,7 +255,7 @@ watch([from, to, unit], () => {
 }
 
 .placeholder {
-  opacity: 0.6;
+  color: var(--color-text-secondary);
 }
 
 .selected-first {
@@ -302,7 +304,7 @@ watch([from, to, unit], () => {
   opacity: 0.7;
   color: var(--color-text);
   font-weight: var(--font-weight-body);
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
 }
 
 .number-input,
