@@ -36,12 +36,3 @@ export async function postQuery(filters: BeaconQueryFilter[]): Promise<BeaconRes
   })
   return res.data
 }
-
-export async function checkSession(): Promise<boolean> {
-  try {
-    await apiClient.get(import.meta.env.VITE_ACCOUNT_INFO)
-    return true
-  } catch {
-    return false
-  }
-}
