@@ -25,6 +25,59 @@ cp .env.example .env
 pnpm dev
 ```
 
+## Docker
+
+### Dockerfile
+
+Multi-stage build:
+
+1. **build** (`node:26-alpine`) — installs dependencies with pnpm and runs `pnpm build`. The `VITE_*` variables are passed as `ARG`s because Vite inlines them at build time; they cannot be injected at runtime.
+2. **serve** (`nginx:1.31-alpine`) — copies the built `dist/` into nginx. Configured for Rahti/OpenShift: the nginx process runs as an arbitrary UID in the root group (no fixed user), and listens on port **8081** (non-root cannot bind ports below 1024).
+
+`nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html` itself.
+
+### Running with docker-compose
+
+```bash
+cp .env.example .env
+# Fill in VITE_API_BASE_URL, VITE_LOGIN_URL, VITE_LOGOUT_URL
+
+docker compose up --build
+```
+
+The app is served at `http://localhost:8081`.
+
+`VITE_API_BASE_URL` defaults to `/api` if not set — useful when the search API runs behind the same reverse proxy. All other variables are required.
+
+### Runtime container environment
+
+This image has two kinds of configuration:
+
+1. **Build-time `VITE_*` variables** — used by Vite and inlined into the frontend bundle during `docker build`
+2. **Runtime container variables** — used by nginx when the container starts
+
+The nginx `/api/` proxy target is configured at runtime. The official `nginx:1.31-alpine` image renders `nginx.conf` from `/etc/nginx/templates/default.conf.template` using environment variables before nginx starts.
+
+| Variable | Required | Description |
+|---|---:|---|
+| `BACKEND_URL` | yes | Base URL for the backend proxied from `/api/` |
+
+`BACKEND_URL` is referenced in `nginx.conf`:
+
+```nginx
+location /api/ {
+    proxy_pass ${BACKEND_URL}/;
+}
+```
+
+Example:
+
+```bash
+docker run --rm -p 8081:8081 \
+  -e BACKEND_URL=http://host.docker.internal:8000 \
+  sd-search-ui
+```
+
 ## Environment Variables
 
 | Variable | Description |
@@ -32,7 +85,6 @@ pnpm dev
 | `VITE_API_BASE_URL` | Search API base URL |
 | `VITE_LOGIN_URL` | LifeScience AAI login redirect URL |
 | `VITE_LOGOUT_URL` | Logout and session clear URL |
-| `VITE_ACCOUNT_INFO` | Session check endpoint (200 = valid session) |
 
 ## Project Structure
 
