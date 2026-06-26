@@ -49,7 +49,13 @@ onKeyStroke('Escape', () => {
     >
       <Info :size="14" aria-hidden="true" />
     </button>
-    <div v-if="isVisible" :id="`${props.fieldId}-description`" class="info-bubble" role="tooltip">
+    <div
+      v-show="isVisible"
+      :id="`${props.fieldId}-description`"
+      class="info-bubble"
+      role="tooltip"
+      :aria-hidden="!isVisible"
+    >
       {{ description }}
     </div>
   </div>
@@ -71,7 +77,9 @@ onKeyStroke('Escape', () => {
   border: none;
   border-radius: 2px;
   background: transparent;
-  padding: 0;
+  padding: 5px;
+  min-width: 24px;
+  min-height: 24px;
   color: rgba(255, 255, 255, 0.5);
   line-height: 1;
 
@@ -100,7 +108,7 @@ onKeyStroke('Escape', () => {
   width: max-content;
   max-width: 240px;
   color: var(--color-text);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.4;
   font-family: var(--font-family);
   white-space: normal;

@@ -108,6 +108,7 @@ function onDescendantsChange(event: Event) {
 }
 
 const {
+  activeIndex,
   onSearchKeydown,
   onOptionKeydown: navOptionKeydown,
   resetActiveIndex,
@@ -187,10 +188,6 @@ watch(
           ref="search"
           v-model="searchTerm"
           type="text"
-          role="combobox"
-          :aria-expanded="isOpen"
-          aria-autocomplete="list"
-          :aria-controls="listboxId"
           class="search-input"
           placeholder="Search..."
           aria-label="Search options"
@@ -215,6 +212,7 @@ watch(
         ref="listbox"
         role="listbox"
         :aria-label="label"
+        :aria-activedescendant="activeIndex >= 0 ? `${fieldId}-option-${activeIndex}` : undefined"
         aria-multiselectable="true"
         class="options-list"
       >
@@ -289,7 +287,7 @@ watch(
 }
 
 .placeholder {
-  opacity: 0.6;
+  color: var(--color-text-secondary);
 }
 
 .selected-first {
@@ -412,7 +410,7 @@ watch(
 
 .option-count {
   flex-shrink: 0;
-  opacity: 0.6;
+  color: var(--color-text-secondary);
   font-size: 0.75rem;
 }
 

@@ -35,7 +35,7 @@ defineProps<{
   cursor: default;
   color: var(--color-white);
   font-weight: var(--font-weight-subheading);
-  font-size: 0.75rem;
+  font-size: 1rem;
   white-space: nowrap;
 }
 </style>

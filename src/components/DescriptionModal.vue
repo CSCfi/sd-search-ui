@@ -39,12 +39,12 @@ function onCancel(event: Event) {
     ref="dialogRef"
     class="description-modal"
     aria-modal="true"
-    :aria-labelledby="'modal-title-' + title"
+    aria-labelledby="modal-title"
     @cancel="onCancel"
   >
     <div class="modal-inner">
       <div class="modal-header">
-        <h2 :id="'modal-title-' + title" class="modal-title">{{ title }}</h2>
+        <h2 id="modal-title" class="modal-title">{{ title }}</h2>
         <button class="close-btn" aria-label="Close" @click="close">
           <X :size="20" aria-hidden="true" />
         </button>
@@ -107,6 +107,11 @@ function onCancel(event: Event) {
 
   &:hover {
     opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-dark-blue);
+    outline-offset: 2px;
   }
 }
 

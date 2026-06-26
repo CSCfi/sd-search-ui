@@ -155,7 +155,7 @@ watch(searchTerm, resetActiveIndex)
           <span class="option-label">{{ item.value }}</span>
           <span class="option-count">{{ item.count }}</span>
         </li>
-        <li v-if="filteredItems.length === 0" role="option" aria-disabled="true" class="no-options">
+        <li v-if="filteredItems.length === 0" role="presentation" class="no-options">
           No options found
         </li>
       </ul>
@@ -204,7 +204,7 @@ watch(searchTerm, resetActiveIndex)
 }
 
 .placeholder {
-  opacity: 0.6;
+  color: var(--color-text-secondary);
 }
 
 .selected-first {
@@ -327,7 +327,7 @@ watch(searchTerm, resetActiveIndex)
 
 .option-count {
   flex-shrink: 0;
-  opacity: 0.6;
+  color: var(--color-text-secondary);
   font-size: 0.75rem;
 }
 
