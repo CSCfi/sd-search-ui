@@ -2,7 +2,7 @@ services:
   sd-search-ui:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
       args:
         # Build args, not runtime env — Vite inlines these into the JS bundle
         # at build time. Changing a value requires a rebuild, not just a restart.

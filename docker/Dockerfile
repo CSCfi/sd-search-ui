@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:26-alpine AS build
 
 ENV CI=true
@@ -38,9 +36,13 @@ RUN apk add --no-cache gettext && \
 # Runtime requirement: BACKEND_URL must be provided.
 # The official nginx entrypoint renders /etc/nginx/templates/*.template
 # with envsubst before nginx starts.
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY docker/docker-entrypoint-validate.sh /usr/local/bin/docker-entrypoint-validate.sh
+
+RUN chmod +x /usr/local/bin/docker-entrypoint-validate.sh
 
 EXPOSE 8081
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-validate.sh"]
 CMD ["nginx", "-g", "daemon off;"]
