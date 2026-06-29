@@ -1,4 +1,5 @@
 import type {
+  BeaconFilteringGroup,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconResultSetsResponse,
@@ -35,4 +36,8 @@ export async function postQuery(filters: BeaconQueryFilter[]): Promise<BeaconRes
     },
   })
   return res.data
+}
+
+export async function getFilteringGroups(): Promise<BeaconFilteringGroup[]> {
+  return apiClient.get<BeaconFilteringGroup[]>('/filtering_groups').then((r) => r.data)
 }
