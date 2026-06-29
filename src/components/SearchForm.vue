@@ -62,7 +62,12 @@ async function copySearch() {
     </p>
 
     <form v-else-if="filteringTerms && filteringGroups" class="form-content" @submit.prevent>
-      <div v-for="group in groupedFields" :key="group.id" class="group">
+      <div
+        v-for="group in groupedFields"
+        :key="group.id"
+        class="group"
+        :class="{ 'group--featured': group.id === 'staining' }"
+      >
         <h2 class="group-label">{{ group.label }}</h2>
         <div class="fields-grid">
           <DynamicField
@@ -118,6 +123,14 @@ async function copySearch() {
 
 .group {
   padding-top: 1.5rem;
+}
+
+.group--featured {
+  margin-top: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 1.25rem 1.5rem;
 }
 
 .group-label {
