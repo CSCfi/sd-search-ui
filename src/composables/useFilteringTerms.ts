@@ -1,18 +1,11 @@
 import { useQuery } from '@tanstack/vue-query'
 import { getFilteringTerms } from '@/services/api'
 
-const HIDDEN_FIELD_IDS = new Set(['dataset_title'])
-
 export function useFilteringTerms() {
   return useQuery({
     queryKey: ['filteringTerms'],
     queryFn: getFilteringTerms,
     staleTime: Infinity,
-    select: (data) => ({
-      ...data,
-      response: {
-        filteringTerms: data.response.filteringTerms.filter((f) => !HIDDEN_FIELD_IDS.has(f.id)),
-      },
-    }),
+    select: (data) => data.response.filteringTerms.filter((f) => f.ui_display !== false),
   })
 }
