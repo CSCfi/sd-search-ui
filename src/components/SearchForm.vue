@@ -1,14 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
+import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 
-const { data, isLoading, isError } = useFilteringTerms()
+const {
+  data: filteringTerms,
+  isLoading: isFilteringTermsLoading,
+  isError: isFilteringTermsError,
+} = useFilteringTerms()
+const {
+  data: filteringGroups,
+  isLoading: isFilteringGroupsLoading,
+  isError: isFilteringGroupsError,
+} = useFilteringGroups()
 const store = useSearchStore()
 
 const copied = ref(false)
+
+const groupedFields = computed(() => {
+  return (
+    filteringGroups.value?.map((group) => ({
+      ...group,
+      fields: filteringTerms.value?.filter((field) => field.ui_group === group.id) ?? [],
+    })) ?? []
+  )
+})
 
 async function copySearch() {
   const params = new URLSearchParams(
@@ -29,22 +48,30 @@ async function copySearch() {
 
 <template>
   <section class="search-form">
-    <div v-if="isLoading" class="state-loading" aria-live="polite" aria-label="Loading filters">
+    <div
+      v-if="isFilteringTermsLoading || isFilteringGroupsLoading"
+      class="state-loading"
+      aria-live="polite"
+      aria-label="Loading filters"
+    >
       <Loader :size="24" class="spinner" aria-hidden="true" />
     </div>
 
-    <p v-else-if="isError" class="state-error" role="alert">
+    <p v-else-if="isFilteringTermsError || isFilteringGroupsError" class="state-error" role="alert">
       Service is currently unavailable. Please try again later.
     </p>
 
-    <form v-else-if="data" class="form-content" @submit.prevent>
-      <div class="fields-grid">
-        <DynamicField
-          v-for="field in data.response.filteringTerms"
-          :key="field.id"
-          :field="field"
-          :class="{ 'col-span-4': field.type === 'text' }"
-        />
+    <form v-else-if="filteringTerms && filteringGroups" class="form-content" @submit.prevent>
+      <div v-for="group in groupedFields" :key="group.id" class="group">
+        <h2 class="group-label">{{ group.label }}</h2>
+        <div class="fields-grid">
+          <DynamicField
+            v-for="field in group.fields"
+            :key="field.id"
+            :field="field"
+            :class="{ 'col-span-3': field.type === 'text' }"
+          />
+        </div>
       </div>
 
       <div class="form-actions">
@@ -63,7 +90,7 @@ async function copySearch() {
           @click="copySearch"
         >
           <Link :size="16" aria-hidden="true" />
-          {{ copied ? 'Copied!' : 'Copy filters' }}
+          {{ copied ? 'Copied!' : 'Copy filter URL' }}
         </c-button>
       </div>
     </form>
@@ -87,6 +114,16 @@ async function copySearch() {
   padding: 3rem 0;
   color: var(--color-white);
   text-align: center;
+}
+
+.group {
+  padding-top: 1.5rem;
+}
+
+.group-label {
+  margin-bottom: 0.75rem;
+  color: var(--color-white);
+  font-size: 1rem;
 }
 
 .fields-grid {
@@ -154,7 +191,7 @@ async function copySearch() {
   .fields-grid {
     grid-template-columns: repeat(2, 1fr);
 
-    .col-span-4 {
+    .col-span-3 {
       grid-column: 1 / -1;
     }
   }
@@ -166,7 +203,7 @@ async function copySearch() {
   }
 
   .fields-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 </style>
