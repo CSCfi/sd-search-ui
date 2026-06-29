@@ -8,7 +8,7 @@ const { committedFilters, hasCommittedFilters } = storeToRefs(useSearchStore())
 const { data: filteringTermsData } = useFilteringTerms()
 
 const labelMap = computed<Map<string, string>>(() => {
-  const terms = filteringTermsData.value?.response.filteringTerms ?? []
+  const terms = filteringTermsData.value ?? []
   return new Map(terms.map((t) => [t.id, t.label]))
 })
 
