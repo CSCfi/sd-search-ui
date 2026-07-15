@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/authStore.ts'
 
 // ProblemDetails-like error model used by the UI.
 // FastAPI responses in this project typically provide `detail`,
@@ -14,29 +15,39 @@ const apiClient = axios.create({
   withCredentials: true,
 })
 
-apiClient.interceptors.response.use(undefined, (error) => {
-  if (error.response?.status === 401) {
-    window.location.href = import.meta.env.VITE_LOGOUT_URL
-    return Promise.reject(error)
-  }
+apiClient.interceptors.response.use(
+  (response) => {
+    const authStore = useAuthStore()
+    if (authStore.isLoggedIn !== true) {
+      authStore.setLoggedIn(true)
+    }
 
-  if (!axios.isAxiosError(error)) {
-    return Promise.reject({
-      status: 0,
-      title: error instanceof Error ? error.message : 'Unknown error',
-    } satisfies ApiError)
-  }
+    return response
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      window.location.href = import.meta.env.VITE_LOGOUT_URL
+      return Promise.reject(error)
+    }
 
-  const detail =
-    typeof error.response?.data?.detail === 'string' ? error.response.data.detail : undefined
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject({
+        status: 0,
+        title: error instanceof Error ? error.message : 'Unknown error',
+      } satisfies ApiError)
+    }
 
-  const apiError: ApiError = {
-    status: error.response?.status ?? 0,
-    title: error.response?.data?.title ?? error.response?.statusText ?? 'Unknown error',
-    detail,
-  }
+    const detail =
+      typeof error.response?.data?.detail === 'string' ? error.response.data.detail : undefined
 
-  return Promise.reject(apiError)
-})
+    const apiError: ApiError = {
+      status: error.response?.status ?? 0,
+      title: error.response?.data?.title ?? error.response?.statusText ?? 'Unknown error',
+      detail,
+    }
+
+    return Promise.reject(apiError)
+  },
+)
 
 export default apiClient
