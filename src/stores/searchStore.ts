@@ -3,9 +3,12 @@ import { computed, ref } from 'vue'
 import { router } from '@/router'
 import type { BeaconQueryFilter } from '@/types/beacon.ts'
 
+export type DatasetType = 'all' | 'clinical' | 'nonclinical'
+
 export const useSearchStore = defineStore('search', () => {
   const draftFilters = ref<BeaconQueryFilter[]>([])
   const committedFilters = ref<BeaconQueryFilter[]>([])
+  const datasetType = ref<DatasetType>('all')
 
   const setFilter = (
     id: string,
@@ -34,21 +37,30 @@ export const useSearchStore = defineStore('search', () => {
 
   const hasCommittedFilters = computed(() => committedFilters.value.length > 0)
 
+  const setDatasetType = (type: DatasetType) => {
+    datasetType.value = type
+  }
+
   const clearFilters = () => {
     draftFilters.value = []
     committedFilters.value = []
+    datasetType.value = 'all'
     router.replace({ query: {} })
   }
 
   const commit = () => {
     committedFilters.value = [...draftFilters.value]
+    const filterEntries = Object.fromEntries(
+      committedFilters.value.map((f) => [
+        f.id,
+        Array.isArray(f.value) ? f.value.join(',') : f.value,
+      ]),
+    )
     router.replace({
-      query: Object.fromEntries(
-        committedFilters.value.map((f) => [
-          f.id,
-          Array.isArray(f.value) ? f.value.join(',') : f.value,
-        ]),
-      ),
+      query: {
+        ...filterEntries,
+        ...(datasetType.value !== 'all' ? { tab: datasetType.value } : {}),
+      },
     })
   }
 
@@ -68,7 +80,9 @@ export const useSearchStore = defineStore('search', () => {
     draftFilters,
     committedFilters,
     hasCommittedFilters,
+    datasetType,
     setFilter,
+    setDatasetType,
     clearFilters,
     commit,
     initFromUrl,

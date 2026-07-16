@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
+import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
+import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
@@ -19,6 +21,11 @@ const {
 const store = useSearchStore()
 
 const copied = ref(false)
+
+const activeTab = computed({
+  get: () => store.datasetType,
+  set: (type) => store.setDatasetType(type),
+})
 
 const groupedFields = computed(() => {
   return (
@@ -78,6 +85,19 @@ async function copySearch() {
           />
         </div>
       </div>
+
+      <FilterTabGroup v-model="activeTab">
+        <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">
+          <FilterTabPanel tab="clinical" :active-tab="activeTab">
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem">
+              Clinical filters — coming soon
+            </p>
+          </FilterTabPanel>
+          <FilterTabPanel tab="nonclinical" :active-tab="activeTab">
+            <p style="color: #f9a866; font-size: 0.875rem">Non-clinical filters — coming soon</p>
+          </FilterTabPanel>
+        </div>
+      </FilterTabGroup>
 
       <div class="form-actions">
         <c-button class="btn-search" type="submit" @click="store.commit()">
@@ -143,6 +163,22 @@ async function copySearch() {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
+}
+
+.tab-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+
+  &.tab-columns--full > :deep(.filter-tab-pane) {
+    grid-column: 1 / -1;
+  }
+}
+
+@include tablet {
+  .tab-columns {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .form-actions {
