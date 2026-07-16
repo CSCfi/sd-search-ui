@@ -21,6 +21,7 @@ const parsed: BeaconQueryFilter[] = []
 
 for (const [id, raw] of entries) {
   if (typeof raw !== 'string' || raw === '') continue
+  if (id === 'tab') continue
   parsed.push({
     id,
     value: parseFilterValue(raw),
@@ -32,6 +33,11 @@ for (const [id, raw] of entries) {
 if (parsed.length > 0) {
   store.initFromUrl(parsed)
   resolveLabelsFromUrl(parsed)
+}
+
+const tabParam = route.query.tab
+if (tabParam === 'clinical' || tabParam === 'nonclinical') {
+  store.setDatasetType(tabParam)
 }
 </script>
 
