@@ -2,8 +2,6 @@
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
-const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
-const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
 </script>
 
 <template>
@@ -16,10 +14,10 @@ const logoutUrl = import.meta.env.VITE_LOGOUT_URL ?? '#'
       <img src="@/assets/images/bg-logo.png" alt="" class="app-logo" />
     </RouterLink>
     <nav class="app-nav" aria-label="Main navigation">
-      <a v-if="!auth.isLoggedIn" :href="loginUrl">
+      <a v-if="!auth.isLoggedIn" href="/login">
         <c-button>Login</c-button>
       </a>
-      <a v-else :href="logoutUrl">
+      <a v-else href="/logout">
         <c-button outlined>Logout</c-button>
       </a>
     </nav>
