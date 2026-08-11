@@ -13,6 +13,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      // Dev equivalents of the nginx proxies in docker/nginx.conf.
+      '/login': 'http://localhost:8000',
+      '/logout': 'http://localhost:8000',
+      '/callback': 'http://localhost:8000',
     },
   },
   plugins: [

@@ -41,6 +41,7 @@ these four paths.
 sets it except a real API response, so anything that gates on it must resolve that unknown state
 first, or it will treat a valid session as logged-out on every fresh page load.
 
+Session check is skipped if `VITE_AUTH_BYPASS` is `"true"` (local dev only).
 ```ts
 // stores/authStore.ts
 const isLoggedIn = ref<boolean | null>(null)
@@ -49,6 +50,10 @@ const isLoggedIn = ref<boolean | null>(null)
 // redirects to /logout on 401, which would race with the router guard's own redirect to /login
 // on this same check. This call only resolves isLoggedIn; the guard decides what to do next.
 async function checkSession() {
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+        setLoggedIn(true)
+        return
+    }
   try {
     await axios.get('/filtering_terms', { baseURL: '/api', withCredentials: true })
     setLoggedIn(true)
