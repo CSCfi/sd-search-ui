@@ -28,11 +28,15 @@ export async function getSuggestions(
     .then((r) => r.data)
 }
 
-export async function postQuery(filters: BeaconQueryFilter[]): Promise<BeaconResultSetsResponse> {
+export async function postQuery(
+  filters: BeaconQueryFilter[],
+  scope?: string,
+): Promise<BeaconResultSetsResponse> {
   const res = await apiClient.post<BeaconResultSetsResponse>('/query', {
     query: {
       filters,
       requestedGranularity: 'record',
+      ...(scope ? { requestedScope: scope } : {}),
     },
   })
   return res.data
