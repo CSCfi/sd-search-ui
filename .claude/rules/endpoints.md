@@ -112,7 +112,6 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
                     rootTerms?: string[] | null
                     allowedTerms?: string[] | null
                 }
-                ontologyConcept?: string | string[] // root SNOMED concept(s)
                 controlledValues?: string[]         // only for type="controlledValue"
             }
         ]
