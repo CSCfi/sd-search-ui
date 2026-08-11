@@ -29,22 +29,30 @@ const router = createRouter({
 /**
  * Client-side UX guard only — redirects to login when no authenticated
  * session is known. "Not known" covers both the initial page load (before
- * any API response has confirmed the session) and a confirmed 401.
+ * the session has been checked) and a confirmed 401.
  *
  * This is NOT a security boundary. Real authentication is enforced
  * server-side — all API calls use withCredentials and the backend returns
  * 401 for invalid sessions, which triggers a logout redirect via the Axios
  * interceptor in apiClient.ts.
  */
-router.beforeEach(() => {
-  if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth || import.meta.env.VITE_AUTH_BYPASS === 'true') {
     return true
   }
 
   const authStore = useAuthStore()
 
+  // isLoggedIn is null until the session has been checked at least once —
+  // a fresh page load (e.g. landing back on /search right after the OIDC
+  // callback) must not be treated as logged-out before that check runs, or
+  // it redirects to login again even with a valid session cookie.
+  if (authStore.isLoggedIn === null) {
+    await authStore.checkSession()
+  }
+
   if (!authStore.isLoggedIn) {
-    window.location.href = import.meta.env.VITE_LOGIN_URL
+    window.location.href = '/login'
     return false
   }
 })

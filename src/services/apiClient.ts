@@ -11,7 +11,7 @@ export interface ApiError {
 }
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: '/api',
   withCredentials: true,
 })
 
@@ -26,7 +26,7 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      window.location.href = import.meta.env.VITE_LOGOUT_URL
+      window.location.href = '/logout'
       return Promise.reject(error)
     }
 

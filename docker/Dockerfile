@@ -10,14 +10,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY . .
 
-# Vite inlines these at build time — they must be build args, not runtime env vars.
-ARG VITE_API_BASE_URL
-ARG VITE_LOGIN_URL
-ARG VITE_LOGOUT_URL
-
-RUN test -n "$VITE_LOGIN_URL" \
- && test -n "$VITE_LOGOUT_URL" \
- && pnpm build
+RUN pnpm build
 
 FROM nginx:1.31-alpine AS serve
 
@@ -29,6 +22,7 @@ FROM nginx:1.31-alpine AS serve
 # `/etc/nginx/conf.d` must also be writable because startup renders
 # `app.conf.template` to `default.conf` there via envsubst.
 RUN apk add --no-cache gettext && \
+    rm -f /etc/nginx/conf.d/default.conf && \
     chmod g+rwx /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d && \
     chown nginx:root /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d && \
     sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf
