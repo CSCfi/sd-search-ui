@@ -19,7 +19,6 @@ export interface BeaconFilteringTerm {
     rootTerms?: string[] | null
     allowedTerms?: string[] | null
   }
-  ontologyConcept?: string | string[]
   controlledValues?: string[]
 }
 
