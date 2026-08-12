@@ -7,12 +7,11 @@ alwaysApply: false
 
 ## Base URL
 
-```
-VITE_API_BASE_URL (env)
-http://localhost:8000  (dev default)
-```
+Always `/api` on this app's own origin — fixed, not configurable. nginx (`docker/nginx.conf`)
+proxies it to the real backend (`BACKEND_URL`) server-side. See `auth.md` for why this must stay
+same-origin rather than pointing at the backend's own hostname directly.
 
-Swagger UI: `http://localhost:8000/docs`
+Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxied through this app.
 
 ## Endpoints
 
@@ -113,7 +112,6 @@ Swagger UI: `http://localhost:8000/docs`
                     rootTerms?: string[] | null
                     allowedTerms?: string[] | null
                 }
-                ontologyConcept?: string | string[] // root SNOMED concept(s)
                 controlledValues?: string[]         // only for type="controlledValue"
             }
         ]

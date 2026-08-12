@@ -1,3 +1,5 @@
+// Filtering terms
+
 export type BeaconFilteringTermType =
   | 'text'
   | 'keyword'
@@ -16,10 +18,7 @@ export interface BeaconFilteringTerm {
   scopes: string[]
   ontology?: {
     id: string
-    rootTerms?: string[] | null
-    allowedTerms?: string[] | null
   }
-  ontologyConcept?: string | string[]
   controlledValues?: string[]
 }
 
@@ -40,6 +39,31 @@ export interface BeaconFilteringGroup {
   description?: string
 }
 
+export interface BeaconFilteringScope {
+  id: string
+  label: string
+  description: string
+}
+
+export interface BeaconFilteringQualifier {
+  id: string
+  label: string
+  description: string
+  values: string[]
+  groups: string[]
+}
+
+// Query
+
+export interface BeaconQueryRequest {
+  query: {
+    filters: BeaconQueryFilter[]
+    requestedGranularity: 'boolean' | 'count' | 'record'
+    requestedScope?: string
+    requestedQualifiers?: Record<string, string[]>
+  }
+}
+
 export interface BeaconQueryFilter {
   id: string
   value: string | string[]
@@ -47,6 +71,8 @@ export interface BeaconQueryFilter {
   includeDescendantTerms?: boolean
   label?: string[]
 }
+
+// Results
 
 export interface BeaconResultSetResult {
   datasetId: string
@@ -81,6 +107,8 @@ export interface BeaconResultSetsResponse {
   }
   response: BeaconResultSets
 }
+
+// Field values
 
 export interface FieldValue {
   value: string

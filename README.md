@@ -31,36 +31,51 @@ pnpm dev
 
 Multi-stage build:
 
-1. **build** (`node:26-alpine`) — installs dependencies with pnpm and runs `pnpm build`. The `VITE_*` variables are passed as `ARG`s because Vite inlines them at build time; they cannot be injected at runtime.
+1. **build** (`node:26-alpine`) — installs dependencies with pnpm and runs `pnpm build`.
 2. **serve** (`nginx:1.31-alpine`) — copies the built `dist/` into nginx. Configured for Rahti/OpenShift: the nginx process runs as an arbitrary UID in the root group (no fixed user), and listens on port **8081** (non-root cannot bind ports below 1024).
 
 `nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html` itself.
+
+The API base URL and the login/logout URLs are not configurable — the app always calls `/api`, `/login`,
+and `/logout` on its own origin, and relies on nginx (below) to proxy those through to the real backend.
+This isn't a placeholder default; it's the only origin that works, because the backend's OIDC `/callback`
+sets a host-only session cookie that must be set on this same origin to reach later `/api/` calls.
+
+### Building for deployment
+
+```bash
+docker build --platform=linux/amd64 \
+  -f docker/Dockerfile \
+  -t <image-registry-url>/sd-search-ui:latest .
+
+docker push <image-registry-url>/sd-search-ui:latest
+```
+
+Pushing under the `sd-search-ui:latest` tag is enough to deploy when 
+OpenShift's ImageStream triggering rollout automatically.
+
 
 ### Running with docker-compose
 
 ```bash
 cp .env.example .env
-# Fill in VITE_API_BASE_URL, VITE_LOGIN_URL, VITE_LOGOUT_URL
+# Fill in BACKEND_URL if the default doesn't reach your backend
 
 docker compose up --build
 ```
 
 The app is served at `http://localhost:8081`.
 
-`VITE_API_BASE_URL` defaults to `/api` if not set — useful when the search API runs behind the same reverse proxy. All other variables are required.
-
 ### Runtime container environment
 
-This image has two kinds of configuration:
-
-1. **Build-time `VITE_*` variables** — used by Vite and inlined into the frontend bundle during `docker build`
-2. **Runtime container variables** — used by nginx when the container starts
-
-The nginx `/api/` proxy target is configured at runtime. The official `nginx:1.31-alpine` image renders `nginx.conf` from `/etc/nginx/templates/default.conf.template` using environment variables before nginx starts.
+Unlike the API base/login/logout URLs above, the nginx proxy *target* — where `/api/`, `/login`,
+`/callback`, `/logout` actually get forwarded to — is runtime configuration, not baked into the image.
+The official `nginx:1.31-alpine` image renders `nginx.conf` from `/etc/nginx/templates/default.conf.template`
+using environment variables before nginx starts.
 
 | Variable | Required | Description |
 |---|---:|---|
-| `BACKEND_URL` | yes | Base URL for the backend proxied from `/api/` |
+| `BACKEND_URL` | yes | Base URL for the backend proxied from `/api/`, `/login`, `/callback`, `/logout` |
 
 `BACKEND_URL` is referenced in `nginx.conf`:
 
@@ -69,6 +84,8 @@ location /api/ {
     proxy_pass ${BACKEND_URL}/;
 }
 ```
+
+`/login`, `/callback`, and `/logout` are proxied the same way, unprefixed.
 
 Example:
 
@@ -82,9 +99,8 @@ docker run --rm -p 8081:8081 \
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Search API base URL |
-| `VITE_LOGIN_URL` | LifeScience AAI login redirect URL |
-| `VITE_LOGOUT_URL` | Logout and session clear URL |
+| `VITE_AUTH_BYPASS` | Bypass the router's auth guard, for local development |
+| `BACKEND_URL` | Runtime nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
 
 ## Project Structure
 

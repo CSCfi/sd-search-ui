@@ -2,6 +2,7 @@ import type {
   BeaconFilteringGroup,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
+  BeaconQueryRequest,
   BeaconResultSetsResponse,
   FieldValue,
 } from '@/types/beacon'
@@ -28,13 +29,19 @@ export async function getSuggestions(
     .then((r) => r.data)
 }
 
-export async function postQuery(filters: BeaconQueryFilter[]): Promise<BeaconResultSetsResponse> {
-  const res = await apiClient.post<BeaconResultSetsResponse>('/query', {
+export async function postQuery(
+  filters: BeaconQueryFilter[],
+  scope?: string,
+): Promise<BeaconResultSetsResponse> {
+  const body: BeaconQueryRequest = {
     query: {
       filters,
       requestedGranularity: 'record',
+      ...(scope ? { requestedScope: scope } : {}),
     },
-  })
+  }
+
+  const res = await apiClient.post<BeaconResultSetsResponse>('/query', body)
   return res.data
 }
 

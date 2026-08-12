@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import loginButton from '@/assets/images/button-login.svg'
-const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
 </script>
 
 <template>
@@ -13,7 +12,7 @@ const loginUrl = import.meta.env.VITE_LOGIN_URL ?? '#'
           Regulation-compliant, quality-controlled and community-based platform, in which both
           large-scale data and Artificial Intelligence (AI) algorithms will coexist.
         </p>
-        <a :href="loginUrl" class="login-button">
+        <a href="/login" class="login-button">
           <img :src="loginButton" alt="Login with LifeScience AAI" />
         </a>
       </div>
