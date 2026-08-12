@@ -24,7 +24,7 @@ const groupedFields = computed(() => {
   return (
     filteringGroups.value?.map((group) => ({
       ...group,
-      fields: filteringTerms.value?.filter((field) => field.ui_group === group.id) ?? [],
+      fields: filteringTerms.value?.filter((field) => field.group === group.id) ?? [],
     })) ?? []
   )
 })
