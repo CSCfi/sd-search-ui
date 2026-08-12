@@ -3,6 +3,7 @@ import type {
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconQueryRequest,
+  BeaconFilteringScope,
   BeaconResultSetsResponse,
   FieldValue,
 } from '@/types/beacon'
@@ -47,4 +48,8 @@ export async function postQuery(
 
 export async function getFilteringGroups(): Promise<BeaconFilteringGroup[]> {
   return apiClient.get<BeaconFilteringGroup[]>('/filtering_groups').then((r) => r.data)
+}
+
+export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {
+  return apiClient.get<BeaconFilteringScope[]>('/filtering_scopes').then((r) => r.data)
 }

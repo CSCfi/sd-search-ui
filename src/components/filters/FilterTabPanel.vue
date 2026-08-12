@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { DatasetType } from '@/stores/searchStore'
 
 const props = defineProps<{
-  tab: 'clinical' | 'nonclinical'
+  tab: string
   activeTab: DatasetType
 }>()
 

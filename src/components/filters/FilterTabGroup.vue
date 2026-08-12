@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import type { DatasetType } from '@/stores/searchStore'
+import type { BeaconFilteringScope } from '@/types/beacon'
 
-defineProps<{ modelValue: DatasetType }>()
+const props = defineProps<{ modelValue: DatasetType; scopes: BeaconFilteringScope[] }>()
 const emit = defineEmits<{ 'update:modelValue': [DatasetType] }>()
 
-const tabs: { id: DatasetType; label: string }[] = [
+const tabs = computed<{ id: DatasetType; label: string }[]>(() => [
   { id: 'all', label: 'All data' },
-  { id: 'clinical', label: 'Clinical' },
-  { id: 'nonclinical', label: 'Non-clinical' },
-]
+  ...props.scopes.map((s) => ({ id: s.id as DatasetType, label: s.label })),
+])
 
 const PANEL_ID = 'filter-tab-panel'
 
@@ -18,14 +18,16 @@ const stripRef = useTemplateRef<HTMLDivElement>('strip')
 function onTabKeydown(event: KeyboardEvent, index: number) {
   let nextIndex: number | null = null
 
-  if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length
-  else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length
+  const count = tabs.value.length
+
+  if (event.key === 'ArrowRight') nextIndex = (index + 1) % count
+  else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + count) % count
   else if (event.key === 'Home') nextIndex = 0
-  else if (event.key === 'End') nextIndex = tabs.length - 1
+  else if (event.key === 'End') nextIndex = count - 1
   else return
 
   event.preventDefault()
-  const next = tabs[nextIndex]
+  const next = tabs.value[nextIndex]
   if (!next) return
   emit('update:modelValue', next.id)
 
@@ -105,18 +107,17 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
     outline-offset: -2px;
   }
 
+  // Default active styling, so a scope id with no color rule below still reads as selected.
   &.tab--active {
-    &.tab--all {
-      border-bottom-color: #ffffff;
-      color: #ffffff;
-    }
+    border-bottom-color: #ffffff;
+    color: #ffffff;
 
     &.tab--clinical {
       border-bottom-color: rgba(120, 140, 255, 0.9);
       color: #ffffff;
     }
 
-    &.tab--nonclinical {
+    &.tab--non_clinical {
       border-bottom-color: #dd7a33;
       color: #f9a866;
     }
