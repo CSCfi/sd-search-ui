@@ -6,11 +6,17 @@ import { storeToRefs } from 'pinia'
 
 export function useSearch() {
   const searchStore = useSearchStore()
-  const { committedFilters, hasCommittedFilters } = storeToRefs(searchStore)
+  const { committedFilters, hasCommittedFilters, committedDatasetType } = storeToRefs(searchStore)
 
   return useQuery<BeaconResultSetsResponse>({
-    queryKey: ['search', committedFilters],
-    queryFn: () => postQuery(committedFilters.value),
+    queryKey: ['search', committedFilters, committedDatasetType],
+    // 'all' is the frontend's "no scope" tab — the backend has no such scope, so the field is
+    // omitted rather than sent.
+    queryFn: () =>
+      postQuery(
+        committedFilters.value,
+        committedDatasetType.value === 'all' ? undefined : committedDatasetType.value,
+      ),
     enabled: hasCommittedFilters,
   })
 }

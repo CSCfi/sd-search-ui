@@ -38,3 +38,17 @@ a {
     text-decoration: underline;
   }
 }
+
+// Visible to screen readers only — for table captions, icon-only button names, and
+// aria-live regions that have a visual equivalent elsewhere on the page.
+.sr-only {
+  position: absolute;
+  margin: -1px;
+  padding: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
