@@ -113,13 +113,13 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
     color: #ffffff;
 
     &.tab--clinical {
-      border-bottom-color: rgba(120, 140, 255, 0.9);
+      border-bottom-color: rgb(var(--color-scope-clinical-rgb) / 0.9);
       color: #ffffff;
     }
 
     &.tab--non_clinical {
-      border-bottom-color: #dd7a33;
-      color: #f9a866;
+      border-bottom-color: rgb(var(--color-scope-non-clinical-rgb));
+      color: rgb(var(--color-scope-non-clinical-light-rgb));
     }
   }
 }

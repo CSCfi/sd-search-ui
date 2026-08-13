@@ -175,10 +175,11 @@ async function copySearch() {
             v-for="scope in scopes"
             :key="scope.id"
             :tab="scope.id"
+            :label="scope.label"
             :active-tab="activeTab"
           >
             <div v-for="group in scopedGroups(scope.id)" :key="group.id" class="group">
-              <h2 class="group-label">{{ group.label }}</h2>
+              <h3 class="group-label">{{ group.label }}</h3>
               <div class="fields-grid">
                 <DynamicField
                   v-for="field in group.fields"
