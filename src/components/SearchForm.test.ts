@@ -173,7 +173,7 @@ const groupByLabel = (wrapper: Wrapper, label: string) => {
 // Panels are keyed by their scope class rather than by index, so a reordered scope list cannot
 // make an assertion silently target the wrong panel.
 const panel = (wrapper: Wrapper, scope: string) => {
-  const pane = wrapper.find(`.filter-tab-pane--${scope}`)
+  const pane = wrapper.find(`.filter-tab-panel--${scope}`)
   if (!pane.exists()) throw new Error(`no panel rendered for scope "${scope}"`)
   return pane
 }
@@ -277,15 +277,15 @@ describe('SearchForm — scope tabs', () => {
 
   it('borders a scope panel whose group carries the flag', () => {
     const wrapper = mountForm()
-    expect(panel(wrapper, 'clinical').classes()).toContain('filter-tab-pane--border')
-    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-pane--border')
+    expect(panel(wrapper, 'clinical').classes()).toContain('filter-tab-panel--border')
+    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--border')
   })
 
   it('keys the panel border colour on the scope id', () => {
     const wrapper = mountForm()
     // The accent class is per scope; clinical keeps the default border colour.
-    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-pane--non_clinical')
-    expect(panel(wrapper, 'clinical').classes()).not.toContain('filter-tab-pane--non_clinical')
+    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--non_clinical')
+    expect(panel(wrapper, 'clinical').classes()).not.toContain('filter-tab-panel--non_clinical')
   })
 
   it('resets a ?tab= value that matches no fetched scope', () => {

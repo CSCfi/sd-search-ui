@@ -264,7 +264,7 @@ async function copySearch() {
   grid-template-columns: 1fr;
   gap: 1.5rem;
 
-  &.tab-columns--full > :deep(.filter-tab-pane) {
+  &.tab-columns--full > :deep(.filter-tab-panel) {
     grid-column: 1 / -1;
   }
 }
