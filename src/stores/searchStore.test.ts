@@ -104,6 +104,77 @@ describe('searchStore — commit', () => {
   })
 })
 
+describe('searchStore — datasetType scope', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('defaults both draft and committed scope to all', () => {
+    const store = useSearchStore()
+    expect(store.datasetType).toBe('all')
+    expect(store.committedDatasetType).toBe('all')
+  })
+
+  it('changing the tab alone does not change the committed scope', () => {
+    const store = useSearchStore()
+    store.setDatasetType('clinical')
+    expect(store.datasetType).toBe('clinical')
+    expect(store.committedDatasetType).toBe('all')
+  })
+
+  it('commit copies datasetType to committedDatasetType', () => {
+    const store = useSearchStore()
+    store.setDatasetType('non_clinical')
+    store.commit()
+    expect(store.committedDatasetType).toBe('non_clinical')
+  })
+
+  it('initFromUrl sets both scopes when a scope is given', () => {
+    const store = useSearchStore()
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }], 'clinical')
+    expect(store.datasetType).toBe('clinical')
+    expect(store.committedDatasetType).toBe('clinical')
+  })
+
+  it('initFromUrl leaves the scope untouched when none is given', () => {
+    const store = useSearchStore()
+    store.setDatasetType('clinical')
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(store.datasetType).toBe('clinical')
+    expect(store.committedDatasetType).toBe('all')
+  })
+})
+
+describe('searchStore — removeFilters', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('drops the given ids from draftFilters', () => {
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setFilter('finding', ['12710003'])
+    store.removeFilters(['finding'])
+    expect(store.draftFilters.map((f) => f.id)).toEqual(['sex'])
+  })
+
+  it('leaves committedFilters untouched', () => {
+    const store = useSearchStore()
+    store.setFilter('finding', ['12710003'])
+    store.commit()
+    store.removeFilters(['finding'])
+    expect(store.draftFilters).toEqual([])
+    expect(store.committedFilters.map((f) => f.id)).toEqual(['finding'])
+  })
+
+  it('ignores ids that are not set', () => {
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.removeFilters(['diagnosis'])
+    expect(store.draftFilters.map((f) => f.id)).toEqual(['sex'])
+  })
+})
+
 describe('searchStore — clearFilters', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -130,5 +201,14 @@ describe('searchStore — clearFilters', () => {
     store.commit()
     store.clearFilters()
     expect(store.hasCommittedFilters).toBe(false)
+  })
+
+  it('resets both scopes to all', () => {
+    const store = useSearchStore()
+    store.setDatasetType('non_clinical')
+    store.commit()
+    store.clearFilters()
+    expect(store.datasetType).toBe('all')
+    expect(store.committedDatasetType).toBe('all')
   })
 })

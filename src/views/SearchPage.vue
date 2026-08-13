@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 import SearchForm from '@/components/SearchForm.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/ResultsTable.vue'
-import { useSearchStore } from '@/stores/searchStore'
+import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
 import type { BeaconQueryFilter } from '@/types/beacon'
 
@@ -21,6 +21,7 @@ const parsed: BeaconQueryFilter[] = []
 
 for (const [id, raw] of entries) {
   if (typeof raw !== 'string' || raw === '') continue
+  if (id === 'tab') continue
   parsed.push({
     id,
     value: parseFilterValue(raw),
@@ -29,9 +30,15 @@ for (const [id, raw] of entries) {
   })
 }
 
+// Unvalidated external string — an id that matches no backend scope is reset to 'all' by
+// SearchForm once /filtering_scopes resolves.
+const tabParam = typeof route.query.tab === 'string' ? (route.query.tab as DatasetType) : undefined
+
 if (parsed.length > 0) {
-  store.initFromUrl(parsed)
+  store.initFromUrl(parsed, tabParam)
   resolveLabelsFromUrl(parsed)
+} else if (tabParam) {
+  store.setDatasetType(tabParam)
 }
 </script>
 
