@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
 import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
-import { useSearchStore } from '@/stores/searchStore'
+import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
+import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { useFieldScopes } from '@/composables/useFieldScopes'
+import type { BeaconFilteringTerm } from '@/types/beacon'
 
 const {
   data: filteringTerms,
@@ -18,14 +21,67 @@ const {
   isLoading: isFilteringGroupsLoading,
   isError: isFilteringGroupsError,
 } = useFilteringGroups()
+const {
+  data: filteringScopes,
+  isLoading: isFilteringScopesLoading,
+  isError: isFilteringScopesError,
+} = useFilteringScopes()
+const { data: fieldScopes } = useFieldScopes()
 const store = useSearchStore()
 
 const copied = ref(false)
+const scopeAnnouncement = ref('')
 
-const activeTab = computed({
+const scopes = computed(() => filteringScopes.value ?? [])
+const scopeIds = computed(() => scopes.value.map((s) => s.id))
+
+// A field is shared only if it exists in every scope, so it belongs above the tabs.
+// This relies on the loading guard below: when the scope list is empty, `every()` would
+// otherwise treat every field as shared.
+const isShared = (field: BeaconFilteringTerm) =>
+  scopeIds.value.every((id) => field.scopes.includes(id))
+
+const fieldLabel = (id: string) => filteringTerms.value?.find((f) => f.id === id)?.label ?? id
+
+const activeTab = computed<DatasetType>({
   get: () => store.datasetType,
-  set: (type) => store.setDatasetType(type),
+  set: (type) => {
+    // Filters for fields outside the new scope are dropped from the draft. Committed filters
+    // are left alone, so the visible results keep matching the search that produced them.
+    const dropped =
+      type === 'all'
+        ? []
+        : store.draftFilters.filter((f) => {
+            const fieldScope = fieldScopes.value?.get(f.id)
+            return fieldScope !== undefined && !fieldScope.includes(type)
+          })
+
+    store.setDatasetType(type)
+
+    if (dropped.length > 0) {
+      store.removeFilters(dropped.map((f) => f.id))
+      scopeAnnouncement.value = `${dropped.length} filter${
+        dropped.length === 1 ? '' : 's'
+      } removed, not available in this dataset type: ${dropped.map((f) => fieldLabel(f.id)).join(', ')}`
+    } else {
+      scopeAnnouncement.value = ''
+    }
+  },
 })
+
+// A hand-edited or stale `?tab=` value that matches no backend scope would hide every panel
+// and send a bogus requestedScope.
+// `immediate` matters: with staleTime Infinity the scope list is already cached on a second
+// mount, so waiting for a change would never run this.
+watch(
+  scopeIds,
+  (ids) => {
+    if (ids.length > 0 && store.datasetType !== 'all' && !ids.includes(store.datasetType)) {
+      store.resetScope()
+    }
+  },
+  { immediate: true },
+)
 
 const groupedFields = computed(() => {
   return (
@@ -35,6 +91,23 @@ const groupedFields = computed(() => {
     })) ?? []
   )
 })
+
+const sharedGroups = computed(() =>
+  groupedFields.value
+    .map((group) => ({ ...group, fields: group.fields.filter(isShared) }))
+    .filter((group) => group.fields.length > 0),
+)
+
+// Fields shown inside a specific scope panel: exclude shared fields so they render only once
+// above the tabs, then keep the remaining fields available in this scope.
+// Splitting per field rather than per group lets mixed groups render each field in one place.
+const scopedGroups = (scope: string) =>
+  groupedFields.value
+    .map((group) => ({
+      ...group,
+      fields: group.fields.filter((f) => !isShared(f) && f.scopes.includes(scope)),
+    }))
+    .filter((group) => group.fields.length > 0)
 
 async function copySearch() {
   const params = new URLSearchParams(
@@ -56,7 +129,7 @@ async function copySearch() {
 <template>
   <section class="search-form">
     <div
-      v-if="isFilteringTermsLoading || isFilteringGroupsLoading"
+      v-if="isFilteringTermsLoading || isFilteringGroupsLoading || isFilteringScopesLoading"
       class="state-loading"
       aria-live="polite"
       aria-label="Loading filters"
@@ -64,13 +137,21 @@ async function copySearch() {
       <Loader :size="24" class="spinner" aria-hidden="true" />
     </div>
 
-    <p v-else-if="isFilteringTermsError || isFilteringGroupsError" class="state-error" role="alert">
+    <p
+      v-else-if="isFilteringTermsError || isFilteringGroupsError || isFilteringScopesError"
+      class="state-error"
+      role="alert"
+    >
       Service is currently unavailable. Please try again later.
     </p>
 
-    <form v-else-if="filteringTerms && filteringGroups" class="form-content" @submit.prevent>
+    <form
+      v-else-if="filteringTerms && filteringGroups && filteringScopes"
+      class="form-content"
+      @submit.prevent
+    >
       <div
-        v-for="group in groupedFields"
+        v-for="group in sharedGroups"
         :key="group.id"
         class="group"
         :class="{ 'group--featured': group.id === 'staining' }"
@@ -86,15 +167,27 @@ async function copySearch() {
         </div>
       </div>
 
-      <FilterTabGroup v-model="activeTab">
+      <p class="sr-only" role="status" aria-live="polite">{{ scopeAnnouncement }}</p>
+
+      <FilterTabGroup v-model="activeTab" :scopes="scopes">
         <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">
-          <FilterTabPanel tab="clinical" :active-tab="activeTab">
-            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem">
-              Clinical filters — coming soon
-            </p>
-          </FilterTabPanel>
-          <FilterTabPanel tab="nonclinical" :active-tab="activeTab">
-            <p style="color: #f9a866; font-size: 0.875rem">Non-clinical filters — coming soon</p>
+          <FilterTabPanel
+            v-for="scope in scopes"
+            :key="scope.id"
+            :tab="scope.id"
+            :active-tab="activeTab"
+          >
+            <div v-for="group in scopedGroups(scope.id)" :key="group.id" class="group">
+              <h2 class="group-label">{{ group.label }}</h2>
+              <div class="fields-grid">
+                <DynamicField
+                  v-for="field in group.fields"
+                  :key="field.id"
+                  :field="field"
+                  :class="{ 'col-span-3': field.type === 'text' }"
+                />
+              </div>
+            </div>
           </FilterTabPanel>
         </div>
       </FilterTabGroup>
