@@ -37,6 +37,7 @@ export interface BeaconFilteringGroup {
   id: string
   label: string
   description?: string
+  border?: boolean
 }
 
 export interface BeaconFilteringScope {
