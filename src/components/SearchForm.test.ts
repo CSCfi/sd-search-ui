@@ -9,9 +9,9 @@ import type {
   BeaconFilteringTerm,
 } from '@/types/beacon'
 
-// Mirrors the real backend: every field is either in both scopes or in exactly one.
-// `animal_species` is deliberately absent — it is `ui_display: false`, so it never reaches
-// the visible term list, but it still appears in the field-scope map below.
+// Mirrors the real backend: every field is either in both scopes or in exactly one, and the
+// `ui_group` values are the backend's own — `animal_species` sits in `subject` even though it
+// only exists in the non-clinical scope.
 const TERMS: BeaconFilteringTerm[] = [
   {
     id: 'dataset_description',
@@ -46,29 +46,41 @@ const TERMS: BeaconFilteringTerm[] = [
     scopes: ['clinical'],
   },
   {
+    id: 'animal_species',
+    type: 'ontology',
+    label: 'Biological species',
+    description: '',
+    // Deliberately `subject`, not `non_clinical` — as in the backend. It must still render
+    // flat in the non-clinical panel, with no "Subject & specimen" heading of its own.
+    ui_group: 'subject',
+    scopes: ['non_clinical'],
+  },
+  {
     id: 'finding',
     type: 'ontology',
     label: 'Finding',
     description: '',
-    ui_group: 'finding',
+    ui_group: 'non_clinical',
     scopes: ['non_clinical'],
   },
   {
     id: 'finding_severity',
     type: 'ontology',
-    label: 'Finding severity',
+    label: 'Severity',
     description: '',
-    ui_group: 'finding',
+    ui_group: 'non_clinical',
     scopes: ['non_clinical'],
   },
 ]
 
+// Mirrors the backend: `clinical` / `non_clinical` are scope panels, and only some groups
+// carry the `border` flag.
 const GROUPS: BeaconFilteringGroup[] = [
-  { id: 'description', label: 'Description' },
-  { id: 'subject', label: 'Subject & specimen' },
-  { id: 'staining', label: 'Staining' },
-  { id: 'clinical', label: 'Clinical' },
-  { id: 'finding', label: 'Finding' },
+  { id: 'description', label: 'Description', border: false },
+  { id: 'subject', label: 'Subject & specimen', border: false },
+  { id: 'staining', label: 'Staining', border: true },
+  { id: 'clinical', label: 'Clinical', border: true },
+  { id: 'non_clinical', label: 'Non-clinical', border: true },
 ]
 
 const SCOPES: BeaconFilteringScope[] = [
@@ -78,7 +90,10 @@ const SCOPES: BeaconFilteringScope[] = [
 
 const FIELD_SCOPES = new Map<string, string[]>([
   ...TERMS.map((t) => [t.id, t.scopes] as [string, string[]]),
-  ['animal_species', ['non_clinical']], // hidden field — must still be prunable
+  // Synthetic: a scope-only field that never reaches the visible term list, e.g. one with
+  // `ui_display: false`. It must still be prunable on a tab switch. The backend has no such
+  // field right now, so there is nothing real to borrow here.
+  ['hidden_scope_only', ['non_clinical']],
 ])
 
 vi.mock('@/composables/useFilteringTerms', () => ({
@@ -145,6 +160,29 @@ const sharedFieldIds = (wrapper: Wrapper) =>
 const groupLabels = (wrapper: Wrapper) =>
   wrapper.findAll('.group-label').map((el) => el.text().trim())
 
+// Throws rather than returning undefined: a negative class assertion against a missing group
+// would pass vacuously and hide a group that stopped rendering.
+const groupByLabel = (wrapper: Wrapper, label: string) => {
+  const group = wrapper
+    .findAll('.group')
+    .find((el) => el.find('.group-label').text().trim() === label)
+  if (!group) throw new Error(`no group rendered with label "${label}"`)
+  return group
+}
+
+// Panels are keyed by their scope class rather than by index, so a reordered scope list cannot
+// make an assertion silently target the wrong panel.
+const panel = (wrapper: Wrapper, scope: string) => {
+  const pane = wrapper.find(`.filter-tab-panel--${scope}`)
+  if (!pane.exists()) throw new Error(`no panel rendered for scope "${scope}"`)
+  return pane
+}
+
+const panelFieldIds = (wrapper: Wrapper, scope: string) =>
+  panel(wrapper, scope)
+    .findAll('.field-stub')
+    .map((el) => el.attributes('data-field'))
+
 async function selectTab(wrapper: Wrapper, id: string) {
   await wrapper.find(`#tab-btn-${id}`).trigger('click')
 }
@@ -207,14 +245,47 @@ describe('SearchForm — scope tabs', () => {
     expect(ids).not.toContain('diagnosis')
   })
 
-  it('does not render a group heading with no fields under it', async () => {
+  it('renders scope panel fields flat, with no group heading of their own', () => {
     const wrapper = mountForm()
+    // Only the shared groups above the tabs carry headings. `animal_species` sits in the
+    // `subject` group, so a per-group render would repeat "Subject & specimen" in the panel.
+    expect(panel(wrapper, 'non_clinical').findAll('.group-label')).toHaveLength(0)
+    expect(panel(wrapper, 'clinical').findAll('.group-label')).toHaveLength(0)
+    expect(groupLabels(wrapper)).toEqual(['Description', 'Subject & specimen', 'Staining'])
+  })
 
-    await selectTab(wrapper, 'clinical')
-    expect(groupLabels(wrapper)).not.toContain('Finding')
+  it('orders panel fields by group, then by field', () => {
+    const wrapper = mountForm()
+    expect(panelFieldIds(wrapper, 'non_clinical')).toEqual([
+      'animal_species',
+      'finding',
+      'finding_severity',
+    ])
+  })
 
-    await selectTab(wrapper, 'non_clinical')
-    expect(groupLabels(wrapper)).not.toContain('Clinical')
+  it('borders a group the backend flagged, above the tabs', () => {
+    const wrapper = mountForm()
+    expect(groupByLabel(wrapper, 'Staining').classes()).toContain('group--border')
+  })
+
+  it('does not border a group without the flag', () => {
+    const wrapper = mountForm()
+    for (const label of ['Description', 'Subject & specimen']) {
+      expect(groupByLabel(wrapper, label).classes()).not.toContain('group--border')
+    }
+  })
+
+  it('borders a scope panel whose group carries the flag', () => {
+    const wrapper = mountForm()
+    expect(panel(wrapper, 'clinical').classes()).toContain('filter-tab-panel--border')
+    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--border')
+  })
+
+  it('keys the panel border colour on the scope id', () => {
+    const wrapper = mountForm()
+    // The accent class is per scope; clinical keeps the default border colour.
+    expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--non_clinical')
+    expect(panel(wrapper, 'clinical').classes()).not.toContain('filter-tab-panel--non_clinical')
   })
 
   it('resets a ?tab= value that matches no fetched scope', () => {
@@ -245,7 +316,7 @@ describe('SearchForm — pruning filters on tab switch', () => {
 
   it('drops a hidden out-of-scope field too', async () => {
     const store = useSearchStore()
-    store.setFilter('animal_species', ['447612001'])
+    store.setFilter('hidden_scope_only', ['447612001'])
 
     const wrapper = mountForm()
     await selectTab(wrapper, 'clinical')

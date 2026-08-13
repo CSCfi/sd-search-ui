@@ -9,7 +9,7 @@ import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import { useFieldScopes } from '@/composables/useFieldScopes'
-import type { BeaconFilteringTerm } from '@/types/beacon'
+import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
 
 const {
   data: filteringTerms,
@@ -98,16 +98,20 @@ const sharedGroups = computed(() =>
     .filter((group) => group.fields.length > 0),
 )
 
-// Fields shown inside a specific scope panel: exclude shared fields so they render only once
-// above the tabs, then keep the remaining fields available in this scope.
-// Splitting per field rather than per group lets mixed groups render each field in one place.
-const scopedGroups = (scope: string) =>
-  groupedFields.value
-    .map((group) => ({
-      ...group,
-      fields: group.fields.filter((f) => !isShared(f) && f.scopes.includes(scope)),
-    }))
-    .filter((group) => group.fields.length > 0)
+// Shared fields render above the tabs, so scope panels only show scope-specific fields.
+// Panels stay flat rather than grouped to avoid repeating the panel heading.
+const scopedFields = (scope: string) =>
+  groupedFields.value.flatMap((group) =>
+    group.fields.filter((f) => !isShared(f) && f.scopes.includes(scope)),
+  )
+
+const scopeGroupHasBorder = (scope: string) =>
+  filteringGroups.value?.find((g) => g.id === scope)?.border === true
+
+// Shared group borders come from the backend `border` flag, not special-case ids.
+const groupClass = (group: BeaconFilteringGroup) => ({
+  'group--border': group.border === true,
+})
 
 async function copySearch() {
   const params = new URLSearchParams(
@@ -150,12 +154,7 @@ async function copySearch() {
       class="form-content"
       @submit.prevent
     >
-      <div
-        v-for="group in sharedGroups"
-        :key="group.id"
-        class="group"
-        :class="{ 'group--featured': group.id === 'staining' }"
-      >
+      <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">
         <h2 class="group-label">{{ group.label }}</h2>
         <div class="fields-grid">
           <DynamicField
@@ -177,17 +176,14 @@ async function copySearch() {
             :tab="scope.id"
             :label="scope.label"
             :active-tab="activeTab"
+            :bordered="scopeGroupHasBorder(scope.id)"
           >
-            <div v-for="group in scopedGroups(scope.id)" :key="group.id" class="group">
-              <h3 class="group-label">{{ group.label }}</h3>
-              <div class="fields-grid">
-                <DynamicField
-                  v-for="field in group.fields"
-                  :key="field.id"
-                  :field="field"
-                  :class="{ 'col-span-3': field.type === 'text' }"
-                />
-              </div>
+            <div class="fields-grid fields-grid--stacked">
+              <DynamicField
+                v-for="field in scopedFields(scope.id)"
+                :key="field.id"
+                :field="field"
+              />
             </div>
           </FilterTabPanel>
         </div>
@@ -239,7 +235,7 @@ async function copySearch() {
   padding-top: 1.5rem;
 }
 
-.group--featured {
+.group--border {
   margin-top: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 0.5rem;
@@ -259,12 +255,16 @@ async function copySearch() {
   gap: 1rem;
 }
 
+.fields-grid.fields-grid--stacked {
+  grid-template-columns: 1fr;
+}
+
 .tab-columns {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
 
-  &.tab-columns--full > :deep(.filter-tab-pane) {
+  &.tab-columns--full > :deep(.filter-tab-panel) {
     grid-column: 1 / -1;
   }
 }
