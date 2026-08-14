@@ -1,5 +1,28 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import loginButton from '@/assets/images/button-login.svg'
+import { useAuthStore } from '@/stores/authStore'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+onMounted(async () => {
+  if (authStore.isLoggedIn === null) {
+    await authStore.checkSession()
+  }
+
+  const redirect = sessionStorage.getItem('postLoginRedirect')
+  if (redirect && authStore.isLoggedIn) {
+    sessionStorage.removeItem('postLoginRedirect')
+    window.location.href = redirect
+    return
+  }
+
+  if (authStore.isLoggedIn) {
+    router.replace('/search')
+  }
+})
 </script>
 
 <template>

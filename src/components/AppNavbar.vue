@@ -2,6 +2,11 @@
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
+
+function logout() {
+  sessionStorage.removeItem('postLoginRedirect')
+  window.location.href = '/logout'
+}
 </script>
 
 <template>
@@ -17,9 +22,9 @@ const auth = useAuthStore()
       <a v-if="!auth.isLoggedIn" href="/login">
         <c-button>Login</c-button>
       </a>
-      <a v-else href="/logout">
+      <span v-else @click="logout" style="cursor: pointer">
         <c-button outlined>Logout</c-button>
-      </a>
+      </span>
     </nav>
   </header>
 </template>
