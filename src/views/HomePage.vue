@@ -15,7 +15,7 @@ onMounted(async () => {
   const redirect = sessionStorage.getItem('postLoginRedirect')
   if (redirect && authStore.isLoggedIn) {
     sessionStorage.removeItem('postLoginRedirect')
-    window.location.href = redirect
+    router.replace(redirect)
     return
   }
 

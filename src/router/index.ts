@@ -52,7 +52,7 @@ router.beforeEach(async (to) => {
   }
 
   if (!authStore.isLoggedIn) {
-    sessionStorage.setItem('postLoginRedirect', window.location.href)
+    sessionStorage.setItem('postLoginRedirect', window.location.pathname + window.location.search)
     window.location.href = '/'
     return false
   }

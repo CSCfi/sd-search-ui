@@ -22,9 +22,9 @@ function logout() {
       <a v-if="!auth.isLoggedIn" href="/login">
         <c-button>Login</c-button>
       </a>
-      <span v-else @click="logout" style="cursor: pointer">
+      <a v-else href="/logout" @click.prevent="logout">
         <c-button outlined>Logout</c-button>
-      </span>
+      </a>
     </nav>
   </header>
 </template>
