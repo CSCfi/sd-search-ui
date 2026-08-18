@@ -145,6 +145,93 @@ describe('searchStore — datasetType scope', () => {
   })
 })
 
+describe('searchStore — qualifiers', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('setQualifier writes the value to draft', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
+  })
+
+  it('setQualifier with "all" deletes the key', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.setQualifier('observation', 'all')
+    expect(store.draftQualifiers).toEqual({})
+  })
+
+  it('commit copies draftQualifiers to committedQualifiers', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.commit()
+    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
+  })
+
+  it('committedQualifiers is an independent copy — mutating draft after commit does not affect it', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.commit()
+    store.setQualifier('observation', 'candidate')
+    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
+    expect(store.draftQualifiers).toEqual({ observation: 'candidate' })
+  })
+
+  it('clearFilters empties both qualifier refs', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.commit()
+    store.clearFilters()
+    expect(store.draftQualifiers).toEqual({})
+    expect(store.committedQualifiers).toEqual({})
+  })
+
+  it('resetQualifiers empties both refs', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.commit()
+    store.resetQualifiers()
+    expect(store.draftQualifiers).toEqual({})
+    expect(store.committedQualifiers).toEqual({})
+  })
+
+  // Fail-open: a URL qualifier is unvalidated, so initFromUrl must not commit it. SearchForm
+  // promotes it via commitQualifiers() once /filtering_qualifiers confirms it's valid — see
+  // commitQualifiers tests below.
+  it('initFromUrl sets draftQualifiers but leaves committedQualifiers empty', () => {
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'confirmed' })
+    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
+    expect(store.committedQualifiers).toEqual({})
+  })
+
+  it('commitQualifiers copies draftQualifiers to committedQualifiers', () => {
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'confirmed' })
+    store.commitQualifiers()
+    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
+  })
+
+  it('commitQualifiers does not touch draftFilters, committedFilters, or dataset type', () => {
+    const store = useSearchStore()
+    store.setFilter('anatomical_site', ['80248007'])
+    store.setDatasetType('clinical')
+    store.setQualifier('observation', 'confirmed')
+    store.commitQualifiers()
+    expect(store.committedFilters).toEqual([])
+    expect(store.committedDatasetType).toBe('all')
+  })
+
+  it('initFromUrl leaves qualifiers untouched when none is given', () => {
+    const store = useSearchStore()
+    store.setQualifier('observation', 'confirmed')
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
+  })
+})
+
 describe('searchStore — removeFilters', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

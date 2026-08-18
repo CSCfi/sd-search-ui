@@ -4,10 +4,12 @@ import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
 import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
+import QualifierSelector from '@/components/filters/QualifierSelector.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
-import { useSearchStore, type DatasetType } from '@/stores/searchStore'
+import { serializeQualifiers, useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { useFilteringQualifiers } from '@/composables/useFilteringQualifiers'
 import { useFieldScopes } from '@/composables/useFieldScopes'
 import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
 
@@ -26,11 +28,15 @@ const {
   isLoading: isFilteringScopesLoading,
   isError: isFilteringScopesError,
 } = useFilteringScopes()
+
+// Qualifiers are optional: if this request fails, hide the selector and run searches
+// without URL-restored qualifiers (the watcher below fails open).
+const { data: filteringQualifiers, isError: isFilteringQualifiersError } = useFilteringQualifiers()
 const { data: fieldScopes } = useFieldScopes()
 const store = useSearchStore()
 
 const copied = ref(false)
-const scopeAnnouncement = ref('')
+const announcement = ref('')
 
 const scopes = computed(() => filteringScopes.value ?? [])
 const scopeIds = computed(() => scopes.value.map((s) => s.id))
@@ -60,24 +66,56 @@ const activeTab = computed<DatasetType>({
 
     if (dropped.length > 0) {
       store.removeFilters(dropped.map((f) => f.id))
-      scopeAnnouncement.value = `${dropped.length} filter${
+      announcement.value = `${dropped.length} filter${
         dropped.length === 1 ? '' : 's'
       } removed, not available in this dataset type: ${dropped.map((f) => fieldLabel(f.id)).join(', ')}`
     } else {
-      scopeAnnouncement.value = ''
+      announcement.value = ''
     }
   },
 })
 
-// A hand-edited or stale `?tab=` value that matches no backend scope would hide every panel
-// and send a bogus requestedScope.
-// `immediate` matters: with staleTime Infinity the scope list is already cached on a second
-// mount, so waiting for a change would never run this.
+// Reset stale `?tab=` values once scopes resolve. `immediate` also handles cached scopes.
 watch(
   scopeIds,
   (ids) => {
     if (ids.length > 0 && store.datasetType !== 'all' && !ids.includes(store.datasetType)) {
       store.resetScope()
+    }
+  },
+  { immediate: true },
+)
+
+// URL qualifiers remain draft-only until validated against the fetched metadata.
+// Promote valid values to the active query; remove invalid values or values that cannot be
+// validated because the optional metadata request failed. `immediate` handles cached metadata.
+watch(
+  [filteringQualifiers, isFilteringQualifiersError],
+  ([qualifiers, isError]) => {
+    const hasDraftQualifiers = Object.keys(store.draftQualifiers).length > 0
+
+    if (isError) {
+      if (hasDraftQualifiers) {
+        store.resetQualifiers()
+        announcement.value =
+          'Qualifier filter from the link could not be checked and was removed from the search.'
+      }
+      return
+    }
+
+    if (!qualifiers || qualifiers.length === 0) return
+
+    const validValues = new Map(qualifiers.map((q) => [q.id, q.values]))
+    const isValid = Object.entries(store.draftQualifiers).every(
+      ([id, value]) => validValues.get(id)?.includes(value) ?? false,
+    )
+
+    if (isValid) {
+      store.commitQualifiers()
+    } else {
+      store.resetQualifiers()
+      announcement.value =
+        'Qualifier filter from the link is not recognised and was removed from the search.'
     }
   },
   { immediate: true },
@@ -117,6 +155,8 @@ async function copySearch() {
   const params = new URLSearchParams(
     store.draftFilters.map((f) => [f.id, Array.isArray(f.value) ? f.value.join(',') : f.value]),
   )
+  const qualifierParam = serializeQualifiers(store.draftQualifiers)
+  if (qualifierParam) params.set('qualifiers', qualifierParam)
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   try {
     await navigator.clipboard.writeText(url)
@@ -166,9 +206,16 @@ async function copySearch() {
         </div>
       </div>
 
-      <p class="sr-only" role="status" aria-live="polite">{{ scopeAnnouncement }}</p>
+      <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
 
       <FilterTabGroup v-model="activeTab" :scopes="scopes">
+        <template v-if="filteringQualifiers && filteringQualifiers.length > 0" #header>
+          <QualifierSelector
+            :qualifiers="filteringQualifiers"
+            :selected="store.draftQualifiers"
+            @change="store.setQualifier"
+          />
+        </template>
         <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">
           <FilterTabPanel
             v-for="scope in scopes"

@@ -1,17 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, ref } from 'vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import type {
   BeaconFilteringGroup,
+  BeaconFilteringQualifier,
   BeaconFilteringScope,
   BeaconFilteringTerm,
 } from '@/types/beacon'
 
-// Mirrors the real backend: every field is either in both scopes or in exactly one, and the
-// `ui_group` values are the backend's own — `animal_species` sits in `subject` even though it
-// only exists in the non-clinical scope.
+// Mirrors backend grouping: `animal_species` is in `subject` but only available in
+// the non-clinical scope.
 const TERMS: BeaconFilteringTerm[] = [
   {
     id: 'dataset_description',
@@ -50,8 +50,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Biological species',
     description: '',
-    // Deliberately `subject`, not `non_clinical` — as in the backend. It must still render
-    // flat in the non-clinical panel, with no "Subject & specimen" heading of its own.
+    // Its backend group differs from its scope; panels must still render fields flat.
     ui_group: 'subject',
     scopes: ['non_clinical'],
   },
@@ -73,8 +72,6 @@ const TERMS: BeaconFilteringTerm[] = [
   },
 ]
 
-// Mirrors the backend: `clinical` / `non_clinical` are scope panels, and only some groups
-// carry the `border` flag.
 const GROUPS: BeaconFilteringGroup[] = [
   { id: 'description', label: 'Description', border: false },
   { id: 'subject', label: 'Subject & specimen', border: false },
@@ -88,11 +85,19 @@ const SCOPES: BeaconFilteringScope[] = [
   { id: 'non_clinical', label: 'Non-clinical', description: '' },
 ]
 
+const QUALIFIERS: BeaconFilteringQualifier[] = [
+  {
+    id: 'observation',
+    label: 'Observation',
+    description: 'How the finding or diagnosis is linked to the image.',
+    values: ['confirmed', 'candidate'],
+    groups: ['diagnosis', 'finding'],
+  },
+]
+
 const FIELD_SCOPES = new Map<string, string[]>([
   ...TERMS.map((t) => [t.id, t.scopes] as [string, string[]]),
-  // Synthetic: a scope-only field that never reaches the visible term list, e.g. one with
-  // `ui_display: false`. It must still be prunable on a tab switch. The backend has no such
-  // field right now, so there is nothing real to borrow here.
+  // A non-rendered scoped field verifies that tab changes prune via the field-scope map
   ['hidden_scope_only', ['non_clinical']],
 ])
 
@@ -124,7 +129,18 @@ vi.mock('@/composables/useFieldScopes', () => ({
   useFieldScopes: () => ({ data: ref(FIELD_SCOPES) }),
 }))
 
-// Stands in for DynamicField so the field id is assertable without mounting the real inputs.
+// SearchForm requires this mock because this suite does not install VueQueryPlugin.
+// Shared refs let the fail-open tests change metadata from pending to resolved after mount.
+const filteringQualifiersData = ref<BeaconFilteringQualifier[] | undefined>(QUALIFIERS)
+const filteringQualifiersIsError = ref(false)
+
+vi.mock('@/composables/useFilteringQualifiers', () => ({
+  useFilteringQualifiers: () => ({
+    data: filteringQualifiersData,
+    isError: filteringQualifiersIsError,
+  }),
+}))
+
 const DynamicFieldStub = defineComponent({
   props: { field: { type: Object, required: true } },
   template: '<div class="field-stub" :data-field="field.id" />',
@@ -132,8 +148,7 @@ const DynamicFieldStub = defineComponent({
 
 const SearchForm = (await import('@/components/SearchForm.vue')).default
 
-// The active pinia, shared between the test's useSearchStore() and the mounted component —
-// mounting with a fresh createPinia() would give the component a different store instance.
+// Use one Pinia instance so the test and mounted component share the same store.
 let pinia: ReturnType<typeof createPinia>
 
 function mountForm() {
@@ -247,8 +262,6 @@ describe('SearchForm — scope tabs', () => {
 
   it('renders scope panel fields flat, with no group heading of their own', () => {
     const wrapper = mountForm()
-    // Only the shared groups above the tabs carry headings. `animal_species` sits in the
-    // `subject` group, so a per-group render would repeat "Subject & specimen" in the panel.
     expect(panel(wrapper, 'non_clinical').findAll('.group-label')).toHaveLength(0)
     expect(panel(wrapper, 'clinical').findAll('.group-label')).toHaveLength(0)
     expect(groupLabels(wrapper)).toEqual(['Description', 'Subject & specimen', 'Staining'])
@@ -283,7 +296,6 @@ describe('SearchForm — scope tabs', () => {
 
   it('keys the panel border colour on the scope id', () => {
     const wrapper = mountForm()
-    // The accent class is per scope; clinical keeps the default border colour.
     expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--non_clinical')
     expect(panel(wrapper, 'clinical').classes()).not.toContain('filter-tab-panel--non_clinical')
   })
@@ -294,6 +306,120 @@ describe('SearchForm — scope tabs', () => {
     mountForm()
     expect(store.datasetType).toBe('all')
     expect(store.committedDatasetType).toBe('all')
+  })
+})
+
+describe('SearchForm — qualifier selector', () => {
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  // The mocked ref is shared across every test in this file (see the mock above) — restore it
+  // so a test that simulates an in-flight/failed fetch can't leak into the next test.
+  afterEach(() => {
+    filteringQualifiersData.value = QUALIFIERS
+    filteringQualifiersIsError.value = false
+  })
+
+  it('renders the qualifier selector inside the tab group header, above the tab strip', () => {
+    const wrapper = mountForm()
+    const header = wrapper.find('.tab-header')
+    expect(header.exists()).toBe(true)
+    expect(header.find('.qualifier-selector').exists()).toBe(true)
+  })
+
+  it('resets a ?qualifiers= value naming an undeclared qualifier id, and announces it', () => {
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { nosuch: 'confirmed' })
+    const wrapper = mountForm()
+    expect(store.draftQualifiers).toEqual({})
+    expect(store.committedQualifiers).toEqual({})
+    expect(wrapper.find('[role="status"]').text()).toContain('not recognised')
+  })
+
+  it('resets a ?qualifiers= value naming an undeclared value for a real qualifier', () => {
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'bogus' })
+    mountForm()
+    expect(store.draftQualifiers).toEqual({})
+    expect(store.committedQualifiers).toEqual({})
+  })
+
+  it('keeps a valid ?qualifiers= value once the qualifier list resolves, and commits it', () => {
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'confirmed' })
+    mountForm()
+    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
+    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
+  })
+
+  it('does not commit a URL qualifier until the qualifier list resolves (fail-open)', async () => {
+    filteringQualifiersData.value = undefined // simulate the request still being in flight
+
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'confirmed' })
+    mountForm()
+
+    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
+    expect(store.committedQualifiers).toEqual({})
+
+    filteringQualifiersData.value = QUALIFIERS
+    await flushPromises()
+
+    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
+  })
+
+  it('drops a URL qualifier and announces it when /filtering_qualifiers fails outright', () => {
+    filteringQualifiersData.value = undefined
+    filteringQualifiersIsError.value = true
+
+    const store = useSearchStore()
+    store.initFromUrl([], undefined, { observation: 'confirmed' })
+    const wrapper = mountForm()
+
+    expect(store.draftQualifiers).toEqual({})
+    expect(store.committedQualifiers).toEqual({})
+    expect(wrapper.find('[role="status"]').text()).toContain('could not be checked')
+  })
+})
+
+describe('SearchForm — copy filter URL', () => {
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  it('includes the qualifier alongside filters in the copied URL', async () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['64033007'])
+    store.setQualifier('observation', 'confirmed')
+
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    const wrapper = mountForm()
+    await wrapper.find('.btn-copy').trigger('click')
+    await flushPromises()
+
+    const url = new URL(writeText.mock.calls[0]?.[0] as string)
+    expect(url.searchParams.get('diagnosis')).toBe('64033007')
+    expect(url.searchParams.get('qualifiers')).toBe('observation:confirmed')
+  })
+
+  it('omits the qualifiers param when no qualifier is selected', async () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['64033007'])
+
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    const wrapper = mountForm()
+    await wrapper.find('.btn-copy').trigger('click')
+    await flushPromises()
+
+    const url = new URL(writeText.mock.calls[0]?.[0] as string)
+    expect(url.searchParams.has('qualifiers')).toBe(false)
   })
 })
 
