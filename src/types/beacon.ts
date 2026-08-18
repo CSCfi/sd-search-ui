@@ -69,7 +69,6 @@ export interface BeaconQueryFilter {
   id: string
   value: string | string[]
   operator: '='
-  includeDescendantTerms?: boolean
   label?: string[]
 }
 

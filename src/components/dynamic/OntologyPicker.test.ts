@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { type Ref, nextTick, ref } from 'vue'
+import { type Ref, nextTick } from 'vue'
 import OntologyPicker from './OntologyPicker.vue'
 import type { FieldValue } from '@/types/beacon'
-import { useFieldValues } from '@/composables/useFieldValues'
 
 const MOCK_SUGGESTIONS = vi.hoisted((): FieldValue[] => [
   { value: 'Breast structure', count: 0, concept_id: '80248007' },
@@ -248,22 +247,6 @@ describe('OntologyPicker', () => {
     expect(w.find('[role="listbox"]').exists()).toBe(true)
   })
 
-  it('checkbox is unchecked by default', async () => {
-    const w = mountComponent()
-    await openDropdown(w)
-    const checkbox = w.find('input[type="checkbox"]').element as HTMLInputElement
-    expect(checkbox.checked).toBe(false)
-  })
-
-  it('emits includeDescendantTerms=false when checkbox unchecked', async () => {
-    const w = mountComponent()
-    await openDropdown(w)
-    const checkbox = w.find('input[type="checkbox"]').element as HTMLInputElement
-    checkbox.checked = false
-    await w.find('input[type="checkbox"]').trigger('change')
-    expect(w.emitted('update:includeDescendantTerms')?.[0]).toEqual([false])
-  })
-
   it('trigger has correct aria-expanded', async () => {
     const w = mountComponent()
     expect(w.find('.trigger').attributes('aria-expanded')).toBe('false')
@@ -283,25 +266,5 @@ describe('OntologyPicker', () => {
     expect(reRendered.attributes('aria-selected')).toBe('true')
     const lungOption = w.findAll('[role="option"]').find((o) => o.text().includes('Lung'))!
     expect(lungOption.attributes('aria-selected')).toBe('false')
-  })
-
-  it('hides the "Include descendant terms" checkbox when all items have concept_id: null', async () => {
-    vi.mocked(useFieldValues).mockImplementationOnce(
-      () =>
-        ({
-          data: ref<FieldValue[]>([{ value: 'Antibody', count: 5, concept_id: null }]),
-          isLoading: ref(false),
-          isError: ref(false),
-        }) as unknown as ReturnType<typeof useFieldValues>,
-    )
-    const w = mountComponent({ allowFreeText: true })
-    await openDropdown(w)
-    expect(w.find('.descendants-toggle').exists()).toBe(false)
-  })
-
-  it('shows the "Include descendant terms" checkbox when at least one item has a concept_id', async () => {
-    const w = mountComponent()
-    await openDropdown(w)
-    expect(w.find('.descendants-toggle').exists()).toBe(true)
   })
 })
