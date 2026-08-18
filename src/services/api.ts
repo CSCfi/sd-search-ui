@@ -1,5 +1,6 @@
 import type {
   BeaconFilteringGroup,
+  BeaconFilteringQualifier,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconQueryRequest,
@@ -33,12 +34,16 @@ export async function getSuggestions(
 export async function postQuery(
   filters: BeaconQueryFilter[],
   scope?: string,
+  qualifiers: Record<string, string> = {},
 ): Promise<BeaconResultSetsResponse> {
   const body: BeaconQueryRequest = {
     query: {
       filters,
       requestedGranularity: 'record',
       ...(scope ? { requestedScope: scope } : {}),
+      requestedQualifiers: Object.fromEntries(
+        Object.entries(qualifiers).map(([id, value]) => [id, [value]]),
+      ),
     },
   }
 
@@ -52,4 +57,8 @@ export async function getFilteringGroups(): Promise<BeaconFilteringGroup[]> {
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {
   return apiClient.get<BeaconFilteringScope[]>('/filtering_scopes').then((r) => r.data)
+}
+
+export async function getFilteringQualifiers(): Promise<BeaconFilteringQualifier[]> {
+  return apiClient.get<BeaconFilteringQualifier[]>('/filtering_qualifiers').then((r) => r.data)
 }

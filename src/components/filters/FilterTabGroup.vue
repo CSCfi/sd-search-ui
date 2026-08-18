@@ -39,6 +39,9 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
 
 <template>
   <div class="filter-tab-group">
+    <div v-if="$slots.header" class="tab-header">
+      <slot name="header" />
+    </div>
     <div ref="strip" class="tab-strip" role="tablist" aria-label="Dataset type">
       <button
         v-for="(tab, index) in tabs"
@@ -76,6 +79,11 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
   border-radius: 0.5rem;
   background-color: rgba(255, 255, 255, 0.06);
   overflow: hidden;
+}
+
+.tab-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1rem 1.5rem;
 }
 
 .tab-strip {

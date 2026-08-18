@@ -36,3 +36,29 @@ describe('postQuery — requestedScope', () => {
     expect(sentBody().query.filters).toEqual(filters)
   })
 })
+
+describe('postQuery — requestedQualifiers', () => {
+  beforeEach(() => {
+    post.mockReset()
+    post.mockResolvedValue({ data: {} })
+  })
+
+  it('sends bare values, not the "<id>:<value>" encoding', async () => {
+    await postQuery([{ id: 'diagnosis', value: ['64033007'], operator: '=' }], 'clinical', {
+      observation: 'confirmed',
+    })
+    expect(sentBody().query.requestedQualifiers).toEqual({ observation: ['confirmed'] })
+  })
+
+  it('sends an empty object when no qualifier is given', async () => {
+    await postQuery([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(sentBody().query.requestedQualifiers).toEqual({})
+  })
+
+  it('does not affect requestedScope handling', async () => {
+    await postQuery([{ id: 'sex', value: 'Female', operator: '=' }], undefined, {
+      observation: 'candidate',
+    })
+    expect(sentBody().query).not.toHaveProperty('requestedScope')
+  })
+})

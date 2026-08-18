@@ -46,7 +46,7 @@ describe('useSearch — requestedScope wiring', () => {
     mountHost()
     await flushPromises()
 
-    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, undefined)
+    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, undefined, {})
   })
 
   it('passes the committed scope id when one is committed', async () => {
@@ -58,7 +58,7 @@ describe('useSearch — requestedScope wiring', () => {
     mountHost()
     await flushPromises()
 
-    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical')
+    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical', {})
   })
 
   it('does not query at all before any filters are committed', async () => {
@@ -81,7 +81,7 @@ describe('useSearch — requestedScope wiring', () => {
     await flushPromises()
 
     expect(postQuery).toHaveBeenCalledTimes(1)
-    expect(postQuery).toHaveBeenLastCalledWith(store.committedFilters, undefined)
+    expect(postQuery).toHaveBeenLastCalledWith(store.committedFilters, undefined, {})
   })
 
   it('refetches with the new scope once the tab change is committed', async () => {
@@ -97,6 +97,54 @@ describe('useSearch — requestedScope wiring', () => {
     await flushPromises()
 
     expect(postQuery).toHaveBeenCalledTimes(2)
-    expect(postQuery).toHaveBeenLastCalledWith(store.committedFilters, 'non_clinical')
+    expect(postQuery).toHaveBeenLastCalledWith(store.committedFilters, 'non_clinical', {})
+  })
+})
+
+describe('useSearch — requestedQualifiers wiring', () => {
+  let pinia: ReturnType<typeof createPinia>
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    postQuery.mockReset()
+    postQuery.mockResolvedValue({
+      meta: { apiVersion: 'v2.0', beaconId: 'test', returnedGranularity: 'record' },
+      responseSummary: { exists: false, numTotalResults: 0 },
+      response: { resultSet: [] },
+    })
+  })
+
+  function mountHost() {
+    return mount(Host, { global: { plugins: [pinia, VueQueryPlugin] } })
+  }
+
+  it('does not refetch when only the draft qualifier changes', async () => {
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.commit()
+
+    mountHost()
+    await flushPromises()
+    expect(postQuery).toHaveBeenCalledTimes(1)
+
+    store.setQualifier('observation', 'confirmed')
+    await flushPromises()
+
+    expect(postQuery).toHaveBeenCalledTimes(1)
+  })
+
+  it('refetches with the committed qualifier once committed', async () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['64033007'])
+    store.setQualifier('observation', 'confirmed')
+    store.commit()
+
+    mountHost()
+    await flushPromises()
+
+    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, undefined, {
+      observation: 'confirmed',
+    })
   })
 })
