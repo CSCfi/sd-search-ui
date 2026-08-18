@@ -26,7 +26,6 @@ for (const [id, raw] of entries) {
     id,
     value: parseFilterValue(raw),
     operator: '=',
-    includeDescendantTerms: true,
   })
 }
 
