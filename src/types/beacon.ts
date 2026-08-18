@@ -13,8 +13,8 @@ export interface BeaconFilteringTerm {
   type: BeaconFilteringTermType
   label: string
   description: string
-  ui_group?: string | null
-  ui_display?: boolean
+  group?: string | null
+  display?: boolean
   scopes: string[]
   ontology?: {
     id: string

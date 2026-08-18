@@ -6,6 +6,6 @@ export function useFilteringTerms() {
     queryKey: ['filteringTerms'],
     queryFn: getFilteringTerms,
     staleTime: Infinity,
-    select: (data) => data.response.filteringTerms.filter((f) => f.ui_display !== false),
+    select: (data) => data.response.filteringTerms.filter((f) => f.display !== false),
   })
 }
