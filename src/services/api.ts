@@ -14,19 +14,45 @@ export async function getFilteringTerms(): Promise<BeaconFilteringTermsResponse>
   return apiClient.get<BeaconFilteringTermsResponse>('/filtering_terms').then((r) => r.data)
 }
 
-export async function getFieldValues(fieldId: string): Promise<FieldValue[]> {
-  return apiClient.get<FieldValue[]>(`/filtering_terms/${fieldId}/values`).then((r) => r.data)
+export async function getFieldValues(
+  fieldId: string,
+  scope?: string,
+  qualifiers?: Record<string, string>,
+): Promise<FieldValue[]> {
+  const params: Record<string, string | string[]> = {}
+  if (scope && scope !== 'all') params.scope = scope
+  if (qualifiers) {
+    params.qualifier = Object.entries(qualifiers).map(([id, value]) => `${id}:${value}`)
+  }
+  return apiClient
+    .get<FieldValue[]>(`/filtering_terms/${fieldId}/values`, {
+      params,
+      // FastAPI expects repeated `qualifier` keys (`qualifier=a&qualifier=b`);
+      // Axios otherwise serializes this array as `qualifier[]=a&qualifier[]=b`.
+      paramsSerializer: { indexes: null },
+    })
+    .then((r) => r.data)
 }
 
 export async function getSuggestions(
   fieldId: string,
   term: string,
   signal: AbortSignal,
+  scope?: string,
+  qualifiers?: Record<string, string>,
 ): Promise<FieldValue[]> {
+  const params: Record<string, string | string[]> = { term, word_match: 'true' }
+  if (scope && scope !== 'all') params.scope = scope
+  if (qualifiers) {
+    params.qualifier = Object.entries(qualifiers).map(([id, value]) => `${id}:${value}`)
+  }
   return apiClient
     .get<FieldValue[]>(`/filtering_terms/${fieldId}/suggestions`, {
-      params: { term, word_match: true },
+      params,
       signal,
+      // FastAPI expects repeated `qualifier` keys (`qualifier=a&qualifier=b`);
+      // Axios otherwise serializes this array as `qualifier[]=a&qualifier[]=b`.
+      paramsSerializer: { indexes: null },
     })
     .then((r) => r.data)
 }
