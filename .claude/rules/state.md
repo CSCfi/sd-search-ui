@@ -10,99 +10,73 @@ alwaysApply: false
 | Data | Owner | Reason |
 |---|---|---|
 | Selected filters | Pinia | UI state — survives component unmount |
+| Active tab / dataset type | Pinia | UI state — survives component unmount |
+| Draft & committed qualifiers | Pinia | UI state — survives component unmount |
 | Loading / error states | TanStack Query | Never duplicate in Pinia |
 | Server data (results, options) | TanStack Query | Caching, deduplication, refetch |
-| Auth status | Pinia (cookie read) | Synchronous, no server fetch |
+| Auth status | Pinia | Synchronous, no server fetch |
 | UI state (modal open, active tab) | Pinia or local `ref` | No server involvement |
 
 **Rule: Pinia stores must never contain `isLoading`, `error`, or raw server response data.**
 
 ## TanStack Query — Query Keys and staleTime
 
-```ts
-// Filter field definitions — static, fetched once
-useQuery({
-  queryKey: ['filteringTerms'],
-  queryFn: getFilteringTerms,
-  staleTime: Infinity,
-})
+| Query key | staleTime | enabled | Notes |
+|---|---|---|---|
+| `['filteringTerms']` | Infinity | always | `ui_display=false` fields filtered out via `select` |
+| `['filteringGroups']` | Infinity | always | |
+| `['filteringScopes']` | Infinity | always | |
+| `['filteringQualifiers']` | Infinity | always | |
+| `['values', fieldId, datasetType, qualifiers]` | 4h | always | |
+| `['suggestions', fieldId, term, datasetType, qualifiers]` | 5min | `term.length > 1` | |
+| `['search', 'clinical', committedFilters, committedQualifiers]` | — | `hasCommittedFilters && tab is 'all' or 'clinical'` | Uses `postQuery` |
+| `['search', 'non_clinical', committedFilters, committedQualifiers]` | — | `hasCommittedFilters && tab is 'all' or 'non_clinical'` | Uses `postNonClinicalQuery` — always count granularity |
 
-// Field values with counts — cached 4h (matches backend cache TTL)
-useQuery({
-  queryKey: ['values', fieldId],
-  queryFn: () => getFieldValues(fieldId),
-  staleTime: 4 * 60 * 60 * 1000,
-})
+## Pinia — Search Store (`stores/searchStore.ts`)
 
-// Autocomplete suggestions — enabled only after user types 2+ chars
-useQuery({
-  queryKey: ['suggestions', fieldId, term],
-  queryFn: () => getSuggestions(fieldId, term),
-  enabled: term.length > 1,
-  staleTime: 5 * 60 * 1000,  // 5 min
-})
+### State
 
-// Search results — enabled only when committed filters are set
-useQuery({
-  queryKey: ['search', committedFilters],
-  queryFn: () => postQuery(committedFilters.value),
-  enabled: hasCommittedFilters,
-})
-})
-```
+| Field | Type | Description |
+|---|---|---|
+| `draftFilters` | `BeaconQueryFilter[]` | Filters updated on every field change |
+| `committedFilters` | `BeaconQueryFilter[]` | Filters from the last submitted search |
+| `datasetType` | `DatasetType` | Active tab selection (`'all'` / `'clinical'` / `'non_clinical'`) |
+| `committedDatasetType` | `DatasetType` | Tab from the last submitted search |
+| `draftQualifiers` | `Record<string, string>` | Qualifiers updated on every change |
+| `committedQualifiers` | `Record<string, string>` | Qualifiers from the last submitted search |
 
-## Pinia — Search Store
+### Computed
 
-```ts
-// stores/searchStore.ts
-export const useSearchStore = defineStore('search', () => {
-    // Form state — updated on every field change
-    const draftFilters = ref<BeaconQueryFilter[]>([])
+| Name | Description |
+|---|---|
+| `hasCommittedFilters` | `true` when `committedFilters` is non-empty |
 
-    // Query state — updated only when user clicks Search
-    const committedFilters = ref<BeaconQueryFilter[]>([])
+### Actions
 
-    const hasCommittedFilters = computed(() => committedFilters.value.length > 0)
+| Action | Description |
+|---|---|
+| `setFilter(id, value, label?)` | Add/update/remove a draft filter. Empty value removes. `label[]` stores display names for concept IDs. |
+| `removeFilters(ids[])` | Remove specific fields from draft only — `committedFilters` unchanged |
+| `setDatasetType(type)` | Update draft tab selection |
+| `resetScope()` | Reset both draft and committed tab to `'all'` — used on invalid `?tab=` URL value |
+| `setQualifier(id, value)` | Update a draft qualifier. Value `'all'` removes the qualifier. |
+| `resetQualifiers()` | Reset both draft and committed qualifiers — used on invalid `?qualifiers=` URL value |
+| `commitQualifiers()` | Copy draft qualifiers to committed without touching filters or tab |
+| `commit()` | Promote all draft state to committed and sync to URL |
+| `clearFilters()` | Reset all state to defaults and clear URL |
+| `initFromUrl(filters, scope?, qualifiers?)` | Populate store from URL on page load |
+| `setUrlLabel(id, label[])` | Patch display labels onto a filter after concept ID resolution |
 
-    const setFilter = (id: string, value: string | string[], includeDescendantTerms = true) => {
-        const existing = draftFilters.value.findIndex((f) => f.id === id)
-        const isEmpty = Array.isArray(value) ? value.length === 0 : value === ''
+### URL Sync
 
-        if (isEmpty) {
-            draftFilters.value = draftFilters.value.filter((f) => f.id !== id)
-        } else if (existing >= 0) {
-            draftFilters.value[existing] = { id, value, operator: '=', includeDescendantTerms }
-        } else {
-            draftFilters.value.push({ id, value, operator: '=', includeDescendantTerms })
-        }
-    }
+`commit()` serializes state to `?`-query params:
+- Each filter → `?{id}={value}` (array values joined with `,`)
+- `tab` omitted when `'all'`
+- `qualifiers` omitted when empty; format: `id:value,id:value`
 
-    const commit = () => {
-        committedFilters.value = [...draftFilters.value]
-    }
-
-    const clearFilters = () => {
-        draftFilters.value = []
-        committedFilters.value = []
-    }
-
-    return { draftFilters, committedFilters, hasCommittedFilters, setFilter, commit, clearFilters }
-})
-})
-```
-
-## Query Key Conventions
-
-Always use arrays. Include all variables that affect the result:
-
-```ts
-['filteringTerms']                    // no variables
-['values', fieldId]                   // varies per field
-['suggestions', fieldId, term]        // varies per field + search term
-['search', filters]                   // varies per full filter set
-```
-
-This ensures proper cache invalidation and deduplication.
+`initFromUrl()` restores state on page load. Qualifiers from URL are **untrusted** — they stay
+in `draftQualifiers` until `SearchForm` validates them against `/filtering_qualifiers`.
+Invalid qualifiers trigger `resetQualifiers()` because the backend hard-rejects unknown qualifiers.
 
 ## What Goes Where — Decision Guide
 

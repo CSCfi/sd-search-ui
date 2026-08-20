@@ -27,112 +27,46 @@ these four paths.
 
 ## Flow
 
-```
-1. Unauthenticated user → redirect to /login
-2. Backend handles AAI OIDC, sets a host-only session cookie on /callback
-3. Frontend asks the backend "am I logged in?" via a real API call (never document.cookie)
-4. API calls use { withCredentials: true } — sends the cookie automatically
-5. 401 response → redirect to /logout (backend clears the session, redirects back)
-```
+1. Unauthenticated user hits a protected route → saved to `sessionStorage` as `postLoginRedirect`, then redirected to `/`
+2. Backend handles AAI OIDC on `/login` and `/callback`, sets a host-only session cookie
+3. Frontend checks login state by making a real API call — never via `document.cookie`
+4. All API calls use `withCredentials: true` — sends the session cookie automatically
+5. Any 401 response → `sessionStorage.removeItem('postLoginRedirect')` + redirect to `/logout` (backend clears session)
 
-## Session Check
+## Session Check (`stores/authStore.ts`)
 
-`isLoggedIn` (`stores/authStore.ts`) starts `null` — "not yet checked", not "logged out". Nothing
-sets it except a real API response, so anything that gates on it must resolve that unknown state
-first, or it will treat a valid session as logged-out on every fresh page load.
+`isLoggedIn` starts as `null` — meaning "not yet checked", not "logged out". Nothing sets it except
+a real API response. The route guard must await `checkSession()` before acting on the value, or a
+fresh page load with a valid session will be incorrectly treated as logged-out.
 
-Session check is skipped if `VITE_AUTH_BYPASS` is `"true"` (local dev only).
-```ts
-// stores/authStore.ts
-const isLoggedIn = ref<boolean | null>(null)
+The check uses a plain `axios` call, **not** the shared `apiClient` instance. `apiClient`'s
+interceptor redirects to `/logout` on 401, which would race with the guard's own redirect to `/`
+on this same check. Plain axios avoids the conflict — the guard decides what to do with the result.
 
-// A plain axios call, deliberately not the shared apiClient instance — apiClient's interceptor
-// redirects to /logout on 401, which would race with the router guard's own redirect to /login
-// on this same check. This call only resolves isLoggedIn; the guard decides what to do next.
-async function checkSession() {
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-        setLoggedIn(true)
-        return
-    }
-  try {
-    await axios.get('/filtering_terms', { baseURL: '/api', withCredentials: true })
-    setLoggedIn(true)
-  } catch {
-    setLoggedIn(false)
-  }
-}
-```
+Session check is skipped entirely if `VITE_AUTH_BYPASS` is `"true"` (local dev only).
 
-## Route Guard
+## Route Guard (`router/index.ts`)
 
-```ts
-// router/index.ts
-router.beforeEach(async (to) => {
-  if (!to.meta.requiresAuth || import.meta.env.VITE_AUTH_BYPASS === 'true') {
-    return true
-  }
+Only routes with `meta: { requiresAuth: true }` are gated. If `isLoggedIn` is still `null` on
+entry, `checkSession()` is awaited first. On failure: save intended URL to `sessionStorage` as
+`postLoginRedirect`, then redirect to `/`.
 
-  const authStore = useAuthStore()
+This is a UX guard only — real enforcement is server-side via 401s.
 
-  if (authStore.isLoggedIn === null) {
-    await authStore.checkSession()
-  }
+## API Client (`services/apiClient.ts`)
 
-  if (!authStore.isLoggedIn) {
-    window.location.href = '/login'
-    return false
-  }
-})
-```
+`apiClient` is an Axios instance with `baseURL: '/api'` and `withCredentials: true`.
 
-This is a UX guard only, not a security boundary — real enforcement is server-side (401s on
-invalid sessions).
-
-## API Axios Config
-
-```ts
-// services/apiClient.ts
-const apiClient = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
-})
-
-apiClient.interceptors.response.use(
-  (response) => {
-    useAuthStore().setLoggedIn(true)
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      window.location.href = '/logout'
-    }
-    return Promise.reject(error)
-  },
-)
-```
+Response interceptor:
+- Success → calls `authStore.setLoggedIn(true)` if not already set
+- 401 → clears `sessionStorage.postLoginRedirect`, redirects to `/logout`
+- Other errors → rejects with a normalized `ApiError` (`status`, `title`, `detail`)
 
 ## Environment Variables
 
-```
-VITE_AUTH_BYPASS   # "true" skips the router guard entirely, for local development
-```
-
-There is no `VITE_API_BASE_URL`/`VITE_LOGIN_URL`/`VITE_LOGOUT_URL` — those paths are fixed
-(`/api`, `/login`, `/logout`) per the same-origin requirement above, not configuration.
-
-## Auth Status in UI
-
-```ts
-// stores/authStore.ts
-export const useAuthStore = defineStore('auth', () => {
-  const isLoggedIn = ref<boolean | null>(null)
-  function setLoggedIn(value: boolean) {
-    isLoggedIn.value = value
-  }
-  async function checkSession() { /* see Session Check above */ }
-  return { isLoggedIn, setLoggedIn, checkSession }
-})
-```
+| Variable | Description |
+|---|---|
+| `VITE_AUTH_BYPASS` | `"true"` skips the route guard entirely — local dev only |
 
 ## What Is Not Implemented Yet
 

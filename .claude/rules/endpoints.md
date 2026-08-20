@@ -19,107 +19,100 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 |---|---|---|---|
 | GET | `/filtering_terms` | All filter field definitions — static list | `staleTime: Infinity` |
 | GET | `/filtering_terms/{field_id}/values` | Field values with counts | `staleTime: 4h` |
-| GET | `/filtering_terms/{field_id}/suggestions?term=xxx` | Autocomplete | no cache |
+| GET | `/filtering_terms/{field_id}/suggestions?term=xxx` | Autocomplete | `staleTime: 5min` |
+| GET | `/filtering_groups` | UI grouping config for filter fields | `staleTime: Infinity` |
+| GET | `/filtering_scopes` | Available scope definitions (`clinical` / `non_clinical`) | `staleTime: Infinity` |
+| GET | `/filtering_qualifiers` | Available qualifier definitions (e.g. `observation`) | `staleTime: Infinity` |
 | POST | `/query` | Beacon V2 search | per query key |
 | GET | `/health` | Health check | — |
 
 ## Filter Field Types → UI Components
 
-| `type` | Component          | Fields                                                                    |
-|---|--------------------|---------------------------------------------------------------------------|
-| `text` | `<TextInput>`      | `dataset_title`, `dataset_description`, `staining_target`                 |
-| `controlledValue` | `<MultiSelect>`    | `sex`                                                                     |
-| `ontology` | `<OntologyPicker>` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation` |
-| `ontologyOrValue` | `<OntologyPicker>` | `fixation_type`, `staining_procedure`, `staining_substance`               |
-| `iso8601Range` | `<RangePicker>`    | `age_at_extraction`                                                       |
+| `type` | Component | Fields |
+|---|---|---|
+| `text` | `<TextField>` | `dataset_title`, `dataset_description` |
+| `keyword` | `<OntologyPicker>` `:allow-free-text="true"` | `staining_target` |
+| `controlledValue` | `<MultiSelect>` | `sex` |
+| `ontology` | `<OntologyPicker>` `:allow-free-text="false"` | `anatomical_site`, `animal_species`, `specimen_type`, `block_preparation`, `diagnosis`, `finding`, `finding_severity`, `finding_chronicity`, `finding_distribution`, `finding_result_category` |
+| `ontologyOrValue` | `<OntologyPicker>` `:allow-free-text="true"` | `fixation_type`, `staining_procedure`, `staining_substance` |
+| `iso8601Range` | `<RangePicker>` | `age_at_extraction` |
 
-## POST /query — Request
-
-```ts
-{
-  query: {
-    filters: [
-      { id: "sex",               value: "Female",     operator: "="},
-      { id: "animal_species",    value: ["337915000"], operator: "=", includeDescendantTerms: true },
-      { id: "age_at_extraction", value: "P40Y-P50Y",  operator: "=" }
-    ],
-    requestedGranularity: "record"
-  }
-}
-```
-
-**Logic:**
-- Multiple different fields → **AND**
-- Multiple values in same field → **OR** (multiselect)
-- Ontology fields: `value` is SNOMED CT concept ID e.g. `"337915000"` (Homo sapiens)
-- `iso8601Range`: `value` is `"P40Y-P50Y"` — backend converts to days internally
-- Backend auto-expands SNOMED descendants — frontend sends exact concept ID only
-
-## POST /query — Response (record)
+## GET /filtering_terms — Response
 
 ```ts
 {
   meta: {
     apiVersion: string
     beaconId: string
-    returnedGranularity: "record"
-  },
-  responseSummary: {
-    exists: boolean
-    numTotalResults: number   // number of matching datasets
-  },
+    returnedSchemas: { entityType: string }[]
+  }
   response: {
-    resultSet: [
+    filteringTerms: [
       {
-        id: string            // datasetId
-        setType: "dataset"
-        exists: boolean
-        results: [
-          {
-            datasetId: string
-            datasetTitle: string | null
-            datasetDescription: string | null
-            totalImageCount: number
-            matchingImageCount: number
-            imageIds: string[]
-          }
-        ]
+        id: string                          // e.g. "anatomical_site"
+        type: "text" | "keyword" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
+        label: string                       // e.g. "Anatomical site"
+        description: string
+        ui_group?: string | null            // maps to a BeaconFilteringGroup id
+        ui_display?: boolean                // if false, field is hidden from UI
+        scopes: string[]                    // e.g. ["specimen"]
+        ontology?: {
+          id: string                        // always "SCTID"
+        }
+        controlledValues?: string[]         // only for type="controlledValue"
       }
     ]
   }
 }
 ```
 
-## GET /filtering_terms — Response
+## GET /filtering_groups — Response
 
 ```ts
-{
-    meta: {
-        apiVersion: string
-        beaconId: string
-        returnedSchemas: { entityType: string }[]
+[
+    {
+        id: string
+        label: string
+        description?: string
+        border?: boolean        // visual separator in UI
     }
-    response: {
-        filteringTerms: [
-            {
-                id: string                          // e.g. "anatomical_site"
-                type: "text" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
-                label: string                       // e.g. "Anatomical site"
-                description: string
-                scopes: string[]                    // e.g. ["specimen"]
-                ontology?: {
-                    id: string                        // always "SCTID"
-                    rootTerms?: string[] | null
-                    allowedTerms?: string[] | null
-                }
-                controlledValues?: string[]         // only for type="controlledValue"
-            }
-        ]
-    }
-}
+]
 ```
 
-## GET /filtering_terms/{field_id}/values — Response
+## GET /filtering_scopes — Response
+
+```ts
+[
+    {
+        id: string          // e.g. "clinical", "non_clinical"
+        label: string
+        description: string
+    }
+]
+```
+
+## GET /filtering_qualifiers — Response
+
+```ts
+[
+    {
+        id: string          // e.g. "observation"
+        label: string
+        description: string
+        values: string[]    // e.g. ["confirmed", "candidate"]
+        groups: string[]    // filter group ids this qualifier applies to
+    }
+]
+```
+
+## GET /filtering_terms/{field_id}/values — Query parameters
+
+| Param | Type | Notes |
+|---|---|---|
+| `scope` | string | Omit when `"all"`. Values: `"clinical"`, `"non_clinical"` |
+| `qualifier` | repeated string | Each entry: `"id:value"` e.g. `"observation:confirmed"`. FastAPI expects repeated keys — Axios must use `paramsSerializer: { indexes: null }` |
+
+Response:
 
 ```ts
 // list ordered by count desc
@@ -132,33 +125,96 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 ]
 ```
 
-## GET /filtering_terms/{field_id}/suggestions — Response
+## GET /filtering_terms/{field_id}/suggestions — Query parameters
+
+| Param | Type | Notes |
+|---|---|---|
+| `term` | string | User's search string (min 2 chars before firing) |
+| `word_match` | `"true"` | Always sent |
+| `scope` | string | Omit when `"all"`. Values: `"clinical"`, `"non_clinical"` |
+| `qualifier` | repeated string | Each entry: `"id:value"` e.g. `"observation:confirmed"`. FastAPI expects repeated keys — Axios must use `paramsSerializer: { indexes: null }` |
+
+Response: same shape as `/values`. First call may be slow (Snowstorm cold cache) — always show loading state. `ontologyOrValue` fields return both SNOMED concepts and free-text values in the same list.
+
+## POST /query — Request
 
 ```ts
-// query param: ?term=lun
-[
-    {
-        value: string           // display label e.g. "Lung structure"
-        count: number
-        concept_id: string | null  // SNOMED ID if ontology match, null if free-text
+{
+    query: {
+        filters: [
+            { id: "sex",               value: "Female",      operator: "=" },
+            { id: "animal_species",    value: ["337915000"], operator: "=" },
+            { id: "age_at_extraction", value: "P40Y-P50Y",   operator: "=" }
+        ],
+            requestedGranularity: "record" | "count",
+            requestedScope?: string,            // "clinical" | "non_clinical" — omit for all data
+            requestedQualifiers?: {
+                [qualifierId: string]: string[]   // e.g. { observation: ["confirmed"] }
     }
-]
+    }
+}
 ```
 
-**Note:** First call may be slow (Snowstorm cold cache). Always show loading state.
-`ontologyOrValue` fields return both SNOMED concepts and free-text values in same list.
+Filter logic: different fields → AND, multiple values on same field → OR. `includeDescendantTerms` is not sent — backend auto-expands SNOMED descendants. `iso8601Range` value format: `"P40Y-P50Y"`.
+
+There are two API functions for the two search paths — `postQuery` (clinical, record granularity) and `postNonClinicalQuery` (always count granularity, always `non_clinical` scope).
+
+## POST /query — Response (record granularity)
+
+```ts
+{
+    meta: {
+        apiVersion: string
+        beaconId: string
+        returnedGranularity: "record"
+    }
+    responseSummary: {
+        exists: boolean
+        numTotalResults: number
+    }
+    response: {
+        resultSet: [
+            {
+                id: string
+                setType: "dataset"
+                exists: boolean
+                results: [
+                    {
+                        datasetId: string
+                        datasetTitle: string | null
+                        datasetDescription: string | null
+                        datasetUrl: string | null
+                        totalImageCount: number
+                        matchingImageCount: number
+                        imageIds: string[]
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+
+`accessionId` is not yet in the backend response — `datasetId` is used as REMS resource fallback.
+
+## POST /query — Response (count granularity)
+
+No `resultSet` — non-clinical results show only aggregate image count.
+
+```ts
+{
+    meta: {
+        apiVersion: string
+        beaconId: string
+        returnedGranularity: "count"
+    }
+    responseSummary: {
+        exists: boolean
+        numTotalResults: number
+    }
+}
+```
 
 ## Request Access
 
-Results show "Request access" per dataset — opens REMS:
-
-```ts
-window.open(
-    `https://bp-rems.sd.csc.fi/apply-for?resource=${datasetId}`,
-    '_blank',
-    'noopener,noreferrer'
-)
-```
-
-**Note:** `accessionId` not yet in backend response — using `datasetId` as fallback.
-Update when backend adds `accessionId` to `BeaconResultSetResult`.
+"Apply for access" opens REMS in a new tab with `datasetId` as the resource parameter. Bulk selection appends multiple resource params to the same URL via `URLSearchParams`.
