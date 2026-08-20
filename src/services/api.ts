@@ -74,7 +74,7 @@ export async function postQuery(
     },
   }
 
-  const res = await apiClient.post<BeaconResultSetsResponse>('/query', body)
+  const res = await apiClient.post<BeaconResultSetsResponse>('/datasets', body)
   return res.data
 }
 
@@ -95,7 +95,7 @@ export async function postNonClinicalQuery(
     },
   }
 
-  const res = await apiClient.post<BeaconCountResponse>('/query', body)
+  const res = await apiClient.post<BeaconCountResponse>('/images', body)
   return res.data
 }
 
