@@ -23,7 +23,8 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | GET | `/filtering_groups` | UI grouping config for filter fields | `staleTime: Infinity` |
 | GET | `/filtering_scopes` | Available scope definitions (`clinical` / `non_clinical`) | `staleTime: Infinity` |
 | GET | `/filtering_qualifiers` | Available qualifier definitions (e.g. `observation`) | `staleTime: Infinity` |
-| POST | `/query` | Beacon V2 search | per query key |
+| POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
+| POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
 | GET | `/health` | Health check | — |
 
 ## Filter Field Types → UI Components
@@ -136,7 +137,7 @@ Response:
 
 Response: same shape as `/values`. First call may be slow (Snowstorm cold cache) — always show loading state. `ontologyOrValue` fields return both SNOMED concepts and free-text values in the same list.
 
-## POST /query — Request
+## POST /datasets, POST /images — Request
 
 ```ts
 {
@@ -157,9 +158,9 @@ Response: same shape as `/values`. First call may be slow (Snowstorm cold cache)
 
 Filter logic: different fields → AND, multiple values on same field → OR. `includeDescendantTerms` is not sent — backend auto-expands SNOMED descendants. `iso8601Range` value format: `"P40Y-P50Y"`.
 
-There are two API functions for the two search paths — `postQuery` (clinical, record granularity) and `postNonClinicalQuery` (always count granularity, always `non_clinical` scope).
+There are two API functions for the two search paths — `postQuery` (calls `/datasets`, clinical, record granularity) and `postNonClinicalQuery` (calls `/images`, always count granularity, always `non_clinical` scope).
 
-## POST /query — Response (record granularity)
+## POST /datasets — Response (record granularity)
 
 ```ts
 {
@@ -197,7 +198,7 @@ There are two API functions for the two search paths — `postQuery` (clinical, 
 
 `accessionId` is not yet in the backend response — `datasetId` is used as REMS resource fallback.
 
-## POST /query — Response (count granularity)
+## POST /images — Response (count granularity)
 
 No `resultSet` — non-clinical results show only aggregate image count.
 
