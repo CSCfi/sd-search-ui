@@ -108,6 +108,18 @@ export interface BeaconResultSetsResponse {
   response: BeaconResultSets
 }
 
+export interface BeaconCountResponse {
+  meta: {
+    apiVersion: string
+    beaconId: string
+    returnedGranularity: 'count'
+  }
+  responseSummary: {
+    exists: boolean
+    numTotalResults: number
+  }
+}
+
 // Field values
 
 export interface FieldValue {

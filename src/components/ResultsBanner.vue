@@ -3,9 +3,18 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '@/stores/searchStore'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
+import { useClinicalSearch } from '@/composables/useClinicalSearch'
+import { useNonClinicalSearch } from '@/composables/useNonClinicalSearch'
+import { pluralize } from '@/utils/pluralize.ts'
 
-const { committedFilters, hasCommittedFilters } = storeToRefs(useSearchStore())
+const { committedFilters, hasCommittedFilters, committedDatasetType } =
+  storeToRefs(useSearchStore())
 const { data: filteringTermsData } = useFilteringTerms()
+const { data: clinicalData } = useClinicalSearch()
+const { data: nonClinicalData } = useNonClinicalSearch()
+
+const clinicalCount = computed(() => clinicalData.value?.responseSummary.numTotalResults)
+const nonClinicalCount = computed(() => nonClinicalData.value?.responseSummary.numTotalResults)
 
 const labelMap = computed<Map<string, string>>(() => {
   const terms = filteringTermsData.value ?? []
@@ -20,6 +29,26 @@ function displayValue(filter: { value: string | string[]; label?: string[] }): s
   if (filter.label && filter.label.length > 0) return filter.label.join(', ')
   return Array.isArray(filter.value) ? filter.value.join(', ') : filter.value
 }
+
+const resultCountText = computed<string | null>(() => {
+  if (committedDatasetType.value === 'clinical') {
+    return clinicalCount.value !== undefined
+      ? `${pluralize(clinicalCount.value, 'dataset', 'datasets')} found`
+      : null
+  }
+  if (committedDatasetType.value === 'non_clinical') {
+    return nonClinicalCount.value !== undefined
+      ? `${pluralize(nonClinicalCount.value, 'image', 'images')} found`
+      : null
+  }
+
+  const parts: string[] = []
+  if (clinicalCount.value !== undefined)
+    parts.push(pluralize(clinicalCount.value, 'clinical dataset', 'clinical datasets'))
+  if (nonClinicalCount.value !== undefined)
+    parts.push(pluralize(nonClinicalCount.value, 'non-clinical image', 'non-clinical images'))
+  return parts.length > 0 ? parts.join(' · ') : null
+})
 </script>
 
 <template>
@@ -32,6 +61,7 @@ function displayValue(filter: { value: string | string[]; label?: string[] }): s
         <span class="tag-value">{{ displayValue(filter) }}</span>
       </li>
     </ul>
+    <p v-if="resultCountText" class="result-count" aria-live="polite">{{ resultCountText }}</p>
   </div>
 </template>
 
@@ -83,5 +113,12 @@ function displayValue(filter: { value: string | string[]; label?: string[] }): s
 
 .tag-value {
   color: var(--color-text);
+}
+
+.result-count {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
 }
 </style>

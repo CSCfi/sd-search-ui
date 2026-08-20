@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router'
 import SearchForm from '@/components/SearchForm.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/ResultsTable.vue'
+import NonClinicalResults from '@/components/NonClinicalResults.vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
 import type { BeaconQueryFilter } from '@/types/beacon'
@@ -65,6 +66,7 @@ if (parsed.length > 0 || Object.keys(parsedQualifiers).length > 0) {
     <section class="results">
       <div class="section-inner">
         <ResultsBanner />
+        <NonClinicalResults />
         <ResultsTable />
       </div>
     </section>
