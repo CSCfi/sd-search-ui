@@ -13,7 +13,7 @@ vi.mock('./apiClient', () => ({
   },
 }))
 
-const { postQuery, getFieldValues, getSuggestions } = await import('./api')
+const { postQuery, postNonClinicalQuery, getFieldValues, getSuggestions } = await import('./api')
 
 function sentBody(): BeaconQueryRequest {
   return post.mock.calls[0]?.[1] as BeaconQueryRequest
@@ -40,6 +40,32 @@ describe('postQuery — requestedScope', () => {
     await postQuery(filters, 'clinical')
     expect(sentBody().query.requestedGranularity).toBe('record')
     expect(sentBody().query.filters).toEqual(filters)
+  })
+})
+
+describe('postNonClinicalQuery', () => {
+  beforeEach(() => {
+    post.mockReset()
+    post.mockResolvedValue({ data: {} })
+  })
+
+  // These are hard-coded in the implementation, but we test them here to ensure that future changes don't break the expected behavior and leak full records.
+  it('always sends count granularity and non_clinical scope', async () => {
+    await postNonClinicalQuery([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(sentBody().query.requestedGranularity).toBe('count')
+    expect(sentBody().query.requestedScope).toBe('non_clinical')
+  })
+
+  it('sends bare qualifier values, not the "<id>:<value>" encoding', async () => {
+    await postNonClinicalQuery([{ id: 'diagnosis', value: ['64033007'], operator: '=' }], {
+      observation: 'confirmed',
+    })
+    expect(sentBody().query.requestedQualifiers).toEqual({ observation: ['confirmed'] })
+  })
+
+  it('sends an empty object when no qualifier is given', async () => {
+    await postNonClinicalQuery([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(sentBody().query.requestedQualifiers).toEqual({})
   })
 })
 

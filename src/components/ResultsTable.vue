@@ -3,14 +3,19 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
-import { useSearch } from '@/composables/useSearch'
+import { useClinicalSearch } from '@/composables/useClinicalSearch'
 import type { BeaconResultSetResult } from '@/types/beacon'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
 
-const { hasCommittedFilters, committedFilters } = storeToRefs(useSearchStore())
-const { data, isLoading, isError } = useSearch()
+const { hasCommittedFilters, committedFilters, committedDatasetType } =
+  storeToRefs(useSearchStore())
+const { data, isLoading, isError } = useClinicalSearch()
+
+const isActiveTab = computed(
+  () => committedDatasetType.value === 'all' || committedDatasetType.value === 'clinical',
+)
 
 const errorDismissed = ref(false)
 const selectedDatasetRows = ref<Set<string>>(new Set())
@@ -86,124 +91,126 @@ async function onModalClose(open: boolean) {
 </script>
 
 <template>
-  <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
-    <Search :size="40" class="no-filters-icon" aria-hidden="true" />
-    <h2 class="no-filters-heading">Start by selecting filters</h2>
-    <p class="no-filters-subtext">
-      Select one or more filters above and click Search to find datasets.
-    </p>
-  </div>
-
-  <section v-else class="results-table-section" aria-label="Search results" aria-live="polite">
-    <LoadingSpinner v-if="isLoading" :size="24" />
-
-    <ErrorBanner
-      v-else-if="isError && !errorDismissed"
-      message="Search failed. Please try again."
-      @dismiss="errorDismissed = true"
-    />
-
-    <p v-else-if="isEmpty" class="empty-state">No results found.</p>
-
-    <div v-else class="results-container">
-      <Transition name="bulk-bar">
-        <div
-          v-if="selectedCount > 0"
-          class="bulk-action-bar"
-          role="region"
-          aria-label="Bulk actions"
-        >
-          <span class="bulk-count">{{ selectedCount }} selected</span>
-          <c-button
-            class="btn-bulk-access"
-            :aria-label="`Apply for access to ${selectedCount} selected datasets`"
-            @click="openBulkRems(selectedIdsArray)"
-          >
-            <Key :size="16" aria-hidden="true" />
-            Apply for access ({{ selectedCount }})
-          </c-button>
-        </div>
-      </Transition>
-      <div class="table-wrapper">
-        <table class="results-table">
-          <caption class="sr-only">
-            Search results
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col"><span class="sr-only">Select row</span></th>
-              <th scope="col">Title</th>
-              <th scope="col">Description</th>
-              <th scope="col">More details</th>
-              <th scope="col">Matching images</th>
-              <th scope="col"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(result, index) in flatResults" :key="result.datasetId">
-              <td class="col-select">
-                <input
-                  type="checkbox"
-                  :checked="isSelected(result.datasetId)"
-                  :id="`select-${result.datasetId}`"
-                  :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
-                  @change="toggleSelection(result.datasetId)"
-                />
-              </td>
-              <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
-              <td class="col-description">
-                <span>{{ truncate(result.datasetDescription, 80) }}</span>
-                <button
-                  v-if="result.datasetDescription && result.datasetDescription.length > 80"
-                  :ref="
-                    (el) => {
-                      if (el) triggerRefs[index] = el as HTMLButtonElement
-                    }
-                  "
-                  class="show-more-btn"
-                  :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
-                  @click="openModal(result, index)"
-                >
-                  Show more
-                </button>
-              </td>
-              <td class="col-more-details">
-                <a
-                  v-if="result.datasetUrl"
-                  :href="result.datasetUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
-                >
-                  View Details
-                </a>
-              </td>
-              <td class="col-images" aria-label="Matching images">
-                {{ result.matchingImageCount }} / {{ result.totalImageCount }}
-              </td>
-              <td class="col-action">
-                <c-button
-                  ghost
-                  class="btn-access"
-                  :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
-                  @click="requestAccess(result.datasetId)"
-                >
-                  Request access
-                </c-button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  <template v-if="isActiveTab">
+    <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
+      <Search :size="40" class="no-filters-icon" aria-hidden="true" />
+      <h2 class="no-filters-heading">Start by selecting filters</h2>
+      <p class="no-filters-subtext">
+        Select one or more filters above and click Search to find datasets.
+      </p>
     </div>
 
-    <DescriptionModal
-      v-model="modalOpen"
-      :title="activeResult?.datasetTitle ?? activeResult?.datasetId ?? ''"
-      :description="activeResult?.datasetDescription ?? ''"
-      @update:model-value="onModalClose"
-    />
-  </section>
+    <section v-else class="results-table-section" aria-label="Search results" aria-live="polite">
+      <LoadingSpinner v-if="isLoading" :size="24" />
+
+      <ErrorBanner
+        v-else-if="isError && !errorDismissed"
+        message="Search failed. Please try again."
+        @dismiss="errorDismissed = true"
+      />
+
+      <p v-else-if="isEmpty" class="empty-state">No results found.</p>
+
+      <div v-else class="results-container">
+        <Transition name="bulk-bar">
+          <div
+            v-if="selectedCount > 0"
+            class="bulk-action-bar"
+            role="region"
+            aria-label="Bulk actions"
+          >
+            <span class="bulk-count">{{ selectedCount }} selected</span>
+            <c-button
+              class="btn-bulk-access"
+              :aria-label="`Apply for access to ${selectedCount} selected datasets`"
+              @click="openBulkRems(selectedIdsArray)"
+            >
+              <Key :size="16" aria-hidden="true" />
+              Apply for access ({{ selectedCount }})
+            </c-button>
+          </div>
+        </Transition>
+        <div class="table-wrapper">
+          <table class="results-table">
+            <caption class="sr-only">
+              Search results
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Select row</span></th>
+                <th scope="col">Title</th>
+                <th scope="col">Description</th>
+                <th scope="col">More details</th>
+                <th scope="col">Matching images</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(result, index) in flatResults" :key="result.datasetId">
+                <td class="col-select">
+                  <input
+                    type="checkbox"
+                    :checked="isSelected(result.datasetId)"
+                    :id="`select-${result.datasetId}`"
+                    :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
+                    @change="toggleSelection(result.datasetId)"
+                  />
+                </td>
+                <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
+                <td class="col-description">
+                  <span>{{ truncate(result.datasetDescription, 80) }}</span>
+                  <button
+                    v-if="result.datasetDescription && result.datasetDescription.length > 80"
+                    :ref="
+                      (el) => {
+                        if (el) triggerRefs[index] = el as HTMLButtonElement
+                      }
+                    "
+                    class="show-more-btn"
+                    :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
+                    @click="openModal(result, index)"
+                  >
+                    Show more
+                  </button>
+                </td>
+                <td class="col-more-details">
+                  <a
+                    v-if="result.datasetUrl"
+                    :href="result.datasetUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
+                  >
+                    View Details
+                  </a>
+                </td>
+                <td class="col-images" aria-label="Matching images">
+                  {{ result.matchingImageCount }} / {{ result.totalImageCount }}
+                </td>
+                <td class="col-action">
+                  <c-button
+                    ghost
+                    class="btn-access"
+                    :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
+                    @click="requestAccess(result.datasetId)"
+                  >
+                    Request access
+                  </c-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <DescriptionModal
+        v-model="modalOpen"
+        :title="activeResult?.datasetTitle ?? activeResult?.datasetId ?? ''"
+        :description="activeResult?.datasetDescription ?? ''"
+        @update:model-value="onModalClose"
+      />
+    </section>
+  </template>
 </template>
 
 <style scoped>

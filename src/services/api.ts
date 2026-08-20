@@ -1,4 +1,5 @@
 import type {
+  BeaconCountResponse,
   BeaconFilteringGroup,
   BeaconFilteringQualifier,
   BeaconFilteringTermsResponse,
@@ -74,6 +75,27 @@ export async function postQuery(
   }
 
   const res = await apiClient.post<BeaconResultSetsResponse>('/query', body)
+  return res.data
+}
+
+// Non-clinical scope is always queried at 'count' granularity — the backend never returns
+// per-dataset identity or imageIds for non-clinical results (see BeaconCountResponse).
+export async function postNonClinicalQuery(
+  filters: BeaconQueryFilter[],
+  qualifiers: Record<string, string> = {},
+): Promise<BeaconCountResponse> {
+  const body: BeaconQueryRequest = {
+    query: {
+      filters,
+      requestedGranularity: 'count',
+      requestedScope: 'non_clinical',
+      requestedQualifiers: Object.fromEntries(
+        Object.entries(qualifiers).map(([id, value]) => [id, [value]]),
+      ),
+    },
+  }
+
+  const res = await apiClient.post<BeaconCountResponse>('/query', body)
   return res.data
 }
 
