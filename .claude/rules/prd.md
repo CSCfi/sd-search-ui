@@ -30,47 +30,70 @@ Biomedical researchers at universities and research institutions who:
 ## User Journey
 
 1. Researcher logs in via their institutional account (LifeScience AAI)
-2. Researcher fills in search filters describing their criteria
+2. Researcher selects a scope tab (All data / Clinical / Non-clinical) and optionally a qualifier
+3. Researcher fills in search filters describing their criteria
    (e.g. human tissue, lung, specific staining method, age range)
-3. Researcher submits the search and sees matching datasets with image counts
-4. Researcher reviews dataset descriptions and decides which datasets are relevant
-5. Researcher requests access to selected datasets via REMS
-6. After approval, researcher gains access to images in BigPicture
+4. Researcher submits the search and sees matching datasets with image counts
+5. For clinical data: researcher reviews dataset list, selects relevant datasets, requests access via REMS
+6. For non-clinical data: researcher sees a total matching image count and applies for access as a virtual dataset
+7. After approval, researcher gains access to images in BigPicture
 
 ## Search Filters
 
-Filters follow the PICO research query model adapted for digital pathology:
+Filters follow the PICO research query model adapted for digital pathology. The actual field list
+is backend-driven (`GET /filtering_terms`) — the table below reflects the current `fields.yaml`.
 
-| Filter | Description | Example |
-|---|---|---|
-| Dataset description | Free-text search in dataset titles and descriptions | "lung carcinoma" |
-| Biological species | Species of the biological sample | Human, Mouse |
-| Anatomical site | Organ or body structure the sample was taken from | Lung, Breast, Kidney |
-| Sex | Biological sex of the donor | Male, Female |
-| Age at extraction | Age of the donor at time of sample extraction | 40–60 years |
-| Fixation type | How the tissue was preserved | FFPE, Fresh frozen |
-| Block preparation | Embedding medium used | Paraffin, OCT |
-| Specimen type | Type of biological specimen | Tissue section |
-| Staining | Staining procedure, compound, or target | H&E, IHC, pan-Cytokeratin |
+| Field id | Label | Scope | Type |
+|---|---|---|---|
+| `dataset_description` | Dataset description | clinical + non_clinical | text |
+| `animal_species` | Biological species | non_clinical | ontology |
+| `anatomical_site` | Anatomical site | clinical + non_clinical | ontology |
+| `sex` | Sex | clinical + non_clinical | controlledValue |
+| `age_at_extraction` | Age at extraction | clinical + non_clinical | iso8601Range |
+| `block_preparation` | Block preparation | clinical + non_clinical | ontology |
+| `specimen_type` | Specimen type | clinical + non_clinical | ontology |
+| `fixation_type` | Fixation type | clinical + non_clinical | ontologyOrValue |
+| `staining_target` | Staining target | clinical + non_clinical | keyword |
+| `staining_procedure` | Staining procedure | clinical + non_clinical | ontologyOrValue |
+| `staining_substance` | Staining substance | clinical + non_clinical | ontologyOrValue |
+| `diagnosis` | Diagnosis | clinical only | ontology (SNOMED CT) |
+| `finding` | Finding | non_clinical only | ontology (SEND) |
+| `finding_severity` | Severity | non_clinical only | ontology (SEND) |
+| `finding_chronicity` | Chronicity | non_clinical only | ontology (SEND) |
+| `finding_distribution` | Distribution | non_clinical only | ontology (SEND) |
+| `finding_result_category` | Result category | non_clinical only | ontology (SEND) |
+
+`dataset_title` is indexed but `ui_display: false` — not shown in the UI.
 
 Multiple values within the same filter are combined with OR.
 Multiple different filters are combined with AND.
+At least one filter must be selected before search can be submitted.
 
 ## Results
 
-Search results show matching datasets, not individual images. Per dataset:
-- Dataset title and description
+Results are split by data scope:
+
+**Clinical data** — shown as a dataset list. Per dataset:
+- Dataset title and description (truncated, expandable via modal)
+- Link to dataset details page (`datasetUrl`)
 - Number of matching images / total images in dataset
-- Button to request access
+- Checkbox for bulk selection
+- Button to apply for access via REMS
+
+Multiple datasets can be selected and submitted as a single bulk REMS application.
+
+**Non-clinical data** — shown as an aggregate count only. No dataset identity is exposed.
+- Total matching image count
+- Button to apply for access (implementation pending)
 
 ## Access Request
 
-Clicking "Request access" opens the REMS (Resource Entitlement Management System)
-application form in a new tab. Access approval is handled outside CSC Discovery.
+Clicking "Apply for access" opens REMS (Resource Entitlement Management System) in a new tab.
+Bulk selection appends multiple `resource` params to the same REMS URL. Access approval is
+handled outside CSC Discovery.
 
 ## Out of Scope (current version)
 
-- Cart / bulk access requests
 - Viewing images directly in the portal
 - Search history
 - Access status tracking

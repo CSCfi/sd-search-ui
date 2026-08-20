@@ -22,7 +22,7 @@ structured filters and request access via REMS.
 | Auth | LifeScience AAI — cookie-based, backend handles OIDC flow |
 | Hosting | CSC Rahti (OpenShift) |
 | Testing | Vitest |
-| Linting | ESLint + Prettier |
+| Linting | ESLint + OXLint + Prettier |
 | Package manager | pnpm |
 
 ## Commands
@@ -48,12 +48,16 @@ pnpm format:ci      # Check code format with Prettier in CI mode
 ```
 src/
   components/
-    dynamic/        # OntologyPicker, RangePicker (custom)
-    ui/             # wrappers around c-* components
-  composables/      # useSearch, useAuth
-  directives/       # vControl.ts
+    dynamic/        # Schema-driven field components (DynamicField + one per FilteringTerm.type)
+    filters/        # Tab/scope/qualifier UI (FilterTabGroup, FilterTabPanel, QualifierSelector, ScopeBadge)
+    ui/             # Generic reusable components (Badge, ErrorBanner, FieldLabel, FieldInfoTooltip, etc.)
+  composables/      # TanStack Query wrappers and other shared logic
+  directives/       # vControl.ts — v-control directive for c-* form components
+  plugins/          # cookieConsent.ts
+  router/           # Vue Router + auth guard
+  services/         # api.ts (all API functions) + apiClient.ts (Axios instance)
   stores/           # Pinia: searchStore, authStore
-  services/         # API layer
-  types/            # TypeScript types (Beacon V2, FilteringTerm etc.)
-  router/           # Vue Router + auth guards
+  types/            # beacon.ts — Beacon V2 + FilteringTerm types
+  utils/
+  views/            # HomePage, SearchPage, NotFoundPage
 ```
