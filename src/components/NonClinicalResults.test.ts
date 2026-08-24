@@ -5,9 +5,14 @@ import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { useSearchStore } from '@/stores/searchStore'
 
 const postNonClinicalQuery = vi.fn<(...args: unknown[]) => Promise<unknown>>()
+const getFilteringScopes = vi.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([
+  { id: 'clinical', label: 'Clinical', description: '' },
+  { id: 'non_clinical', label: 'Non-clinical', description: '' },
+])
 
 vi.mock('@/services/api', () => ({
   postNonClinicalQuery: (...args: unknown[]) => postNonClinicalQuery(...args),
+  getFilteringScopes: (...args: unknown[]) => getFilteringScopes(...args),
 }))
 
 const { default: NonClinicalResults } = await import('./NonClinicalResults.vue')

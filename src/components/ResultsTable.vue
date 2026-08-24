@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useClinicalSearch } from '@/composables/useClinicalSearch'
+import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import type { BeaconResultSetResult } from '@/types/beacon'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
@@ -12,6 +13,11 @@ import DescriptionModal from '@/components/DescriptionModal.vue'
 const { hasCommittedFilters, committedFilters, committedDatasetType } =
   storeToRefs(useSearchStore())
 const { data, isLoading, isError } = useClinicalSearch()
+const { data: filteringScopes } = useFilteringScopes()
+
+const clinicalLabel = computed(
+  () => filteringScopes.value?.find((scope) => scope.id === 'clinical')?.label + ' results',
+)
 
 const isActiveTab = computed(
   () => committedDatasetType.value === 'all' || committedDatasetType.value === 'clinical',
@@ -92,6 +98,8 @@ async function onModalClose(open: boolean) {
 
 <template>
   <template v-if="isActiveTab">
+    <h2 class="scope-heading scope-heading--clinical">{{ clinicalLabel }}</h2>
+
     <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
       <Search :size="40" class="no-filters-icon" aria-hidden="true" />
       <h2 class="no-filters-heading">Start by selecting filters</h2>
@@ -214,6 +222,39 @@ async function onModalClose(open: boolean) {
 </template>
 
 <style scoped>
+@include tablet {
+  .scope-heading {
+    margin-left: 0;
+  }
+}
+
+.scope-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.5rem 1.5rem;
+  font-weight: var(--font-weight-heading);
+  font-size: 1.0625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &::before {
+    display: inline-block;
+    border-radius: 0.125rem;
+    width: 0.25rem;
+    height: 1.125rem;
+    content: '';
+  }
+}
+
+.scope-heading--clinical {
+  color: rgb(var(--color-scope-clinical-rgb));
+
+  &::before {
+    background: rgb(var(--color-scope-clinical-rgb));
+  }
+}
+
 .no-filters-state {
   display: flex;
   flex-direction: column;
