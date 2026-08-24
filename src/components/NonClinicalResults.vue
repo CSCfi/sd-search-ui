@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Key } from '@lucide/vue'
+import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useNonClinicalSearch } from '@/composables/useNonClinicalSearch'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
@@ -22,6 +22,12 @@ const isActiveTab = computed(
   () => committedDatasetType.value === 'all' || committedDatasetType.value === 'non_clinical',
 )
 
+// On the 'all' tab, ResultsTable already renders the shared "no filters" prompt —
+// only render it here when non_clinical is the sole active scope, to avoid a duplicate.
+const showNoFiltersPrompt = computed(
+  () => !hasCommittedFilters.value && committedDatasetType.value === 'non_clinical',
+)
+
 const imageCount = computed(() => data.value?.responseSummary.numTotalResults ?? 0)
 
 const hasMatches = computed(() => data.value !== undefined && imageCount.value > 0)
@@ -34,7 +40,17 @@ function applyForNonClinicalAccess() {
 
 <template>
   <template v-if="isActiveTab">
-    <h2 class="scope-heading scope-heading--non-clinical">{{ nonClinicalLabel }}</h2>
+    <h2 v-if="hasCommittedFilters" class="scope-heading scope-heading--non-clinical">
+      {{ nonClinicalLabel }}
+    </h2>
+
+    <div v-if="showNoFiltersPrompt" class="no-filters-state" aria-live="polite">
+      <Search :size="40" class="no-filters-icon" aria-hidden="true" />
+      <h2 class="no-filters-heading">Start by selecting filters</h2>
+      <p class="no-filters-subtext">
+        Select one or more filters above and click Search to find datasets.
+      </p>
+    </div>
 
     <section
       v-if="hasCommittedFilters"
@@ -113,6 +129,34 @@ function applyForNonClinicalAccess() {
   &::before {
     background: rgb(var(--color-scope-non-clinical-rgb));
   }
+}
+
+.no-filters-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 1.5rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.no-filters-icon {
+  color: var(--color-light-grey);
+}
+
+.no-filters-heading {
+  margin: 0;
+  color: var(--color-dark-blue);
+  font-weight: var(--font-weight-heading);
+  font-size: 1.25rem;
+}
+
+.no-filters-subtext {
+  margin: 0;
+  max-width: 32rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
 }
 
 .non-clinical-results {
