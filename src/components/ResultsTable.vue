@@ -98,7 +98,9 @@ async function onModalClose(open: boolean) {
 
 <template>
   <template v-if="isActiveTab">
-    <h2 class="scope-heading scope-heading--clinical">{{ clinicalLabel }}</h2>
+    <h2 v-if="hasCommittedFilters" class="scope-heading scope-heading--clinical">
+      {{ clinicalLabel }}
+    </h2>
 
     <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
       <Search :size="40" class="no-filters-icon" aria-hidden="true" />
