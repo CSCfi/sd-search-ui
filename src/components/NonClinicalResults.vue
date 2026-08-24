@@ -4,11 +4,17 @@ import { storeToRefs } from 'pinia'
 import { Key } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useNonClinicalSearch } from '@/composables/useNonClinicalSearch'
+import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const { committedDatasetType, hasCommittedFilters } = storeToRefs(useSearchStore())
 const { data, isLoading, isError } = useNonClinicalSearch()
+const { data: filteringScopes } = useFilteringScopes()
+
+const nonClinicalLabel = computed(
+  () => filteringScopes.value?.find((scope) => scope.id === 'non_clinical')?.label + ' results',
+)
 
 const errorDismissed = ref(false)
 
@@ -27,50 +33,92 @@ function applyForNonClinicalAccess() {
 </script>
 
 <template>
-  <section
-    v-if="isActiveTab && hasCommittedFilters"
-    class="non-clinical-results"
-    aria-label="Non-clinical results"
-    aria-live="polite"
-  >
-    <div class="non-clinical-card">
-      <LoadingSpinner v-if="isLoading" :size="24" />
+  <template v-if="isActiveTab">
+    <h2 class="scope-heading scope-heading--non-clinical">{{ nonClinicalLabel }}</h2>
 
-      <ErrorBanner
-        v-else-if="isError && !errorDismissed"
-        message="Search failed. Please try again."
-        @dismiss="errorDismissed = true"
-      />
+    <section
+      v-if="hasCommittedFilters"
+      class="non-clinical-results"
+      aria-label="Non-clinical results"
+      aria-live="polite"
+    >
+      <div class="non-clinical-card">
+        <LoadingSpinner v-if="isLoading" :size="24" />
 
-      <template v-else>
-        <div v-if="data && !hasMatches" class="nc-row">
-          <span class="nc-bar nc-bar--empty" aria-hidden="true"></span>
-          <p class="nc-heading nc-heading--empty">No matching non-clinical images</p>
-        </div>
+        <ErrorBanner
+          v-else-if="isError && !errorDismissed"
+          message="Search failed. Please try again."
+          @dismiss="errorDismissed = true"
+        />
 
-        <template v-else-if="hasMatches">
-          <div class="nc-row">
-            <span class="nc-bar nc-bar--active" aria-hidden="true"></span>
-            <p class="nc-heading">
-              Matching non-clinical images : <span class="nc-count">{{ imageCount }}</span>
-            </p>
+        <template v-else>
+          <div v-if="data && !hasMatches" class="nc-row">
+            <p class="nc-heading nc-heading--empty">No matching non-clinical images</p>
           </div>
-          <c-button class="btn-apply-non-clinical" @click="applyForNonClinicalAccess">
-            <Key :size="16" aria-hidden="true" />
-            Apply for the non-clinical images
-          </c-button>
-          <p class="nc-disclaimer">
-            Image access is subject to approval. You will receive an email when your virtual dataset
-            is ready.
-          </p>
+
+          <template v-else-if="hasMatches">
+            <div class="nc-row">
+              <p class="nc-heading">
+                Matching non-clinical images : <span class="nc-count">{{ imageCount }}</span>
+              </p>
+            </div>
+            <c-button class="btn-apply-non-clinical" @click="applyForNonClinicalAccess">
+              <Key :size="16" aria-hidden="true" />
+              Apply for the non-clinical images
+            </c-button>
+            <p class="nc-disclaimer">
+              Image access is subject to approval. You will receive an email when your virtual
+              dataset is ready.
+            </p>
+          </template>
         </template>
-      </template>
-    </div>
-  </section>
+      </div>
+    </section>
+  </template>
 </template>
 
 <style scoped>
+@include tablet {
+  .scope-heading {
+    margin-left: 0;
+  }
+
+  .non-clinical-results {
+    margin-left: 0;
+  }
+}
+
+.scope-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.5rem 1.5rem;
+  font-weight: var(--font-weight-heading);
+  font-size: 1.0625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &::before {
+    display: inline-block;
+    border-radius: 0.125rem;
+    width: 0.25rem;
+    height: 1.125rem;
+    content: '';
+  }
+}
+
+.scope-heading--non-clinical {
+  color: rgb(var(--color-scope-non-clinical-rgb));
+
+  &::before {
+    background: rgb(var(--color-scope-non-clinical-rgb));
+  }
+}
+
 .non-clinical-results {
+  margin-top: 1.5rem;
+  margin-bottom: 2.5rem;
+  margin-left: 1.5rem;
   max-width: 35rem;
 }
 
@@ -85,21 +133,6 @@ function applyForNonClinicalAccess() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.nc-bar {
-  flex-shrink: 0;
-  border-radius: 0.125rem;
-  width: 0.25rem;
-  height: 1.75rem;
-}
-
-.nc-bar--empty {
-  background: var(--color-light-grey);
-}
-
-.nc-bar--active {
-  background: rgb(var(--color-scope-non-clinical-rgb));
 }
 
 .nc-heading {
