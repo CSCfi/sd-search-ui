@@ -10,6 +10,21 @@ function formatNumber(n: number): string {
   return new Intl.NumberFormat().format(n)
 }
 
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+const lastIndexed = computed(() => {
+  if (!data.value?.last_indexed) return null
+  return formatDate(data.value.last_indexed)
+})
+
 const scopeItems = computed(() => {
   if (!data.value) return []
   const scopes = data.value.scopes
@@ -27,6 +42,10 @@ const scopeItems = computed(() => {
       <span class="dot" :class="`dot--${item.key}`"></span>
       <span class="label">{{ item.label }}</span>
       <span class="value">{{ item.value }}</span>
+    </div>
+    <div v-if="lastIndexed" class="stat-item stat-item--divider">
+      <span class="label">Last indexed</span>
+      <span class="value">{{ lastIndexed }}</span>
     </div>
   </div>
 </template>
@@ -47,6 +66,12 @@ const scopeItems = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.stat-item--divider {
+  margin-left: -10px;
+  border-left: 1px solid var(--color-light-grey);
+  padding-left: 10px;
 }
 
 .dot {
