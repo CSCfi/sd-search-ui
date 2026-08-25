@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import AppNavbar from '@/components/AppNavbar.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import DeploymentStatusBar from '@/components/ui/DeploymentStatusBar.vue'
 </script>
 
 <template>
   <div class="app-layout">
     <AppNavbar />
+    <DeploymentStatusBar />
     <div class="app-content">
       <RouterView />
     </div>

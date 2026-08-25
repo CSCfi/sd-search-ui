@@ -21,6 +21,8 @@ All colors are CSS custom properties defined in `src/assets/styles/_variables.sc
 | `--color-surface` | `#fafafa` | Input/control backgrounds |
 | `--color-text-secondary` | `#666` | Muted / placeholder text |
 | `--color-white` | `#ffffff` | |
+| `--color-stats-label` | `#8a86ab` | Deployment status strip — label text |
+| `--color-stats-value` | `#4a4570` | Deployment status strip — value text |
 
 ### Scope accent colors
 

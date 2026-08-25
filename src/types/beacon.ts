@@ -127,3 +127,21 @@ export interface FieldValue {
   count: number
   concept_id: string | null
 }
+
+// Deployment status
+
+export interface DocumentCounts {
+  indexed: number
+  pending: number
+}
+
+export interface ScopedCounts {
+  documents: DocumentCounts
+}
+
+export interface DeploymentStatus {
+  deployment: string
+  documents: DocumentCounts
+  scopes: Record<string, ScopedCounts>
+  last_indexed: string | null // ISO 8601 datetime string or null
+}

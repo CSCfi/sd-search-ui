@@ -7,6 +7,7 @@ import type {
   BeaconQueryRequest,
   BeaconFilteringScope,
   BeaconResultSetsResponse,
+  DeploymentStatus,
   FieldValue,
 } from '@/types/beacon'
 import apiClient from './apiClient'
@@ -109,4 +110,8 @@ export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {
 
 export async function getFilteringQualifiers(): Promise<BeaconFilteringQualifier[]> {
   return apiClient.get<BeaconFilteringQualifier[]>('/filtering_qualifiers').then((r) => r.data)
+}
+
+export async function getStatus(): Promise<DeploymentStatus> {
+  return apiClient.get<DeploymentStatus>('/status').then((r) => r.data)
 }

@@ -29,6 +29,7 @@ alwaysApply: false
 | `['filteringQualifiers']` | Infinity | always | |
 | `['values', fieldId, datasetType, qualifiers]` | 4h | always | |
 | `['suggestions', fieldId, term, datasetType, qualifiers]` | 5min | `term.length > 1` | |
+| `['deploymentStatus']` | 5min | always | `refetchInterval: 5min` too — polls while mounted. Uses `getStatus` |
 | `['search', 'clinical', committedFilters, committedQualifiers]` | — | `hasCommittedFilters && tab is 'all' or 'clinical'` | Uses `postQuery` |
 | `['search', 'non_clinical', committedFilters, committedQualifiers]` | — | `hasCommittedFilters && tab is 'all' or 'non_clinical'` | Uses `postNonClinicalQuery` — always count granularity |
 
