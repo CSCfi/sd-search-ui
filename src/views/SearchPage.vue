@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import DeploymentStatusBar from '@/components/ui/DeploymentStatusBar.vue'
 import SearchForm from '@/components/SearchForm.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/ResultsTable.vue'
@@ -54,6 +55,7 @@ if (parsed.length > 0 || Object.keys(parsedQualifiers).length > 0) {
 </script>
 
 <template>
+  <DeploymentStatusBar />
   <main class="search-layout">
     <section class="filters">
       <div class="section-inner">
