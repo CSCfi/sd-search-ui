@@ -25,6 +25,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | GET | `/filtering_qualifiers` | Available qualifier definitions (e.g. `observation`) | `staleTime: Infinity` |
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
+| GET | `/status` | Deployment/indexing status — document counts per scope | `staleTime: 5min`, `refetchInterval: 5min` |
 | GET | `/health` | Health check | — |
 
 ## Filter Field Types → UI Components
@@ -215,6 +216,19 @@ No `resultSet` — non-clinical results show only aggregate image count.
     }
 }
 ```
+
+## GET /status — Response
+
+```ts
+{
+    deployment: string
+    documents: { indexed: number; pending: number }
+    scopes: Record<string, { documents: { indexed: number; pending: number } }>  // keyed by scope id, e.g. "clinical" / "non_clinical"
+    last_indexed: string | null  // ISO 8601 datetime, or null
+}
+```
+
+Consumed via `getStatus()` in `services/api.ts` and the `useDeploymentStatus` composable (`queryKey: ['deploymentStatus']`). Rendered by `<DeploymentStatusBar>` — one stat per scope from `/filtering_scopes`, using `scopes[scope.id].documents.indexed`.
 
 ## Request Access
 

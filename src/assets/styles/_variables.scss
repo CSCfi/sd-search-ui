@@ -9,6 +9,8 @@
   --color-surface: #fafafa; /* input/control backgrounds */
   --color-text-secondary: #666; /* muted / placeholder text */
   --color-white: #ffffff;
+  --color-stats-label: #8a86ab; /* deployment stats strip — label text */
+  --color-stats-value: #4a4570; /* deployment stats strip — value text */
 
   /* Dataset scope accents. Channel triples, not hex, so borders and translucent fills derive
      the alpha variants from one source: rgb(var(--color-scope-clinical-rgb) / 0.15).
