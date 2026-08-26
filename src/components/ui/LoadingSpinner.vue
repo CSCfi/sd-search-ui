@@ -10,7 +10,7 @@ withDefaults(defineProps<{ size?: number }>(), { size: 16 })
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .loading {
   display: flex;
   justify-content: center;
