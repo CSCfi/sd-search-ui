@@ -14,7 +14,6 @@ export interface BeaconFilteringTerm {
   label: string
   description: string
   ui_group?: string | null
-  ui_display?: boolean
   scopes: string[]
   ontology?: {
     id: string
@@ -37,7 +36,6 @@ export interface BeaconFilteringGroup {
   id: string
   label: string
   description?: string
-  border?: boolean
 }
 
 export interface BeaconFilteringScope {

@@ -11,6 +11,7 @@ import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import { useFilteringQualifiers } from '@/composables/useFilteringQualifiers'
 import { useFieldScopes } from '@/composables/useFieldScopes'
+import { fieldsConfig } from '@/services/config'
 import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
 
 const {
@@ -143,12 +144,11 @@ const scopedFields = (scope: string) =>
     group.fields.filter((f) => !isShared(f) && f.scopes.includes(scope)),
   )
 
-const scopeGroupHasBorder = (scope: string) =>
-  filteringGroups.value?.find((g) => g.id === scope)?.border === true
+const scopeGroupHasBorder = (scope: string) => fieldsConfig.bordered.includes(scope)
 
-// Shared group borders come from the backend `border` flag, not special-case ids.
+// Shared group borders come from fieldsConfig.bordered
 const groupClass = (group: BeaconFilteringGroup) => ({
-  'group--border': group.border === true,
+  'group--border': fieldsConfig.bordered.includes(group.id),
 })
 
 async function copySearch() {

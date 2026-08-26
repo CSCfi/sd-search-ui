@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import FieldInfoTooltip from './FieldInfoTooltip.vue'
-
-const HIDDEN_DESCRIPTION_FIELD_IDS: string[] = ['dataset_description']
+import { fieldsConfig } from '@/services/config'
 
 defineProps<{
   fieldId: string
@@ -14,7 +13,7 @@ defineProps<{
   <div class="field-label-row">
     <label :for="`${fieldId}-trigger`" class="field-label">{{ label }}</label>
     <FieldInfoTooltip
-      v-if="description && !HIDDEN_DESCRIPTION_FIELD_IDS.includes(fieldId)"
+      v-if="description && !fieldsConfig.hidden_description.includes(fieldId)"
       :field-id="fieldId"
       :description="description"
     />
