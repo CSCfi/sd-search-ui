@@ -151,6 +151,7 @@ function applyForNonClinicalAccess() {
 
 .non-clinical-results {
   margin-top: 1.5rem;
+  margin-right: 1.5rem;
   margin-bottom: 2.5rem;
   margin-left: 1.5rem;
   max-width: 35rem;
@@ -202,15 +203,5 @@ function applyForNonClinicalAccess() {
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   line-height: 1.5;
-}
-
-@include tablet {
-  .scope-heading {
-    margin-left: 0;
-  }
-
-  .non-clinical-results {
-    margin-left: 0;
-  }
 }
 </style>
