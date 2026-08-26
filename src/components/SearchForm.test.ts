@@ -73,11 +73,11 @@ const TERMS: BeaconFilteringTerm[] = [
 ]
 
 const GROUPS: BeaconFilteringGroup[] = [
-  { id: 'description', label: 'Description', border: false },
-  { id: 'subject', label: 'Subject & specimen', border: false },
-  { id: 'staining', label: 'Staining', border: true },
-  { id: 'clinical', label: 'Clinical', border: true },
-  { id: 'non_clinical', label: 'Non-clinical', border: true },
+  { id: 'description', label: 'Description' },
+  { id: 'subject', label: 'Subject & specimen' },
+  { id: 'staining', label: 'Staining' },
+  { id: 'clinical', label: 'Clinical' },
+  { id: 'non_clinical', label: 'Non-clinical' },
 ]
 
 const SCOPES: BeaconFilteringScope[] = [
@@ -276,19 +276,19 @@ describe('SearchForm — scope tabs', () => {
     ])
   })
 
-  it('borders a group the backend flagged, above the tabs', () => {
+  it('borders a group listed in fieldsConfig.bordered, above the tabs', () => {
     const wrapper = mountForm()
     expect(groupByLabel(wrapper, 'Staining').classes()).toContain('group--border')
   })
 
-  it('does not border a group without the flag', () => {
+  it('does not border a group not listed in fieldsConfig.bordered', () => {
     const wrapper = mountForm()
     for (const label of ['Description', 'Subject & specimen']) {
       expect(groupByLabel(wrapper, label).classes()).not.toContain('group--border')
     }
   })
 
-  it('borders a scope panel whose group carries the flag', () => {
+  it('borders a scope panel whose id is in fieldsConfig.bordered', () => {
     const wrapper = mountForm()
     expect(panel(wrapper, 'clinical').classes()).toContain('filter-tab-panel--border')
     expect(panel(wrapper, 'non_clinical').classes()).toContain('filter-tab-panel--border')

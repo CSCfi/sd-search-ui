@@ -456,10 +456,4 @@ async function onModalClose(open: boolean) {
     outline-offset: 2px;
   }
 }
-
-@include tablet {
-  .scope-heading {
-    margin-left: 0;
-  }
-}
 </style>

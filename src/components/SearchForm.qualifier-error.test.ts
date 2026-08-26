@@ -22,7 +22,7 @@ const TERMS: BeaconFilteringTerm[] = [
   },
 ]
 
-const GROUPS: BeaconFilteringGroup[] = [{ id: 'description', label: 'Description', border: false }]
+const GROUPS: BeaconFilteringGroup[] = [{ id: 'description', label: 'Description' }]
 
 const SCOPES: BeaconFilteringScope[] = [
   { id: 'clinical', label: 'Clinical', description: '' },
