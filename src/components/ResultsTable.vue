@@ -5,6 +5,7 @@ import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useClinicalSearch } from '@/composables/useClinicalSearch'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { pluralize } from '@/utils/pluralize'
 import type { BeaconResultSetResult } from '@/types/beacon'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
@@ -22,6 +23,13 @@ const clinicalLabel = computed(
 const isActiveTab = computed(
   () => committedDatasetType.value === 'all' || committedDatasetType.value === 'clinical',
 )
+
+const clinicalCount = computed(() => data.value?.responseSummary.numTotalResults)
+
+const countHeading = computed(() => {
+  if (clinicalCount.value === undefined) return null
+  return pluralize(clinicalCount.value, 'clinical dataset', 'clinical datasets')
+})
 
 const errorDismissed = ref(false)
 const selectedDatasetRows = ref<Set<string>>(new Set())
@@ -100,6 +108,7 @@ async function onModalClose(open: boolean) {
   <template v-if="isActiveTab">
     <h2 v-if="hasCommittedFilters" class="scope-heading scope-heading--clinical">
       {{ clinicalLabel }}
+      <span v-if="countHeading" class="scope-heading-count">{{ countHeading }}</span>
     </h2>
 
     <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
@@ -257,6 +266,19 @@ async function onModalClose(open: boolean) {
   }
 }
 
+.scope-heading-count {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-body);
+  font-size: 0.8125rem;
+  letter-spacing: normal;
+  text-transform: none;
+
+  &::before {
+    margin-right: 0.375rem;
+    content: '·';
+  }
+}
+
 .no-filters-state {
   display: flex;
   flex-direction: column;
@@ -301,22 +323,12 @@ async function onModalClose(open: boolean) {
 
 .results-container {
   position: relative;
-  max-height: calc(100vh - 32rem);
+  /* This controls the maximum height of the results container until scrollbars become visible.
+   * This is 10 visible dataset rows
+   */
+  max-height: 50rem;
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.bulk-bar-enter-active,
-.bulk-bar-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.25s ease-out;
-}
-
-.bulk-bar-enter-from,
-.bulk-bar-leave-to {
-  transform: translateY(-100%);
-  opacity: 0;
 }
 
 .bulk-action-bar {
