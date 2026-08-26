@@ -10,7 +10,7 @@ defineProps<{
   <span class="badge">+{{ count }}</span>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .badge {
   flex-shrink: 0;
   border-radius: 9999px;

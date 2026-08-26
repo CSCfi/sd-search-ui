@@ -232,13 +232,7 @@ async function onModalClose(open: boolean) {
   </template>
 </template>
 
-<style scoped>
-@include tablet {
-  .scope-heading {
-    margin-left: 0;
-  }
-}
-
+<style scoped lang="scss">
 .scope-heading {
   display: flex;
   align-items: center;
@@ -367,32 +361,34 @@ async function onModalClose(open: boolean) {
   width: 100%;
   color: var(--color-text);
   font-size: 0.9375rem;
-}
 
-.results-table thead th {
-  border-bottom: 2px solid var(--color-light-grey);
-  padding: 0.75rem 1rem;
-  color: var(--color-dark-blue);
-  font-weight: var(--font-weight-heading);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.results-table tbody tr {
-  border-bottom: 1px solid var(--color-light-grey);
-
-  &:last-child {
-    border-bottom: none;
+  thead th {
+    border-bottom: 2px solid var(--color-light-grey);
+    padding: 0.75rem 1rem;
+    color: var(--color-dark-blue);
+    font-weight: var(--font-weight-heading);
+    text-align: left;
+    white-space: nowrap;
   }
 
-  &:hover {
-    background-color: var(--color-surface);
-  }
-}
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--color-light-grey);
 
-.results-table tbody td {
-  vertical-align: top;
-  padding: 0.875rem 1rem;
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: var(--color-surface);
+      }
+    }
+
+    td {
+      vertical-align: top;
+      padding: 0.875rem 1rem;
+    }
+  }
 }
 
 .col-select {
@@ -458,6 +454,12 @@ async function onModalClose(open: boolean) {
   &:focus-within {
     outline: 2px solid var(--color-pink);
     outline-offset: 2px;
+  }
+}
+
+@include tablet {
+  .scope-heading {
+    margin-left: 0;
   }
 }
 </style>

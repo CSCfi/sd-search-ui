@@ -10,7 +10,7 @@ defineEmits<{ dismiss: [] }>()
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .error-banner {
   display: flex;
   justify-content: space-between;

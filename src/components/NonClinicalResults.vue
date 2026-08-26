@@ -93,17 +93,7 @@ function applyForNonClinicalAccess() {
   </template>
 </template>
 
-<style scoped>
-@include tablet {
-  .scope-heading {
-    margin-left: 0;
-  }
-
-  .non-clinical-results {
-    margin-left: 0;
-  }
-}
-
+<style scoped lang="scss">
 .scope-heading {
   display: flex;
   align-items: center;
@@ -212,5 +202,15 @@ function applyForNonClinicalAccess() {
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   line-height: 1.5;
+}
+
+@include tablet {
+  .scope-heading {
+    margin-left: 0;
+  }
+
+  .non-clinical-results {
+    margin-left: 0;
+  }
 }
 </style>
