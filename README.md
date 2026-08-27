@@ -54,6 +54,14 @@ docker push <image-registry-url>/sd-search-ui:latest
 Pushing under the `sd-search-ui:latest` tag is enough to deploy when 
 OpenShift's ImageStream triggering rollout automatically.
 
+### Continuous deployment
+
+Pushing to `main` (including merging a PR) automatically builds and pushes
+the image to Rahti via `.github/workflows/ci.yml`'s `rahti-image-stream`
+job — the manual `docker build`/`docker push` steps above are only needed
+for one-off or out-of-band builds. Once pushed under the `:latest` tag,
+Rahti's ImageStream triggers the rollout on its own; no manual OpenShift
+step is needed after a merge to `main`.
 
 ### Running with docker-compose
 
@@ -76,6 +84,10 @@ using environment variables before nginx starts.
 | Variable | Required | Description |
 |---|---:|---|
 | `BACKEND_URL` | yes | Base URL for the backend proxied from `/api/`, `/login`, `/callback`, `/logout` |
+
+If `BACKEND_URL` is missing, the container fails fast at startup with
+`BACKEND_URL is required` (`docker/docker-entrypoint-validate.sh`) rather
+than starting nginx with a broken, unsubstituted config.
 
 `BACKEND_URL` is referenced in `nginx.conf`:
 
@@ -102,24 +114,92 @@ docker run --rm -p 8081:8081 \
 | `VITE_AUTH_BYPASS` | Bypass the router's auth guard, for local development |
 | `BACKEND_URL` | Runtime nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
 
+## Configuration
+
+### Field and group visibility — `src/configs/fields.yaml`
+
+Controls which search-form fields are shown, which fields' info tooltips
+are shown, and which filter groups/scopes render with a bordered box,
+without touching component code.
+
+| Field                | Type | Notes |
+|----------------------|---|---|
+| `hidden`             | `string[]` | Field ids (from `/filtering_terms`) to hide entirely. All others are shown by default. If every field in a group is hidden, the group heading is hidden automatically. |
+| `hidden_description` | `string[]` | Field ids whose info tooltip (i) is suppressed, even when the field has a description. The field itself still shows — only the tooltip icon is hidden. All fields show their tooltip by default. |
+| `bordered`           | `string[]` | Group ids (from `/filtering_groups`) and scope ids (from `/filtering_scopes`) to render with a bordered box. All others render without one by default. |
+
+Edit `src/configs/fields.yaml` directly and rebuild (or restart `pnpm dev`) — it's bundled at build time, not fetched at runtime.
+
+### Styling and Branding
+
+#### Colours
+
+Edit the CSS custom properties in `src/assets/styles/_variables.scss` directly and rebuild.
+Components reference these variables — no other code changes needed to change the colour scheme.
+
+#### Logos and images
+
+Replace these files under `src/assets/images/` with your own, keeping the same filenames:
+
+| File | Used in |
+|---|---|
+| `bg-logo.png` | Navbar logo |
+| `footer_logos.png` | Footer logos |
+| `loginImage.png` | Home page hero image |
+| `button-login.svg` | "Login with LifeScience AAI" button — follow [LS AAI's login button design guidelines](https://lifescience-ri.eu) if changing this |
+
+#### Browser tab title and favicon
+
+Edit `index.html` directly — not part of any config file:
+
+```html
+<title>Your Deployment Name</title>
+<link rel="icon" href="your-favicon.ico" />
+```
+
+### Rebranding for a new deployment
+
+Beyond colours/logos/`fields.yaml` above, the following text and links are
+hardcoded directly in source — no config file controls them:
+
+| Content | File(s) |
+|---|---|
+| Footer links (About, Datasets, Privacy policy, Contact email), funding text | `src/components/AppFooter.vue` |
+| Cookie consent banner text and its own privacy policy link | `src/plugins/cookieConsent.ts` |
+| Home page heading and hero paragraph | `src/views/HomePage.vue` |
+| REMS apply-for URL | `src/components/ResultsTable.vue` |
+
+**Two of these are duplicated and easy to update inconsistently:**
+- The privacy policy URL appears in both `AppFooter.vue` and
+  `cookieConsent.ts` — update both.
+- The REMS URL appears **twice within `ResultsTable.vue` itself**
+  (lines 47 and 54) — update both.
+
 ## Project Structure
 
 ```
 src/
-  assets/
-    fonts/          # Lato font files (.ttf)
-    styles/         # SCSS — variables, base styles, fonts
-  components/
-    dynamic/        # Schema-driven field components
-    ui/             # Shared UI components
-  composables/      # TanStack Query composables
-  directives/       # vControl — v-model bridge for CSC UI components
-  router/           # Vue Router + auth guards
-  services/         # API layer
-  stores/           # Pinia stores
-  types/            # TypeScript types
-  views/            # Page-level components
+    assets/
+        fonts/        # Lato font files (.ttf)
+        images/       # Logos and other static images — see Styling and Branding
+        styles/       # SCSS — variables, base styles, fonts
+    components/
+        dynamic/      # Schema-driven field components
+        filters/      # Scope tabs, qualifier selector, scope badge
+        ui/           # Shared UI components
+    composables/      # TanStack Query composables
+    configs/          # fields.yaml — see Configuration
+    directives/       # vControl — v-model bridge for CSC UI components
+    plugins/          # Cookie consent banner
+    router/           # Vue Router + auth guards
+    services/         # API layer
+    stores/           # Pinia stores
+    tasks/            # Claude-written scratch files (e.g. todo.md) — gitignored, not part of the actual source
+    types/            # TypeScript types
+    utils/            # Small shared helpers (e.g. pluralize)
+    views/            # Page-level components
 ```
+
 
 ## Commands
 
