@@ -23,7 +23,7 @@ const parsed: BeaconQueryFilter[] = []
 
 for (const [id, raw] of entries) {
   if (typeof raw !== 'string' || raw === '') continue
-  if (id === 'tab' || id === 'qualifiers') continue
+  if (id === 'tab') continue
   parsed.push({
     id,
     value: parseFilterValue(raw),
@@ -35,19 +35,8 @@ for (const [id, raw] of entries) {
 // SearchForm once /filtering_scopes resolves.
 const tabParam = typeof route.query.tab === 'string' ? (route.query.tab as DatasetType) : undefined
 
-// Unvalidated external string too — an id or value the deployment does not declare is
-// reset to 'All' by SearchForm once /filtering_qualifiers resolves.
-const qualifierParam =
-  typeof route.query.qualifiers === 'string' ? route.query.qualifiers : undefined
-
-const parsedQualifiers: Record<string, string> = {}
-for (const pair of qualifierParam?.split(',') ?? []) {
-  const [id, value] = pair.split(':')
-  if (id && value) parsedQualifiers[id] = value
-}
-
-if (parsed.length > 0 || Object.keys(parsedQualifiers).length > 0) {
-  store.initFromUrl(parsed, tabParam, parsedQualifiers)
+if (parsed.length > 0) {
+  store.initFromUrl(parsed, tabParam)
   resolveLabelsFromUrl(parsed)
 } else if (tabParam) {
   store.setDatasetType(tabParam)

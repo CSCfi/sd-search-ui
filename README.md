@@ -124,6 +124,7 @@ without touching component code.
 
 | Field                | Type | Notes |
 |----------------------|---|---|
+| `header`             | `string[]` | Field ids rendered above the filter tabs (in the header slot) instead of the regular filter grid. Used for cross-cutting filters like `observation_type`. |
 | `hidden`             | `string[]` | Field ids (from `/filtering_terms`) to hide entirely. All others are shown by default. If every field in a group is hidden, the group heading is hidden automatically. |
 | `hidden_description` | `string[]` | Field ids whose info tooltip (i) is suppressed, even when the field has a description. The field itself still shows — only the tooltip icon is hidden. All fields show their tooltip by default. |
 | `bordered`           | `string[]` | Group ids (from `/filtering_groups`) and scope ids (from `/filtering_scopes`) to render with a bordered box. All others render without one by default. |

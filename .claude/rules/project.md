@@ -49,7 +49,7 @@ pnpm format:ci      # Check code format with Prettier in CI mode
 src/
   components/
     dynamic/        # Schema-driven field components (DynamicField + one per FilteringTerm.type)
-    filters/        # Tab/scope/qualifier UI (FilterTabGroup, FilterTabPanel, QualifierSelector, ScopeBadge)
+    filters/        # Tab/scope UI (FilterTabGroup, FilterTabPanel, ObservationTypeSelector, ScopeBadge)
     ui/             # Generic reusable components (Badge, ErrorBanner, FieldLabel, FieldInfoTooltip, DeploymentStatusBar, etc.)
   composables/      # TanStack Query wrappers and other shared logic (e.g. useDeploymentStatus)
   directives/       # vControl.ts — v-control directive for c-* form components
