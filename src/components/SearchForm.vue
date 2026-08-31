@@ -84,12 +84,17 @@ watch(
 )
 
 // Fields listed in fieldsConfig.header are rendered in the #header slot above the tabs
-// instead of the regular filter grid. Any field id added to that config list is extracted
-// here at runtime — no code changes needed when the list grows.
+// instead of the regular filter grid.
 const headerFields = computed(
   () => filteringTerms.value?.filter((f) => fieldsConfig.header.includes(f.id)) ?? [],
 )
 
+// Each header field needs explicit extraction and a compatible dedicated component.
+const observationTypeField = computed(() =>
+  headerFields.value.find((f) => f.id === 'observation_type'),
+)
+
+// The observation_type selection is a plain filter in draftFilters (string | null).
 const selectedObservationType = computed<string | null>(() => {
   const f = store.draftFilters.find((f) => f.id === 'observation_type')
   return f && typeof f.value === 'string' ? f.value : null
@@ -188,9 +193,8 @@ async function copySearch() {
       <FilterTabGroup v-model="activeTab" :scopes="scopes">
         <template v-if="headerFields.length > 0" #header>
           <ObservationTypeSelector
-            v-for="field in headerFields"
-            :key="field.id"
-            :field="field"
+            v-if="observationTypeField"
+            :field="observationTypeField"
             :selected="selectedObservationType"
           />
         </template>
