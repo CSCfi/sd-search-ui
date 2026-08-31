@@ -1,3 +1,8 @@
+# Field ids rendered above the filter tabs in the #header slot of FilterTabGroup,
+# instead of the regular filter grid. Matched against filteringTerms at runtime.
+header:
+  - observation_type
+
 # Field ids to hide in the search UI.
 # All fields returned by /filtering_terms are shown by default.
 # Add a field id here to hide it. If all fields in a group are hidden,

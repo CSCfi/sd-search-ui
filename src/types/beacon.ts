@@ -44,14 +44,6 @@ export interface BeaconFilteringScope {
   description: string
 }
 
-export interface BeaconFilteringQualifier {
-  id: string
-  label: string
-  description: string
-  values: string[]
-  groups: string[]
-}
-
 // Query
 
 export interface BeaconQueryRequest {
@@ -59,7 +51,6 @@ export interface BeaconQueryRequest {
     filters: BeaconQueryFilter[]
     requestedGranularity: 'boolean' | 'count' | 'record'
     requestedScope?: string
-    requestedQualifiers?: Record<string, string[]>
   }
 }
 

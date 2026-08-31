@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, ref } from 'vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import type {
   BeaconFilteringGroup,
-  BeaconFilteringQualifier,
   BeaconFilteringScope,
   BeaconFilteringTerm,
 } from '@/types/beacon'
@@ -50,7 +49,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Biological species',
     description: '',
-    // Its backend group differs from its scope; panels must still render fields flat.
     ui_group: 'subject',
     scopes: ['non_clinical'],
   },
@@ -85,16 +83,6 @@ const SCOPES: BeaconFilteringScope[] = [
   { id: 'non_clinical', label: 'Non-clinical', description: '' },
 ]
 
-const QUALIFIERS: BeaconFilteringQualifier[] = [
-  {
-    id: 'observation',
-    label: 'Observation',
-    description: 'How the finding or diagnosis is linked to the image.',
-    values: ['confirmed', 'candidate'],
-    groups: ['diagnosis', 'finding'],
-  },
-]
-
 const FIELD_SCOPES = new Map<string, string[]>([
   ...TERMS.map((t) => [t.id, t.scopes] as [string, string[]]),
   // A non-rendered scoped field verifies that tab changes prune via the field-scope map
@@ -127,18 +115,6 @@ vi.mock('@/composables/useFilteringScopes', () => ({
 
 vi.mock('@/composables/useFieldScopes', () => ({
   useFieldScopes: () => ({ data: ref(FIELD_SCOPES) }),
-}))
-
-// SearchForm requires this mock because this suite does not install VueQueryPlugin.
-// Shared refs let the fail-open tests change metadata from pending to resolved after mount.
-const filteringQualifiersData = ref<BeaconFilteringQualifier[] | undefined>(QUALIFIERS)
-const filteringQualifiersIsError = ref(false)
-
-vi.mock('@/composables/useFilteringQualifiers', () => ({
-  useFilteringQualifiers: () => ({
-    data: filteringQualifiersData,
-    isError: filteringQualifiersIsError,
-  }),
 }))
 
 const DynamicFieldStub = defineComponent({
@@ -309,91 +285,15 @@ describe('SearchForm — scope tabs', () => {
   })
 })
 
-describe('SearchForm — qualifier selector', () => {
-  beforeEach(() => {
-    pinia = createPinia()
-    setActivePinia(pinia)
-  })
-
-  // The mocked ref is shared across every test in this file (see the mock above) — restore it
-  // so a test that simulates an in-flight/failed fetch can't leak into the next test.
-  afterEach(() => {
-    filteringQualifiersData.value = QUALIFIERS
-    filteringQualifiersIsError.value = false
-  })
-
-  it('renders the qualifier selector inside the tab group header, above the tab strip', () => {
-    const wrapper = mountForm()
-    const header = wrapper.find('.tab-header')
-    expect(header.exists()).toBe(true)
-    expect(header.find('.qualifier-selector').exists()).toBe(true)
-  })
-
-  it('resets a ?qualifiers= value naming an undeclared qualifier id, and announces it', () => {
-    const store = useSearchStore()
-    store.initFromUrl([], undefined, { nosuch: 'confirmed' })
-    const wrapper = mountForm()
-    expect(store.draftQualifiers).toEqual({})
-    expect(store.committedQualifiers).toEqual({})
-    expect(wrapper.find('[role="status"]').text()).toContain('not recognised')
-  })
-
-  it('resets a ?qualifiers= value naming an undeclared value for a real qualifier', () => {
-    const store = useSearchStore()
-    store.initFromUrl([], undefined, { observation: 'bogus' })
-    mountForm()
-    expect(store.draftQualifiers).toEqual({})
-    expect(store.committedQualifiers).toEqual({})
-  })
-
-  it('keeps a valid ?qualifiers= value once the qualifier list resolves, and commits it', () => {
-    const store = useSearchStore()
-    store.initFromUrl([], undefined, { observation: 'confirmed' })
-    mountForm()
-    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
-    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
-  })
-
-  it('does not commit a URL qualifier until the qualifier list resolves (fail-open)', async () => {
-    filteringQualifiersData.value = undefined // simulate the request still being in flight
-
-    const store = useSearchStore()
-    store.initFromUrl([], undefined, { observation: 'confirmed' })
-    mountForm()
-
-    expect(store.draftQualifiers).toEqual({ observation: 'confirmed' })
-    expect(store.committedQualifiers).toEqual({})
-
-    filteringQualifiersData.value = QUALIFIERS
-    await flushPromises()
-
-    expect(store.committedQualifiers).toEqual({ observation: 'confirmed' })
-  })
-
-  it('drops a URL qualifier and announces it when /filtering_qualifiers fails outright', () => {
-    filteringQualifiersData.value = undefined
-    filteringQualifiersIsError.value = true
-
-    const store = useSearchStore()
-    store.initFromUrl([], undefined, { observation: 'confirmed' })
-    const wrapper = mountForm()
-
-    expect(store.draftQualifiers).toEqual({})
-    expect(store.committedQualifiers).toEqual({})
-    expect(wrapper.find('[role="status"]').text()).toContain('could not be checked')
-  })
-})
-
 describe('SearchForm — copy filter URL', () => {
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
   })
 
-  it('includes the qualifier alongside filters in the copied URL', async () => {
+  it('includes filters in the copied URL', async () => {
     const store = useSearchStore()
     store.setFilter('diagnosis', ['64033007'])
-    store.setQualifier('observation', 'confirmed')
 
     const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
@@ -404,12 +304,12 @@ describe('SearchForm — copy filter URL', () => {
 
     const url = new URL(writeText.mock.calls[0]?.[0] as string)
     expect(url.searchParams.get('diagnosis')).toBe('64033007')
-    expect(url.searchParams.get('qualifiers')).toBe('observation:confirmed')
   })
 
-  it('omits the qualifiers param when no qualifier is selected', async () => {
+  it('includes observation_type filter when selected', async () => {
     const store = useSearchStore()
     store.setFilter('diagnosis', ['64033007'])
+    store.setFilter('observation_type', 'confirmed')
 
     const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
@@ -419,7 +319,8 @@ describe('SearchForm — copy filter URL', () => {
     await flushPromises()
 
     const url = new URL(writeText.mock.calls[0]?.[0] as string)
-    expect(url.searchParams.has('qualifiers')).toBe(false)
+    expect(url.searchParams.get('diagnosis')).toBe('64033007')
+    expect(url.searchParams.get('observation_type')).toBe('confirmed')
   })
 })
 

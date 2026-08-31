@@ -4,12 +4,11 @@ import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
 import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
-import QualifierSelector from '@/components/filters/QualifierSelector.vue'
+import ObservationTypeSelector from '@/components/filters/ObservationTypeSelector.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
-import { serializeQualifiers, useSearchStore, type DatasetType } from '@/stores/searchStore'
+import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
-import { useFilteringQualifiers } from '@/composables/useFilteringQualifiers'
 import { useFieldScopes } from '@/composables/useFieldScopes'
 import { fieldsConfig } from '@/services/config'
 import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
@@ -30,9 +29,6 @@ const {
   isError: isFilteringScopesError,
 } = useFilteringScopes()
 
-// Qualifiers are optional: if this request fails, hide the selector and run searches
-// without URL-restored qualifiers (the watcher below fails open).
-const { data: filteringQualifiers, isError: isFilteringQualifiersError } = useFilteringQualifiers()
 const { data: fieldScopes } = useFieldScopes()
 const store = useSearchStore()
 
@@ -87,40 +83,22 @@ watch(
   { immediate: true },
 )
 
-// URL qualifiers remain draft-only until validated against the fetched metadata.
-// Promote valid values to the active query; remove invalid values or values that cannot be
-// validated because the optional metadata request failed. `immediate` handles cached metadata.
-watch(
-  [filteringQualifiers, isFilteringQualifiersError],
-  ([qualifiers, isError]) => {
-    const hasDraftQualifiers = Object.keys(store.draftQualifiers).length > 0
-
-    if (isError) {
-      if (hasDraftQualifiers) {
-        store.resetQualifiers()
-        announcement.value =
-          'Qualifier filter from the link could not be checked and was removed from the search.'
-      }
-      return
-    }
-
-    if (!qualifiers || qualifiers.length === 0) return
-
-    const validValues = new Map(qualifiers.map((q) => [q.id, q.values]))
-    const isValid = Object.entries(store.draftQualifiers).every(
-      ([id, value]) => validValues.get(id)?.includes(value) ?? false,
-    )
-
-    if (isValid) {
-      store.commitQualifiers()
-    } else {
-      store.resetQualifiers()
-      announcement.value =
-        'Qualifier filter from the link is not recognised and was removed from the search.'
-    }
-  },
-  { immediate: true },
+// Fields listed in fieldsConfig.header are rendered in the #header slot above the tabs
+// instead of the regular filter grid.
+const headerFields = computed(
+  () => filteringTerms.value?.filter((f) => fieldsConfig.header.includes(f.id)) ?? [],
 )
+
+// Each header field needs explicit extraction and a compatible dedicated component.
+const observationTypeField = computed(() =>
+  headerFields.value.find((f) => f.id === 'observation_type'),
+)
+
+// The observation_type selection is a plain filter in draftFilters (string | null).
+const selectedObservationType = computed<string | null>(() => {
+  const f = store.draftFilters.find((f) => f.id === 'observation_type')
+  return f && typeof f.value === 'string' ? f.value : null
+})
 
 const groupedFields = computed(() => {
   return (
@@ -131,9 +109,15 @@ const groupedFields = computed(() => {
   )
 })
 
+// Header fields are excluded from the grid — they render above the tabs via ObservationTypeSelector.
+const isHeaderField = (field: BeaconFilteringTerm) => fieldsConfig.header.includes(field.id)
+
 const sharedGroups = computed(() =>
   groupedFields.value
-    .map((group) => ({ ...group, fields: group.fields.filter(isShared) }))
+    .map((group) => ({
+      ...group,
+      fields: group.fields.filter((f) => isShared(f) && !isHeaderField(f)),
+    }))
     .filter((group) => group.fields.length > 0),
 )
 
@@ -155,8 +139,6 @@ async function copySearch() {
   const params = new URLSearchParams(
     store.draftFilters.map((f) => [f.id, Array.isArray(f.value) ? f.value.join(',') : f.value]),
   )
-  const qualifierParam = serializeQualifiers(store.draftQualifiers)
-  if (qualifierParam) params.set('qualifiers', qualifierParam)
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   try {
     await navigator.clipboard.writeText(url)
@@ -209,11 +191,11 @@ async function copySearch() {
       <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
 
       <FilterTabGroup v-model="activeTab" :scopes="scopes">
-        <template v-if="filteringQualifiers && filteringQualifiers.length > 0" #header>
-          <QualifierSelector
-            :qualifiers="filteringQualifiers"
-            :selected="store.draftQualifiers"
-            @change="store.setQualifier"
+        <template v-if="headerFields.length > 0" #header>
+          <ObservationTypeSelector
+            v-if="observationTypeField"
+            :field="observationTypeField"
+            :selected="selectedObservationType"
           />
         </template>
         <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">

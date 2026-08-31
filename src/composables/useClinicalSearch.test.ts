@@ -53,7 +53,7 @@ describe('useClinicalSearch', () => {
     mountHost()
     await flushPromises()
 
-    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical', {})
+    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical')
   })
 
   it('queries with clinical scope when the committed tab is clinical', async () => {
@@ -65,7 +65,7 @@ describe('useClinicalSearch', () => {
     mountHost()
     await flushPromises()
 
-    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical', {})
+    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical')
   })
 
   it('does not query when the committed tab is non_clinical', async () => {
@@ -110,19 +110,5 @@ describe('useClinicalSearch', () => {
 
     // enabled flips false — no second call fires for the clinical query
     expect(postQuery).toHaveBeenCalledTimes(1)
-  })
-
-  it('passes committed qualifiers as bare values', async () => {
-    const store = useSearchStore()
-    store.setFilter('diagnosis', ['64033007'])
-    store.setQualifier('observation', 'confirmed')
-    store.commit()
-
-    mountHost()
-    await flushPromises()
-
-    expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical', {
-      observation: 'confirmed',
-    })
   })
 })
