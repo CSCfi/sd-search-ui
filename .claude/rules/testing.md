@@ -20,7 +20,7 @@ Scope: individual functions, stores, composables.
 No DOM, no mounting. Fast and deterministic.
 
 Best for:
-- `searchStore` filter logic (setFilter, clearFilters, AND/OR behavior)
+- `searchStore` filter logic (setFilter, clearFilters, AND/OR behavior, qualifier handling)
 - ISO 8601 range formatting utility (RangePicker output)
 - API response parsing / type mapping
 
@@ -33,6 +33,8 @@ Best for:
 - Dynamic field rendering — does `type: "ontology"` render OntologyPicker?
 - OntologyPicker internal state (selection, tag removal, suggestion triggering)
 - RangePicker validation (from > to, missing unit)
+- SearchForm scope tab rendering and qualifier selector behavior
+- NonClinicalResults display states (loading, error, empty, count)
 
 ### E2E tests (Playwright — future)
 
@@ -41,6 +43,7 @@ Slow, but catches integration issues that unit tests miss.
 
 Best for:
 - Full search flow: select filters → submit → results appear
+- Tab switching between clinical / non-clinical
 - Request access button opens correct REMS URL
 - Clear search resets all fields and results
 - Auth redirect when session is invalid
@@ -55,8 +58,11 @@ E2E is not in scope for the initial build. Add once the core search flow is stab
 |---|---|---|---|
 | Dynamic component selection | Component | 🔴 Critical | Wrong component = silent incorrect behavior |
 | searchStore AND/OR logic | Unit | 🔴 Critical | Wrong query structure = wrong results |
+| searchStore scope + qualifier logic | Unit | 🔴 Critical | Draft/committed separation must be correct |
 | RangePicker ISO 8601 output | Unit | 🔴 Critical | Easy to get wrong, hard to notice |
 | OntologyPicker multiselect | Component | 🟡 High | Complex internal state |
+| SearchForm scope tabs + qualifier selector | Component | 🟡 High | Schema-driven rendering |
+| NonClinicalResults display states | Component | 🟡 High | Count-only response, no resultSet |
 | Full search flow | E2E | 🟡 High | Core user journey |
 | Results rendering | Component | 🟢 Normal | Regression protection |
 | Request access button | E2E | 🟢 Normal | Simple but user-facing |
@@ -65,24 +71,22 @@ E2E is not in scope for the initial build. Add once the core search flow is stab
 
 ## Critical: Dynamic Component Selection
 
-This is the most important thing to test in the entire frontend.
-
-The UI is schema-driven — `GET /filtering_terms` returns a list of fields, each with a
-`type`. The frontend renders a different component based on that type. If the mapping
-is wrong, the user sees the wrong input for a field and the query silently breaks.
+The UI is schema-driven — `GET /filtering_terms` returns a list of fields, each with a `type`.
+The frontend renders a different component based on that type. If the mapping is wrong, the user
+sees the wrong input and the query silently breaks.
 
 **The mapping that must be tested:**
 
-| `type` | Expected component |
-|---|---|
-| `text` | TextInput |
-| `controlledValue` | c-select (CSC UI) |
-| `ontology` | OntologyPicker |
-| `ontologyOrValue` | OntologyPicker |
-| `iso8601Range` | RangePicker |
+| `type` | Expected component | Props |
+|---|---|---|
+| `text` | `<TextField>` | — |
+| `keyword` | `<OntologyPicker>` | `:allow-free-text="true"` |
+| `controlledValue` | `<MultiSelect>` | — |
+| `ontology` | `<OntologyPicker>` | `:allow-free-text="false"` |
+| `ontologyOrValue` | `<OntologyPicker>` | `:allow-free-text="true"` |
+| `iso8601Range` | `<RangePicker>` | — |
 
-Test each type explicitly. Also test that an unknown type does not silently render
-a wrong component — it should either render nothing or throw a visible error.
+Also test that an unknown type renders nothing and logs a console warning.
 
 ---
 
@@ -94,8 +98,24 @@ The query sent to `POST /query` must follow these rules:
 - **Multiple values on the same field** → single filter with array value → backend treats as OR
 - Setting a field to empty must remove it from the filters array entirely
 - Updating an existing field must replace, not append
+- `removeFilters(ids)` removes from draft only — `committedFilters` must stay unchanged
+- `clearFilters()` resets both draft and committed, including scope and qualifiers
 
-These rules live in `searchStore`. Test the store directly without mounting any UI.
+Test the store directly without mounting any UI.
+
+---
+
+## Critical: Scope and Qualifier Logic
+
+Draft and committed state are separate — changing the tab or qualifier without committing must
+not affect the active query.
+
+- `datasetType` changes do not touch `committedDatasetType` until `commit()`
+- `draftQualifiers` changes do not touch `committedQualifiers` until `commit()` or `commitQualifiers()`
+- `initFromUrl` sets `draftQualifiers` but leaves `committedQualifiers` empty — qualifiers from
+  URL are untrusted until validated by SearchForm
+- `resetQualifiers()` empties both refs
+- `commitQualifiers()` copies draft qualifiers without touching filters or scope
 
 ---
 
@@ -107,9 +127,6 @@ These rules live in `searchStore`. Test the store directly without mounting any 
 - Produce `"Pfrom-Pto"` format with a hyphen separator
 - Not emit a value when `from > to`
 - Not emit a value when the time unit is not selected
-
-This is easy to get subtly wrong (e.g. `P40-P50Y` or `40Y-50Y`) and the backend
-will silently return no results without any visible error.
 
 ---
 
@@ -125,35 +142,42 @@ FFPE:   431510009    Paraffin: 311731000
 HE:     12710003     IHC: 406917005
 ```
 
-When mocking API responses in component tests, use these codes for consistency.
+---
+
+## Naming Conventions
+
+Describe blocks use `'ComponentName'` or `'storeName — section'` format:
+
+```
+describe('DynamicField')
+  it('renders OntologyPicker for type=ontology')
+  it('passes allowFreeText=false to OntologyPicker for type=ontology')
+  it('renders OntologyPicker for type=keyword')
+  it('renders nothing and logs warning for unknown type')
+
+describe('searchStore — setFilter')
+  it('adds a new filter')
+  it('replaces existing filter for the same field')
+  it('removes filter when value is empty array')
+  it('supports string array value — OR logic')
+  it('multiple different fields — AND logic')
+
+describe('searchStore — qualifiers')
+  it('setQualifier writes the value to draft')
+  it('commit copies draftQualifiers to committedQualifiers')
+  it('initFromUrl sets draftQualifiers but leaves committedQualifiers empty')
+```
+
+Use plain English descriptions. Describe the expected behavior, not the implementation.
 
 ---
 
 ## What Not to Test
 
-- CSC UI web component internals (`c-button`, `c-select`) — these are a third-party library
+- CSC UI web component internals (`c-button`, `c-select`) — third-party library
 - Vue Router navigation mechanics — trust the framework
 - TanStack Query caching behavior — trust the library
 - Visual appearance / CSS
-
----
-
-## Naming Conventions
-
-```
-describe('ComponentName')
-  it('renders OntologyPicker for type=ontology')
-  it('renders RangePicker for type=iso8601Range')
-  it('does not render when type is unknown')
-
-describe('searchStore')
-  it('adds a new filter')
-  it('replaces existing filter for the same field')
-  it('removes filter when value is empty')
-  it('supports multiple values as OR within the same field')
-```
-
-Use plain English descriptions. Describe the expected behavior, not the implementation.
 
 ---
 
@@ -165,6 +189,7 @@ Run before every PR that touches the search form or results view.
 - [ ] All fields from `/filtering_terms` appear in the UI
 - [ ] Each field shows the correct input type (text / dropdown / autocomplete / range)
 - [ ] No fields are missing or duplicated
+- [ ] Fields with `ui_display: false` are hidden
 
 ### Filter logic
 - [ ] Selecting Sex=Female and searching returns only female datasets
@@ -172,8 +197,19 @@ Run before every PR that touches the search form or results view.
 - [ ] Adding Sex=Male to Sex field broadens results (OR within same field)
 - [ ] Removing a filter updates results correctly
 
+### Tabs and scope
+- [ ] All data tab shows both clinical and non-clinical results
+- [ ] Clinical tab shows only clinical results
+- [ ] Non-clinical tab shows only the image count, no dataset details
+- [ ] Switching tabs clears filters that belong to the other scope
+- [ ] Invalid `?tab=` URL value is reset silently
+
+### Qualifiers
+- [ ] Selecting a qualifier updates results
+- [ ] Invalid `?qualifiers=` URL value is reset with a visible announcement
+
 ### Edge cases
-- [ ] Search with no filters returns all datasets
+- [ ] Search with no filters shows a prompt to select at least one filter — does not submit
 - [ ] Search with filters that match nothing shows empty state, not an error
 - [ ] Typing 1 character in OntologyPicker does not trigger suggestions
 - [ ] Typing 2+ characters triggers suggestions
@@ -181,8 +217,9 @@ Run before every PR that touches the search form or results view.
 
 ### Results
 - [ ] Dataset title, description, and match counts are displayed
-- [ ] "Request access" opens REMS in a new tab with correct URL
-- [ ] "Clear search" resets all fields and removes results
+- [ ] Non-clinical panel shows total matching image count
+- [ ] "Apply for access" opens REMS in a new tab with correct URL
+- [ ] "Clear search" resets all fields, tabs, qualifiers, and removes results
 
 ### Auth
 - [ ] Unauthenticated user is redirected to login

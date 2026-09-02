@@ -56,7 +56,7 @@ function onCancel(event: Event) {
   </dialog>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .description-modal {
   box-shadow: 0 8px 32px rgb(0 0 0 / 0.2);
   border: none;
@@ -65,10 +65,10 @@ function onCancel(event: Event) {
   width: min(90vw, 40rem);
   max-height: 80vh;
   overflow: hidden;
-}
 
-.description-modal::backdrop {
-  background: rgb(0 0 0 / 0.5);
+  &::backdrop {
+    background: rgb(0 0 0 / 0.5);
+  }
 }
 
 .modal-inner {
@@ -120,9 +120,9 @@ function onCancel(event: Event) {
   overflow-y: auto;
   color: var(--color-text);
   line-height: 1.6;
-}
 
-.modal-body p {
-  margin: 0;
+  p {
+    margin: 0;
+  }
 }
 </style>

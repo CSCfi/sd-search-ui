@@ -3,14 +3,33 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
-import { useSearch } from '@/composables/useSearch'
+import { useClinicalSearch } from '@/composables/useClinicalSearch'
+import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { pluralize } from '@/utils/pluralize'
 import type { BeaconResultSetResult } from '@/types/beacon'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
 
-const { hasCommittedFilters, committedFilters } = storeToRefs(useSearchStore())
-const { data, isLoading, isError } = useSearch()
+const { hasCommittedFilters, committedFilters, committedDatasetType } =
+  storeToRefs(useSearchStore())
+const { data, isLoading, isError } = useClinicalSearch()
+const { data: filteringScopes } = useFilteringScopes()
+
+const clinicalLabel = computed(
+  () => filteringScopes.value?.find((scope) => scope.id === 'clinical')?.label + ' results',
+)
+
+const isActiveTab = computed(
+  () => committedDatasetType.value === 'all' || committedDatasetType.value === 'clinical',
+)
+
+const clinicalCount = computed(() => data.value?.responseSummary.numTotalResults)
+
+const countHeading = computed(() => {
+  if (clinicalCount.value === undefined) return null
+  return pluralize(clinicalCount.value, 'clinical dataset', 'clinical datasets')
+})
 
 const errorDismissed = ref(false)
 const selectedDatasetRows = ref<Set<string>>(new Set())
@@ -86,127 +105,174 @@ async function onModalClose(open: boolean) {
 </script>
 
 <template>
-  <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
-    <Search :size="40" class="no-filters-icon" aria-hidden="true" />
-    <h2 class="no-filters-heading">Start by selecting filters</h2>
-    <p class="no-filters-subtext">
-      Select one or more filters above and click Search to find datasets.
-    </p>
-  </div>
+  <template v-if="isActiveTab">
+    <h2 v-if="hasCommittedFilters" class="scope-heading scope-heading--clinical">
+      {{ clinicalLabel }}
+      <span v-if="countHeading" class="scope-heading-count">{{ countHeading }}</span>
+    </h2>
 
-  <section v-else class="results-table-section" aria-label="Search results" aria-live="polite">
-    <LoadingSpinner v-if="isLoading" :size="24" />
-
-    <ErrorBanner
-      v-else-if="isError && !errorDismissed"
-      message="Search failed. Please try again."
-      @dismiss="errorDismissed = true"
-    />
-
-    <p v-else-if="isEmpty" class="empty-state">No results found.</p>
-
-    <div v-else class="results-container">
-      <Transition name="bulk-bar">
-        <div
-          v-if="selectedCount > 0"
-          class="bulk-action-bar"
-          role="region"
-          aria-label="Bulk actions"
-        >
-          <span class="bulk-count">{{ selectedCount }} selected</span>
-          <c-button
-            class="btn-bulk-access"
-            :aria-label="`Apply for access to ${selectedCount} selected datasets`"
-            @click="openBulkRems(selectedIdsArray)"
-          >
-            <Key :size="16" aria-hidden="true" />
-            Apply for access ({{ selectedCount }})
-          </c-button>
-        </div>
-      </Transition>
-      <div class="table-wrapper">
-        <table class="results-table">
-          <caption class="sr-only">
-            Search results
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col"><span class="sr-only">Select row</span></th>
-              <th scope="col">Title</th>
-              <th scope="col">Description</th>
-              <th scope="col">More details</th>
-              <th scope="col">Matching images</th>
-              <th scope="col"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(result, index) in flatResults" :key="result.datasetId">
-              <td class="col-select">
-                <input
-                  type="checkbox"
-                  :checked="isSelected(result.datasetId)"
-                  :id="`select-${result.datasetId}`"
-                  :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
-                  @change="toggleSelection(result.datasetId)"
-                />
-              </td>
-              <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
-              <td class="col-description">
-                <span>{{ truncate(result.datasetDescription, 80) }}</span>
-                <button
-                  v-if="result.datasetDescription && result.datasetDescription.length > 80"
-                  :ref="
-                    (el) => {
-                      if (el) triggerRefs[index] = el as HTMLButtonElement
-                    }
-                  "
-                  class="show-more-btn"
-                  :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
-                  @click="openModal(result, index)"
-                >
-                  Show more
-                </button>
-              </td>
-              <td class="col-more-details">
-                <a
-                  v-if="result.datasetUrl"
-                  :href="result.datasetUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
-                >
-                  View Details
-                </a>
-              </td>
-              <td class="col-images" aria-label="Matching images">
-                {{ result.matchingImageCount }} / {{ result.totalImageCount }}
-              </td>
-              <td class="col-action">
-                <c-button
-                  ghost
-                  class="btn-access"
-                  :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
-                  @click="requestAccess(result.datasetId)"
-                >
-                  Request access
-                </c-button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div v-if="!hasCommittedFilters" class="no-filters-state" aria-live="polite">
+      <Search :size="40" class="no-filters-icon" aria-hidden="true" />
+      <h2 class="no-filters-heading">Start by selecting filters</h2>
+      <p class="no-filters-subtext">
+        Select one or more filters above and click Search to find datasets.
+      </p>
     </div>
 
-    <DescriptionModal
-      v-model="modalOpen"
-      :title="activeResult?.datasetTitle ?? activeResult?.datasetId ?? ''"
-      :description="activeResult?.datasetDescription ?? ''"
-      @update:model-value="onModalClose"
-    />
-  </section>
+    <section v-else class="results-table-section" aria-label="Search results" aria-live="polite">
+      <LoadingSpinner v-if="isLoading" :size="24" />
+
+      <ErrorBanner
+        v-else-if="isError && !errorDismissed"
+        message="Search failed. Please try again."
+        @dismiss="errorDismissed = true"
+      />
+
+      <p v-else-if="isEmpty" class="empty-state">No results found.</p>
+
+      <div v-else class="results-container">
+        <Transition name="bulk-bar">
+          <div
+            v-if="selectedCount > 0"
+            class="bulk-action-bar"
+            role="region"
+            aria-label="Bulk actions"
+          >
+            <span class="bulk-count">{{ selectedCount }} selected</span>
+            <c-button
+              class="btn-bulk-access"
+              :aria-label="`Apply for access to ${selectedCount} selected datasets`"
+              @click="openBulkRems(selectedIdsArray)"
+            >
+              <Key :size="16" aria-hidden="true" />
+              Apply for access ({{ selectedCount }})
+            </c-button>
+          </div>
+        </Transition>
+        <div class="table-wrapper">
+          <table class="results-table">
+            <caption class="sr-only">
+              Search results
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Select row</span></th>
+                <th scope="col">Title</th>
+                <th scope="col">Description</th>
+                <th scope="col">More details</th>
+                <th scope="col">Matching images</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(result, index) in flatResults" :key="result.datasetId">
+                <td class="col-select">
+                  <input
+                    type="checkbox"
+                    :checked="isSelected(result.datasetId)"
+                    :id="`select-${result.datasetId}`"
+                    :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
+                    @change="toggleSelection(result.datasetId)"
+                  />
+                </td>
+                <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
+                <td class="col-description">
+                  <span>{{ truncate(result.datasetDescription, 80) }}</span>
+                  <button
+                    v-if="result.datasetDescription && result.datasetDescription.length > 80"
+                    :ref="
+                      (el) => {
+                        if (el) triggerRefs[index] = el as HTMLButtonElement
+                      }
+                    "
+                    class="show-more-btn"
+                    :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
+                    @click="openModal(result, index)"
+                  >
+                    Show more
+                  </button>
+                </td>
+                <td class="col-more-details">
+                  <a
+                    v-if="result.datasetUrl"
+                    :href="result.datasetUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
+                  >
+                    View Details
+                  </a>
+                </td>
+                <td class="col-images" aria-label="Matching images">
+                  {{ result.matchingImageCount }} / {{ result.totalImageCount }}
+                </td>
+                <td class="col-action">
+                  <c-button
+                    ghost
+                    class="btn-access"
+                    :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
+                    @click="requestAccess(result.datasetId)"
+                  >
+                    Request access
+                  </c-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <DescriptionModal
+        v-model="modalOpen"
+        :title="activeResult?.datasetTitle ?? activeResult?.datasetId ?? ''"
+        :description="activeResult?.datasetDescription ?? ''"
+        @update:model-value="onModalClose"
+      />
+    </section>
+  </template>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+.scope-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.5rem 1.5rem;
+  font-weight: var(--font-weight-heading);
+  font-size: 1.0625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &::before {
+    display: inline-block;
+    border-radius: 0.125rem;
+    width: 0.25rem;
+    height: 1.125rem;
+    content: '';
+  }
+}
+
+.scope-heading--clinical {
+  color: rgb(var(--color-scope-clinical-rgb));
+
+  &::before {
+    background: rgb(var(--color-scope-clinical-rgb));
+  }
+}
+
+.scope-heading-count {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-body);
+  font-size: 0.8125rem;
+  letter-spacing: normal;
+  text-transform: none;
+
+  &::before {
+    margin-right: 0.375rem;
+    content: '·';
+  }
+}
+
 .no-filters-state {
   display: flex;
   flex-direction: column;
@@ -251,22 +317,12 @@ async function onModalClose(open: boolean) {
 
 .results-container {
   position: relative;
-  max-height: calc(100vh - 32rem);
+  /* This controls the maximum height of the results container until scrollbars become visible.
+   * This is 10 visible dataset rows
+   */
+  max-height: 50rem;
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.bulk-bar-enter-active,
-.bulk-bar-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.25s ease-out;
-}
-
-.bulk-bar-enter-from,
-.bulk-bar-leave-to {
-  transform: translateY(-100%);
-  opacity: 0;
 }
 
 .bulk-action-bar {
@@ -305,32 +361,34 @@ async function onModalClose(open: boolean) {
   width: 100%;
   color: var(--color-text);
   font-size: 0.9375rem;
-}
 
-.results-table thead th {
-  border-bottom: 2px solid var(--color-light-grey);
-  padding: 0.75rem 1rem;
-  color: var(--color-dark-blue);
-  font-weight: var(--font-weight-heading);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.results-table tbody tr {
-  border-bottom: 1px solid var(--color-light-grey);
-
-  &:last-child {
-    border-bottom: none;
+  thead th {
+    border-bottom: 2px solid var(--color-light-grey);
+    padding: 0.75rem 1rem;
+    color: var(--color-dark-blue);
+    font-weight: var(--font-weight-heading);
+    text-align: left;
+    white-space: nowrap;
   }
 
-  &:hover {
-    background-color: var(--color-surface);
-  }
-}
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--color-light-grey);
 
-.results-table tbody td {
-  vertical-align: top;
-  padding: 0.875rem 1rem;
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: var(--color-surface);
+      }
+    }
+
+    td {
+      vertical-align: top;
+      padding: 0.875rem 1rem;
+    }
+  }
 }
 
 .col-select {
@@ -397,17 +455,5 @@ async function onModalClose(open: boolean) {
     outline: 2px solid var(--color-pink);
     outline-offset: 2px;
   }
-}
-
-.sr-only {
-  position: absolute;
-  margin: -1px;
-  padding: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-  white-space: nowrap;
 }
 </style>

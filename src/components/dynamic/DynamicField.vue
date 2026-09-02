@@ -26,10 +26,6 @@ const currentArrayValue = computed(() => {
   return value ? [value] : []
 })
 
-// Tracked locally so unchecking before any selection is honoured on first pick
-const includeDescendantTerms = ref(
-  store.draftFilters.find((f) => f.id === props.field.id)?.includeDescendantTerms ?? true,
-)
 const ontologyDisplayLabels = ref<string[]>([])
 
 function handleStringUpdate(value: string) {
@@ -42,26 +38,14 @@ function handleArrayUpdate(value: string[]) {
 
 function handleOntologyUpdate(value: string[]) {
   if (ontologyDisplayLabels.value.length > 0) {
-    store.setFilter(
-      props.field.id,
-      value,
-      includeDescendantTerms.value,
-      ontologyDisplayLabels.value,
-    )
+    store.setFilter(props.field.id, value, ontologyDisplayLabels.value)
   } else {
-    store.setFilter(props.field.id, value, includeDescendantTerms.value)
+    store.setFilter(props.field.id, value)
   }
 }
 
 function handleDisplayLabels(labels: string[]) {
   ontologyDisplayLabels.value = labels
-}
-
-function handleIncludeDescendants(include: boolean) {
-  includeDescendantTerms.value = include
-  if (currentArrayValue.value.length > 0) {
-    store.setFilter(props.field.id, currentArrayValue.value, include, ontologyDisplayLabels.value)
-  }
 }
 
 const KNOWN_TYPES: BeaconFilteringTerm['type'][] = [
@@ -109,7 +93,6 @@ onMounted(() => {
     :model-value="currentArrayValue"
     :allow-free-text="false"
     @update:model-value="handleOntologyUpdate"
-    @update:include-descendant-terms="handleIncludeDescendants"
     @update:display-labels="handleDisplayLabels"
   />
 
@@ -121,7 +104,6 @@ onMounted(() => {
     :model-value="currentArrayValue"
     :allow-free-text="true"
     @update:model-value="handleOntologyUpdate"
-    @update:include-descendant-terms="handleIncludeDescendants"
     @update:display-labels="handleDisplayLabels"
   />
 

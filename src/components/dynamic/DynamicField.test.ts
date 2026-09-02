@@ -129,31 +129,9 @@ describe('DynamicField', () => {
     expect(wrapper.findComponent(OntologyPicker).props('allowFreeText')).toBe(true)
   })
 
-  it('defaults includeDescendantTerms=true when no toggle emitted', () => {
-    const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
-    const store = useSearchStore()
-    const setFilterSpy = vi.spyOn(store, 'setFilter')
-
-    wrapper.findComponent(OntologyPicker).vm.$emit('update:modelValue', ['80248007'])
-
-    expect(setFilterSpy).toHaveBeenCalledWith('anatomical_site', ['80248007'], true)
-  })
-
-  it('passes includeDescendantTerms=false to setFilter after toggle then select', () => {
-    const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
-    const store = useSearchStore()
-    const setFilterSpy = vi.spyOn(store, 'setFilter')
-
-    const picker = wrapper.findComponent(OntologyPicker)
-    picker.vm.$emit('update:includeDescendantTerms', false)
-    picker.vm.$emit('update:modelValue', ['80248007'])
-
-    expect(setFilterSpy).toHaveBeenCalledWith('anatomical_site', ['80248007'], false)
-  })
-
   it('passes existing store array to OntologyPicker on mount', () => {
     const store = useSearchStore()
-    store.setFilter('anatomical_site', ['80248007', '64033007'], true)
+    store.setFilter('anatomical_site', ['80248007', '64033007'])
 
     const wrapper = mountField(makeField({ id: 'anatomical_site', type: 'ontology' }))
 

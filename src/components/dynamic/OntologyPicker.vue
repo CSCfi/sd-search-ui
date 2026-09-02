@@ -21,13 +21,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]
-  'update:includeDescendantTerms': [value: boolean]
   'update:displayLabels': [labels: string[]]
 }>()
 
 const searchTerm = ref('')
 const selectedItems = ref<FieldValue[]>([])
-const includeDescendantTerms = ref(false)
 
 const debouncedTerm = refDebounced(searchTerm, 500)
 
@@ -72,10 +70,6 @@ const additionalCount = computed(() =>
   selectedItems.value.length > 1 ? selectedItems.value.length - 1 : 0,
 )
 
-const hasOntologyItems = computed(() => {
-  return filteredSuggestions.value.some((item) => item.concept_id !== null)
-})
-
 function isSelected(item: FieldValue): boolean {
   const key = item.concept_id ?? item.value
   return selectedItems.value.some((s) => (s.concept_id ?? s.value) === key)
@@ -100,11 +94,6 @@ function toggleItem(item: FieldValue) {
     'update:modelValue',
     selectedItems.value.map((s) => s.concept_id ?? s.value),
   )
-}
-
-function onDescendantsChange(event: Event) {
-  includeDescendantTerms.value = (event.target as HTMLInputElement).checked
-  emit('update:includeDescendantTerms', includeDescendantTerms.value)
 }
 
 const {
@@ -235,13 +224,6 @@ watch(
           No results found
         </li>
       </ul>
-
-      <div v-if="hasOntologyItems" class="descendants-toggle">
-        <label class="descendants-label">
-          <input type="checkbox" :checked="includeDescendantTerms" @change="onDescendantsChange" />
-          Include descendant terms
-        </label>
-      </div>
     </div>
   </div>
 </template>
@@ -420,24 +402,5 @@ watch(
   font-style: italic;
   font-size: 0.875rem;
   text-align: center;
-}
-
-.descendants-toggle {
-  border-top: 1px solid var(--color-light-grey);
-  padding: 0.5rem 0.75rem;
-}
-
-.descendants-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  color: var(--color-text);
-  font-size: 0.8125rem;
-
-  input[type='checkbox'] {
-    cursor: pointer;
-    accent-color: var(--color-dark-blue);
-  }
 }
 </style>

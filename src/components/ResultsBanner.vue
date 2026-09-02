@@ -35,7 +35,7 @@ function displayValue(filter: { value: string | string[]; label?: string[] }): s
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .results-banner {
   display: flex;
   flex-wrap: wrap;

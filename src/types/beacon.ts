@@ -14,7 +14,6 @@ export interface BeaconFilteringTerm {
   label: string
   description: string
   group?: string | null
-  display?: boolean
   scopes: string[]
   ontology?: {
     id: string
@@ -68,7 +67,6 @@ export interface BeaconQueryFilter {
   id: string
   value: string | string[]
   operator: '='
-  includeDescendantTerms?: boolean
   label?: string[]
 }
 
@@ -108,10 +106,40 @@ export interface BeaconResultSetsResponse {
   response: BeaconResultSets
 }
 
+export interface BeaconCountResponse {
+  meta: {
+    apiVersion: string
+    beaconId: string
+    returnedGranularity: 'count'
+  }
+  responseSummary: {
+    exists: boolean
+    numTotalResults: number
+  }
+}
+
 // Field values
 
 export interface FieldValue {
   value: string
   count: number
   concept_id: string | null
+}
+
+// Deployment status
+
+export interface DocumentCounts {
+  indexed: number
+  pending: number
+}
+
+export interface ScopedCounts {
+  documents: DocumentCounts
+}
+
+export interface DeploymentStatus {
+  deployment: string
+  documents: DocumentCounts
+  scopes: Record<string, ScopedCounts>
+  last_indexed: string | null // ISO 8601 datetime string or null
 }

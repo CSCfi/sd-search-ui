@@ -26,6 +26,7 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
+      sessionStorage.removeItem('postLoginRedirect')
       window.location.href = '/logout'
       return Promise.reject(error)
     }

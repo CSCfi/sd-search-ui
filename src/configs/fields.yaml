@@ -1,0 +1,19 @@
+# Field ids to hide in the search UI.
+# All fields returned by /filtering_terms are shown by default.
+# Add a field id here to hide it. If all fields in a group are hidden,
+# the group heading is also hidden automatically.
+hidden:
+  - dataset_title
+
+# Field ids whose description tooltip is hidden even when a description exists.
+hidden_description:
+  - dataset_description
+
+# Group ids (from /filtering_groups) and scope ids (from /filtering_scopes)
+# that render with a bordered box in the search form.
+# All groups/scopes render without a border by default.
+# Note: group ids and scope ids share this list — they don't collide today.
+bordered:
+  - staining
+  - clinical
+  - non_clinical

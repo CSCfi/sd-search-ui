@@ -27,7 +27,7 @@ const router = createRouter({
 })
 
 /**
- * Client-side UX guard only — redirects to login when no authenticated
+ * Client-side UX guard only — redirects to homepage when no authenticated
  * session is known. "Not known" covers both the initial page load (before
  * the session has been checked) and a confirmed 401.
  *
@@ -52,9 +52,12 @@ router.beforeEach(async (to) => {
   }
 
   if (!authStore.isLoggedIn) {
-    window.location.href = '/login'
+    sessionStorage.setItem('postLoginRedirect', window.location.pathname + window.location.search)
+    window.location.href = '/'
     return false
   }
+
+  return true
 })
 
 export { router }
