@@ -118,6 +118,41 @@ export interface BeaconCountResponse {
   }
 }
 
+// Non-clinical images at record granularity.
+export interface BeaconImageResult {
+  imageId: string
+}
+
+export interface BeaconImageResultSet {
+  id: string
+  setType: 'image'
+  results: BeaconImageResult[]
+}
+
+export interface BeaconImageResultSetsResponse {
+  meta: {
+    apiVersion: string
+    beaconId: string
+    returnedGranularity: 'record'
+  }
+  responseSummary: {
+    exists: boolean
+    numTotalResults: number
+  }
+  response: {
+    resultSet: BeaconImageResultSet[]
+  }
+}
+
+// Dataset on Demand (DoD)
+export interface DatasetOnDemandCreated {
+  onDemandDatasetAccession: string
+}
+
+export type DatasetOnDemandResult =
+  | ({ status: 'success' } & DatasetOnDemandCreated)
+  | { status: 'processing'; onDemandDatasetAccession: string }
+
 // Field values
 
 export interface FieldValue {

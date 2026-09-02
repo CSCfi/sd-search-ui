@@ -9,10 +9,21 @@ const getFilteringScopes = vi.fn<(...args: unknown[]) => Promise<unknown>>().moc
   { id: 'clinical', label: 'Clinical', description: '' },
   { id: 'non_clinical', label: 'Non-clinical', description: '' },
 ])
+const getNonClinicalImageIds = vi.fn<(...args: unknown[]) => Promise<string[]>>()
+const submitDatasetOnDemand = vi.fn<(...args: unknown[]) => Promise<unknown>>()
+const pollDatasetOnDemandStatus = vi.fn<(...args: unknown[]) => Promise<string>>()
+const buildRemsUrl = vi.fn<(...args: unknown[]) => string>()
 
 vi.mock('@/services/api', () => ({
   postNonClinicalQuery: (...args: unknown[]) => postNonClinicalQuery(...args),
   getFilteringScopes: (...args: unknown[]) => getFilteringScopes(...args),
+  getNonClinicalImageIds: (...args: unknown[]) => getNonClinicalImageIds(...args),
+  submitDatasetOnDemand: (...args: unknown[]) => submitDatasetOnDemand(...args),
+  pollDatasetOnDemandStatus: (...args: unknown[]) => pollDatasetOnDemandStatus(...args),
+}))
+
+vi.mock('@/utils/rems', () => ({
+  buildRemsUrl: (...args: unknown[]) => buildRemsUrl(...args),
 }))
 
 const { default: NonClinicalResults } = await import('./NonClinicalResults.vue')
@@ -20,10 +31,17 @@ const { default: NonClinicalResults } = await import('./NonClinicalResults.vue')
 describe('NonClinicalResults', () => {
   let pinia: ReturnType<typeof createPinia>
 
+  let windowOpenSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
     postNonClinicalQuery.mockReset()
+    getNonClinicalImageIds.mockReset()
+    submitDatasetOnDemand.mockReset()
+    pollDatasetOnDemandStatus.mockReset()
+    buildRemsUrl.mockReset()
+    windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
   })
 
   // retry: false — the isError tests below assert on the first rejection, not after
@@ -175,5 +193,94 @@ describe('NonClinicalResults', () => {
 
     expect(wrapper.find('.btn-apply-non-clinical').exists()).toBe(true)
     expect(wrapper.text()).toContain('Image access is subject to approval')
+  })
+
+  it('shows loading message and disables button while DoD fetch is pending', async () => {
+    postNonClinicalQuery.mockResolvedValue({
+      meta: { apiVersion: 'v2.0', beaconId: 'test', returnedGranularity: 'count' },
+      responseSummary: { exists: true, numTotalResults: 5 },
+    })
+    // Never resolves — keeps the composable in loading state
+    getNonClinicalImageIds.mockReturnValue(new Promise(() => {}))
+
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setDatasetType('non_clinical')
+    store.commit()
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    await wrapper.find('.btn-apply-non-clinical').trigger('click')
+
+    expect(wrapper.find('.dod-progress').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Processing the request to create a dataset')
+    expect(wrapper.find('.btn-apply-non-clinical').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows polling spinner and disables button while in polling state', async () => {
+    postNonClinicalQuery.mockResolvedValue({
+      meta: { apiVersion: 'v2.0', beaconId: 'test', returnedGranularity: 'count' },
+      responseSummary: { exists: true, numTotalResults: 5 },
+    })
+    getNonClinicalImageIds.mockResolvedValue(['img-1'])
+    submitDatasetOnDemand.mockResolvedValue({
+      status: 'success',
+      onDemandDatasetAccession: 'SDA-abc',
+    })
+    // Never resolves — composable stays in polling state (3s timeout hasn't fired)
+    pollDatasetOnDemandStatus.mockReturnValue(new Promise(() => {}))
+    buildRemsUrl.mockReturnValue('https://rems.example.com/apply-for?resource=SDA-abc')
+
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setDatasetType('non_clinical')
+    store.commit()
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    await wrapper.find('.btn-apply-non-clinical').trigger('click')
+    // Flush microtasks so getNonClinicalImageIds + submitDatasetOnDemand resolve
+    // and dodStatus reaches 'polling'. The 3s setTimeout hasn't fired yet.
+    await flushPromises()
+
+    expect(wrapper.find('.dod-progress').exists()).toBe(true)
+    expect(wrapper.find('.dod-processing').exists()).toBe(false)
+    expect(wrapper.find('.btn-apply-non-clinical').attributes('disabled')).toBeDefined()
+    expect(windowOpenSpy).not.toHaveBeenCalled()
+  })
+
+  it('shows error banner with button re-enabled on DoD error; dismissing hides banner', async () => {
+    postNonClinicalQuery.mockResolvedValue({
+      meta: { apiVersion: 'v2.0', beaconId: 'test', returnedGranularity: 'count' },
+      responseSummary: { exists: true, numTotalResults: 5 },
+    })
+    getNonClinicalImageIds.mockResolvedValue(['img-1'])
+    submitDatasetOnDemand.mockRejectedValue({
+      status: 500,
+      title: 'Server error',
+      detail: 'Quota exceeded',
+    })
+
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setDatasetType('non_clinical')
+    store.commit()
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    await wrapper.find('.btn-apply-non-clinical').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    // Custom element sets disabled as string 'false' when not disabled (not undefined)
+    expect(wrapper.find('.btn-apply-non-clinical').attributes('disabled')).not.toBe('')
+
+    // Dismiss the error banner via its internal button
+    await wrapper.find('.dismiss-btn').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 })

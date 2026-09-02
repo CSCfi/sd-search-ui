@@ -5,18 +5,21 @@ import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useNonClinicalSearch } from '@/composables/useNonClinicalSearch'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { useDatasetOnDemand } from '@/composables/useDatasetOnDemand'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const { committedDatasetType, hasCommittedFilters } = storeToRefs(useSearchStore())
 const { data, isLoading, isError } = useNonClinicalSearch()
 const { data: filteringScopes } = useFilteringScopes()
+const { dodStatus, dodError, isDodBusy, applyForNonClinicalImages } = useDatasetOnDemand()
 
 const nonClinicalLabel = computed(
   () => filteringScopes.value?.find((scope) => scope.id === 'non_clinical')?.label + ' results',
 )
 
 const errorDismissed = ref(false)
+const dodErrorDismissed = ref(false)
 
 const isActiveTab = computed(
   () => committedDatasetType.value === 'all' || committedDatasetType.value === 'non_clinical',
@@ -32,9 +35,9 @@ const imageCount = computed(() => data.value?.responseSummary.numTotalResults ??
 
 const hasMatches = computed(() => data.value !== undefined && imageCount.value > 0)
 
-function applyForNonClinicalAccess() {
-  // TODO: the count-granularity response carries no imageIds, so there
-  // is nothing to send to the access request endpoint yet.
+function onApplyClick() {
+  dodErrorDismissed.value = false
+  applyForNonClinicalImages()
 }
 </script>
 
@@ -78,11 +81,28 @@ function applyForNonClinicalAccess() {
                 Matching non-clinical images : <span class="nc-count">{{ imageCount }}</span>
               </p>
             </div>
-            <c-button class="btn-apply-non-clinical" @click="applyForNonClinicalAccess">
+            <c-button class="btn-apply-non-clinical" :disabled="isDodBusy" @click="onApplyClick">
               <Key :size="16" aria-hidden="true" />
               Apply for the non-clinical images
             </c-button>
-            <p class="nc-disclaimer">
+
+            <div
+              v-if="dodStatus === 'loading' || dodStatus === 'polling'"
+              class="dod-progress"
+              aria-live="polite"
+            >
+              <LoadingSpinner :size="18" />
+              <span>Processing the request to create a dataset..</span>
+            </div>
+
+            <ErrorBanner
+              v-else-if="dodStatus === 'error' && !dodErrorDismissed"
+              class="dod-error"
+              :message="dodError ?? 'Something went wrong. Please try again.'"
+              @dismiss="dodErrorDismissed = true"
+            />
+
+            <p v-else class="nc-disclaimer">
               Image access is subject to approval. You will receive an email when your virtual
               dataset is ready.
             </p>
@@ -198,10 +218,27 @@ function applyForNonClinicalAccess() {
   }
 }
 
+.dod-error {
+  margin-top: 0.875rem;
+}
+
 .nc-disclaimer {
   margin: 0.875rem 0 0;
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   line-height: 1.5;
+}
+
+.dod-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+
+  .loading {
+    padding: 0;
+  }
 }
 </style>
