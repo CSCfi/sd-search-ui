@@ -17,7 +17,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'text',
     label: 'Dataset description',
     description: '',
-    ui_group: 'description',
+    group: 'description',
     scopes: ['clinical', 'non_clinical'],
   },
 ]
