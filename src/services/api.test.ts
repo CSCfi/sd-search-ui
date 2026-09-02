@@ -8,8 +8,8 @@ vi.mock('axios', async (importOriginal) => {
   return {
     default: {
       ...actual.default,
-      post: vi.fn(),
-      get: vi.fn(),
+      post: vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>(),
+      get: vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>(),
       isAxiosError: actual.default.isAxiosError,
     },
   }
