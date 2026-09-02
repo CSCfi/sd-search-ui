@@ -6,6 +6,7 @@ import { useSearchStore } from '@/stores/searchStore'
 import { useClinicalSearch } from '@/composables/useClinicalSearch'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import { pluralize } from '@/utils/pluralize'
+import { buildRemsUrl } from '@/utils/rems'
 import type { BeaconResultSetResult } from '@/types/beacon'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
@@ -57,17 +58,11 @@ function truncate(text: string | null, max: number): string {
 }
 
 function requestAccess(datasetId: string) {
-  window.open(
-    `https://bp-rems.sd.csc.fi/apply-for?resource=${datasetId}`,
-    '_blank',
-    'noopener,noreferrer',
-  )
+  window.open(buildRemsUrl(datasetId), '_blank', 'noopener,noreferrer')
 }
 
 function openBulkRems(ids: string[]) {
-  const url = new URL('https://bp-rems.sd.csc.fi/apply-for')
-  ids.forEach((id) => url.searchParams.append('resource', id))
-  window.open(url.toString(), '_blank', 'noopener,noreferrer')
+  window.open(buildRemsUrl(ids), '_blank', 'noopener,noreferrer')
 }
 
 function isSelected(id: string): boolean {
