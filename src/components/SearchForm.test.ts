@@ -18,7 +18,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'text',
     label: 'Dataset description',
     description: '',
-    ui_group: 'description',
+    group: 'description',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -26,7 +26,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Anatomical site',
     description: '',
-    ui_group: 'subject',
+    group: 'subject',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -34,7 +34,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'keyword',
     label: 'Staining target',
     description: '',
-    ui_group: 'staining',
+    group: 'staining',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -42,7 +42,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Diagnosis',
     description: '',
-    ui_group: 'clinical',
+    group: 'clinical',
     scopes: ['clinical'],
   },
   {
@@ -51,7 +51,7 @@ const TERMS: BeaconFilteringTerm[] = [
     label: 'Biological species',
     description: '',
     // Its backend group differs from its scope; panels must still render fields flat.
-    ui_group: 'subject',
+    group: 'subject',
     scopes: ['non_clinical'],
   },
   {
@@ -59,7 +59,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Finding',
     description: '',
-    ui_group: 'non_clinical',
+    group: 'non_clinical',
     scopes: ['non_clinical'],
   },
   {
@@ -67,7 +67,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Severity',
     description: '',
-    ui_group: 'non_clinical',
+    group: 'non_clinical',
     scopes: ['non_clinical'],
   },
 ]
