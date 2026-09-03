@@ -67,7 +67,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Severity',
     description: '',
-    group: 'non_clinical',
+    group: 'finding_details',
     scopes: ['non_clinical'],
   },
 ]
