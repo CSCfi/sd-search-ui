@@ -14,6 +14,8 @@ hidden_description:
 # All groups/scopes render without a border by default.
 # Note: group ids and scope ids share this list — they don't collide today.
 bordered:
+  - subject
+  - sample
   - staining
   - clinical
   - non_clinical
