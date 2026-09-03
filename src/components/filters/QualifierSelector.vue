@@ -117,8 +117,9 @@ function onQualifierKeydown(event: KeyboardEvent, qualifierId: string, values: s
 
 .qualifier-label {
   color: var(--color-white);
-  font-weight: var(--font-weight-subheading);
+  font-weight: var(--font-weight-heading);
   font-size: 1rem;
+  letter-spacing: 0.15em;
 }
 
 .qualifier-pills {

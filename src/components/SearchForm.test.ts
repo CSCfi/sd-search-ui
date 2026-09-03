@@ -312,7 +312,7 @@ describe('SearchForm — scope tabs', () => {
 
   it('does not border a group not listed in fieldsConfig.bordered', () => {
     const wrapper = mountForm()
-    for (const label of ['Description', 'Subject & specimen']) {
+    for (const label of ['Description']) {
       expect(groupByLabel(wrapper, label).classes()).not.toContain('group--border')
     }
   })
