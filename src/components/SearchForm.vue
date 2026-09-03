@@ -137,18 +137,62 @@ const sharedGroups = computed(() =>
     .filter((group) => group.fields.length > 0),
 )
 
-// Shared fields render above the tabs, so scope panels only show scope-specific fields.
-// Panels stay flat rather than grouped to avoid repeating the panel heading.
-const scopedFields = (scope: string) =>
-  groupedFields.value.flatMap((group) =>
-    group.fields.filter((f) => !isShared(f) && f.scopes.includes(scope)),
-  )
+// Scope sections preserve filteringTerms order: root-group fields render flat, while
+// child-group fields render in labelled subgroups. `kind` discriminates the two layouts.
+type FlatSection = { kind: 'flat'; fields: BeaconFilteringTerm[] }
+type SubgroupSection = {
+  kind: 'subgroup'
+  group: BeaconFilteringGroup
+  fields: BeaconFilteringTerm[]
+}
+type ScopeSection = FlatSection | SubgroupSection
+
+const scopedSections = (scope: string): ScopeSection[] => {
+  const sections: ScopeSection[] = []
+  const groups = filteringGroups.value ?? []
+
+  for (const field of filteringTerms.value ?? []) {
+    if (isShared(field) || !field.scopes.includes(scope)) continue
+
+    const group = groups.find((g) => g.id === field.group)
+    if (!group) continue
+
+    if (group.parent) {
+      // Append to the current subgroup if it's the same group; otherwise start a new one.
+      const last = sections.at(-1)
+      if (last?.kind === 'subgroup' && last.group.id === group.id) {
+        last.fields.push(field)
+      } else {
+        sections.push({ kind: 'subgroup', group, fields: [field] })
+      }
+    } else {
+      // Merge into current flat segment if adjacent; otherwise start a new one.
+      const last = sections.at(-1)
+      if (last?.kind === 'flat') {
+        last.fields.push(field)
+      } else {
+        sections.push({ kind: 'flat', fields: [field] })
+      }
+    }
+  }
+
+  return sections
+}
+
+// Precomputed per scope to avoid calling scopedSections multiple times per render cycle.
+const scopePanelSections = computed(() =>
+  scopes.value.map((scope) => ({ scope, sections: scopedSections(scope.id) })),
+)
 
 const scopeGroupHasBorder = (scope: string) => fieldsConfig.bordered.includes(scope)
 
 // Shared group borders come from fieldsConfig.bordered
 const groupClass = (group: BeaconFilteringGroup) => ({
   'group--border': fieldsConfig.bordered.includes(group.id),
+})
+
+const subgroupClass = (group: BeaconFilteringGroup) => ({
+  'subgroup--border': fieldsConfig.bordered.includes(group.id),
 })
 
 async function copySearch() {
@@ -218,20 +262,27 @@ async function copySearch() {
         </template>
         <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">
           <FilterTabPanel
-            v-for="scope in scopes"
+            v-for="{ scope, sections } in scopePanelSections"
             :key="scope.id"
             :tab="scope.id"
             :label="scope.label"
             :active-tab="activeTab"
             :bordered="scopeGroupHasBorder(scope.id)"
           >
-            <div class="fields-grid fields-grid--stacked">
-              <DynamicField
-                v-for="field in scopedFields(scope.id)"
-                :key="field.id"
-                :field="field"
-              />
-            </div>
+            <template
+              v-for="(section, i) in sections"
+              :key="section.kind === 'flat' ? `flat-${i}` : section.group.id"
+            >
+              <div v-if="section.kind === 'flat'" class="fields-grid fields-grid--stacked">
+                <DynamicField v-for="field in section.fields" :key="field.id" :field="field" />
+              </div>
+              <div v-else class="subgroup" :class="subgroupClass(section.group)">
+                <h3 class="subgroup-label">{{ section.group.label }}</h3>
+                <div class="fields-grid fields-grid--subgroup">
+                  <DynamicField v-for="field in section.fields" :key="field.id" :field="field" />
+                </div>
+              </div>
+            </template>
           </FilterTabPanel>
         </div>
       </FilterTabGroup>
@@ -316,12 +367,6 @@ async function copySearch() {
   }
 }
 
-@include tablet {
-  .tab-columns {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 .form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -377,13 +422,45 @@ async function copySearch() {
   animation: spin 1s linear infinite;
 }
 
+.subgroup {
+  margin-top: 1rem;
+}
+
+.subgroup + .fields-grid {
+  margin-top: 1rem;
+}
+
+.subgroup--border {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 1rem 1.25rem;
+}
+
+.subgroup-label {
+  margin-bottom: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: var(--font-weight-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 @include tablet {
+  .tab-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .fields-grid {
     grid-template-columns: repeat(2, 1fr);
 
     .col-span-3 {
       grid-column: 1 / -1;
     }
+  }
+
+  .fields-grid--subgroup {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -394,6 +471,10 @@ async function copySearch() {
 
   .fields-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .fields-grid--subgroup {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

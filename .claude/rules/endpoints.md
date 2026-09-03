@@ -55,8 +55,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
         type: "text" | "keyword" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
         label: string                       // e.g. "Anatomical site"
         description: string
-        ui_group?: string | null            // maps to a BeaconFilteringGroup id
-        ui_display?: boolean                // if false, field is hidden from UI
+        group?: string | null            // maps to a BeaconFilteringGroup id
         scopes: string[]                    // e.g. ["specimen"]
         ontology?: {
           id: string                        // always "SCTID"
