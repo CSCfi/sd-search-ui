@@ -154,7 +154,7 @@ const scopedSections = (scope: string): ScopeSection[] => {
   for (const field of filteringTerms.value ?? []) {
     if (isShared(field) || !field.scopes.includes(scope)) continue
 
-    const group = groups.find((g) => g.id === field.ui_group)
+    const group = groups.find((g) => g.id === field.group)
     if (!group) continue
 
     if (group.parent) {
