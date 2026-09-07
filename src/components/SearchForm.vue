@@ -238,6 +238,11 @@ async function copySearch() {
       class="form-content"
       @submit.prevent
     >
+      <p class="filter-hint">
+        The fields display available values and the number of matching records. Selecting multiple
+        values within the same field uses OR logic, while selections across different fields use AND
+        logic. For more information, click the <strong>?</strong> icon in the top-right corner.
+      </p>
       <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">
         <h2 class="group-label">{{ group.label }}</h2>
         <div class="fields-grid">
@@ -327,6 +332,20 @@ async function copySearch() {
   padding: 3rem 0;
   color: var(--color-white);
   text-align: center;
+}
+
+.filter-hint {
+  margin-bottom: 1.5rem;
+  border-left: 3px solid rgb(var(--color-scope-clinical-rgb) / 0.6);
+  padding-left: 0.75rem;
+  max-width: 100%;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+
+  @include tablet {
+    max-width: 50%;
+  }
 }
 
 .group {
