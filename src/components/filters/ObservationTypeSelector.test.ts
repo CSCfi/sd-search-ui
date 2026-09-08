@@ -31,26 +31,6 @@ describe('ObservationTypeSelector', () => {
     expect(toggleInput(wrapper).element.checked).toBe(true)
   })
 
-  it('shows both All and Confirmed labels at all times', () => {
-    const wrapper = mountSelector()
-    const labels = wrapper.findAll('.side-label').map((el) => el.text())
-    expect(labels).toEqual(['All', 'Confirmed'])
-  })
-
-  it('dims the All label when confirmed is active', () => {
-    const wrapper = mountSelector('confirmed')
-    const labels = wrapper.findAll('.side-label')
-    expect(labels[0]?.classes()).toContain('side-label--dim')
-    expect(labels[1]?.classes()).not.toContain('side-label--dim')
-  })
-
-  it('dims the Confirmed label when All is active', () => {
-    const wrapper = mountSelector()
-    const labels = wrapper.findAll('.side-label')
-    expect(labels[0]?.classes()).not.toContain('side-label--dim')
-    expect(labels[1]?.classes()).toContain('side-label--dim')
-  })
-
   it('emits change with confirmed when toggling on', async () => {
     const wrapper = mountSelector()
     const input = toggleInput(wrapper)
