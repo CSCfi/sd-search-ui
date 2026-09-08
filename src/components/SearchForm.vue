@@ -4,7 +4,7 @@ import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
 import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
-import QualifierSelector from '@/components/filters/QualifierSelector.vue'
+import ObservationTypeSelector from '@/components/filters/ObservationTypeSelector.vue'
 import { useFilteringTerms } from '@/composables/useFilteringTerms'
 import { serializeQualifiers, useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
@@ -259,9 +259,9 @@ async function copySearch() {
 
       <FilterTabGroup v-model="activeTab" :scopes="scopes">
         <template v-if="filteringQualifiers && filteringQualifiers.length > 0" #header>
-          <QualifierSelector
-            :qualifiers="filteringQualifiers"
-            :selected="store.draftQualifiers"
+          <ObservationTypeSelector
+            :qualifier="filteringQualifiers[0]!"
+            :selected="store.draftQualifiers[filteringQualifiers[0]!.id]"
             @change="store.setQualifier"
           />
         </template>

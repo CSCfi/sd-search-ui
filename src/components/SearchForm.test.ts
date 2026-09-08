@@ -355,7 +355,7 @@ describe('SearchForm — qualifier selector', () => {
     const wrapper = mountForm()
     const header = wrapper.find('.tab-header')
     expect(header.exists()).toBe(true)
-    expect(header.find('.qualifier-selector').exists()).toBe(true)
+    expect(header.find('.observation-type-toggle').exists()).toBe(true)
   })
 
   it('resets a ?qualifiers= value naming an undeclared qualifier id, and announces it', () => {
