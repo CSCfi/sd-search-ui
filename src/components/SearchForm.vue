@@ -239,9 +239,9 @@ async function copySearch() {
       @submit.prevent
     >
       <p class="filter-hint">
-        The fields display available values and the number of matching records. Selecting multiple
+        The fields display available values and the number of matching images. Selecting multiple
         values within the same field uses OR logic, while selections across different fields use AND
-        logic. For more information, click the <strong>?</strong> icon in the top-right corner.
+        logic. For more information, click the <strong>?</strong> Help icon in the top-right corner.
       </p>
       <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">
         <h2 class="group-label">{{ group.label }}</h2>
