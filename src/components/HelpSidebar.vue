@@ -169,82 +169,84 @@ function onKeydown(e: KeyboardEvent) {
   background: var(--color-white);
   width: min(380px, 90vw);
   height: 100vh;
-}
 
-.help-header {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--color-light-grey);
-  padding: 1.25rem 1.5rem;
-}
+  .help-header {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-light-grey);
+    padding: 1.25rem 1.5rem;
 
-.help-title {
-  color: var(--color-dark-blue);
-  font-weight: var(--font-weight-heading);
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-}
+    .help-title {
+      color: var(--color-dark-blue);
+      font-weight: var(--font-weight-heading);
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+    }
 
-.help-close {
-  display: flex;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  padding: 0.25rem;
-  color: var(--color-text-secondary);
+    .help-close {
+      display: flex;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      padding: 0.25rem;
+      color: var(--color-text-secondary);
 
-  &:hover {
-    color: var(--color-text);
-  }
-}
-
-.help-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
-.help-toc {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  border-bottom: 1px solid var(--color-light-grey);
-  padding-bottom: 1rem;
-
-  a {
-    color: var(--color-bright-blue);
-    font-size: 0.8125rem;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
+      &:hover {
+        color: var(--color-text);
+      }
     }
   }
-}
 
-.help-section-title {
-  margin-bottom: 0.5rem;
-  color: var(--color-dark-blue);
-  font-weight: 700;
-  font-size: 0.875rem;
-}
+  .help-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    overflow-y: auto;
 
-.help-section-body {
-  color: var(--color-text);
-  font-size: 0.875rem;
-  line-height: 1.6;
+    .help-toc {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      border-bottom: 1px solid var(--color-light-grey);
+      padding-bottom: 1rem;
 
-  :deep(p) {
-    margin: 0;
-  }
+      a {
+        color: var(--color-bright-blue);
+        font-size: 0.8125rem;
+        text-decoration: none;
 
-  :deep(p + p) {
-    margin-top: 0.625rem;
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .help-section {
+      .help-section-title {
+        margin-bottom: 0.5rem;
+        color: var(--color-dark-blue);
+        font-weight: 700;
+        font-size: 0.875rem;
+      }
+
+      .help-section-body {
+        color: var(--color-text);
+        font-size: 0.875rem;
+        line-height: 1.6;
+
+        :deep(p) {
+          margin: 0;
+        }
+
+        :deep(p + p) {
+          margin-top: 0.625rem;
+        }
+      }
+    }
   }
 }
 </style>
