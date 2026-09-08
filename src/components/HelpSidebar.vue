@@ -16,21 +16,16 @@ interface HelpSection {
 const sections: HelpSection[] = [
   {
     id: 'help-filters',
-    title: 'How your filters combine',
-    html: `<p>When you select <strong>multiple values within the same field</strong>, the results include images matching <strong>any</strong> of those values (OR logic). For example, selecting both <em>Lung structure</em> and <em>Breast structure</em> as anatomical sites returns images from either site — broadening your results.</p>
-<p>When you fill in <strong>multiple different fields</strong>, only images matching <strong>all</strong> of the criteria are returned (AND logic). Adding a staining filter on top of an anatomical site filter will narrow your results to images that satisfy both conditions simultaneously.</p>`,
+    title: 'How the filters work together',
+    html: `<p>When you apply the filters in the dropdown lists, the search combines them in two different ways:</p>
+<p><strong>1. Selecting multiple values in the same field:</strong><br>If you select several values within one filter field, the search uses OR logic.<br><em>Example:</em> Selecting <em>Liver</em> and <em>Kidney</em> from the Anatomical Site dropdown will return records related to Liver, Kidney, or both.</p>
+<p><strong>2. Combining filters from different fields:</strong><br>When you apply filters in different fields, the search uses AND logic.<br><em>Example:</em> If you select Anatomical Site = <em>Liver</em> and Staining Procedure = <em>H&amp;E stain</em>, the results will only include records that match both criteria.</p>`,
   },
   {
-    id: 'help-staining',
-    title: 'Staining fields and related terms',
-    html: `<p><strong>Staining procedure</strong> and <strong>Staining substance</strong> use the SNOMED CT ontology hierarchy. Selecting a broad concept (for example, <em>Immunohistochemistry staining technique</em>) automatically includes all more specific variants within that concept — you do not need to list each variant individually.</p>
-<p><strong>Staining target</strong> works differently: it is a plain keyword list with exact matching only. No ontology expansion is applied, so select the exact term that describes your target of interest.</p>`,
-  },
-  {
-    id: 'help-diagnosis',
-    title: 'Diagnosis and other coded fields',
-    html: `<p><strong>Diagnosis</strong> uses SNOMED CT in the same way as the staining procedure and staining substance fields. Selecting a high-level diagnosis concept will include datasets annotated with any more specific diagnosis that falls under it in the SNOMED CT hierarchy.</p>
-<p>Other ontology fields — such as <strong>Anatomical site</strong>, <strong>Specimen type</strong>, and <strong>Block preparation</strong> — behave the same way: selecting a broader term expands coverage to all narrower concepts automatically.</p>`,
+    id: 'help-snomed',
+    title: 'The hierarchical SNOMED CT terms',
+    html: `<p>The fields <strong>Staining procedure</strong>, <strong>Staining substance</strong>, and <strong>Diagnosis</strong> use SNOMED CT, which organizes concepts in a hierarchy from broad to more specific terms. When a broad term is selected, records coded with any of its more specific subtypes are automatically included.</p>
+<p><em>Example:</em> When selecting <em>adenocarcinoma</em> from the Diagnosis dropdown, the search also returns records coded with <em>adenocarcinoma morphologic abnormality</em> as it is one of the subtypes of adenocarcinoma.</p>`,
   },
 ]
 
