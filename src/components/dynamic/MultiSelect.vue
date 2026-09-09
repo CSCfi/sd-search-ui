@@ -13,13 +13,23 @@ const props = defineProps<{
   fieldId: string
   modelValue: string[]
   description?: string
+  controlledValues?: string[]
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]
 }>()
 
-const { data, isLoading } = useFieldValues(props.fieldId)
+const { data: fetchedData, isLoading } = useFieldValues(props.fieldId)
+
+// Prefer API data (includes counts); fall back to the static controlledValues list
+// from the filteringTerms response when the API returns nothing.
+const items = computed(() => {
+  if (fetchedData.value && fetchedData.value.length > 0) {
+    return fetchedData.value.map((fv) => ({ value: fv.value, count: fv.count as number | null }))
+  }
+  return (props.controlledValues ?? []).map((v) => ({ value: v, count: null as number | null }))
+})
 
 const searchTerm = ref('')
 const triggerRef = useTemplateRef<HTMLButtonElement>('trigger')
@@ -40,10 +50,9 @@ const additionalCount = computed(() =>
 )
 
 const filteredItems = computed(() => {
-  const items = data.value ?? []
   const term = searchTerm.value.toLowerCase()
-  if (!term) return items
-  return items.filter((item) => item.value.toLowerCase().includes(term))
+  if (!term) return items.value
+  return items.value.filter((item) => item.value.toLowerCase().includes(term))
 })
 
 const itemCount = computed(() => filteredItems.value.length)
@@ -153,7 +162,7 @@ watch(searchTerm, resetActiveIndex)
           @keydown="onOptionKeydown($event, index)"
         >
           <span class="option-label">{{ item.value }}</span>
-          <span class="option-count">{{ item.count }}</span>
+          <span v-if="item.count !== null" class="option-count">{{ item.count }}</span>
         </li>
         <li v-if="filteredItems.length === 0" role="presentation" class="no-options">
           No options found

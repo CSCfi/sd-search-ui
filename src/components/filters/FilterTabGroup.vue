@@ -78,7 +78,6 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.5rem;
   background-color: rgba(255, 255, 255, 0.06);
-  overflow: hidden;
 }
 
 .tab-header {

@@ -82,6 +82,7 @@ onMounted(() => {
     :field-id="field.id"
     :description="field.description"
     :model-value="currentArrayValue"
+    :controlled-values="field.controlledValues"
     @update:model-value="handleArrayUpdate"
   />
 

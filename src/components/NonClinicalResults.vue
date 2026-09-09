@@ -82,10 +82,6 @@ function applyForNonClinicalAccess() {
               <Key :size="16" aria-hidden="true" />
               Apply for the non-clinical images
             </c-button>
-            <p class="nc-disclaimer">
-              Image access is subject to approval. You will receive an email when your virtual
-              dataset is ready.
-            </p>
           </template>
         </template>
       </div>
@@ -196,12 +192,5 @@ function applyForNonClinicalAccess() {
     outline: 2px solid var(--color-pink);
     outline-offset: 2px;
   }
-}
-
-.nc-disclaimer {
-  margin: 0.875rem 0 0;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  line-height: 1.5;
 }
 </style>

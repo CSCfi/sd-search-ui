@@ -174,6 +174,5 @@ describe('NonClinicalResults', () => {
     await flushPromises()
 
     expect(wrapper.find('.btn-apply-non-clinical').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Image access is subject to approval')
   })
 })

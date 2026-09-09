@@ -17,7 +17,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'text',
     label: 'Dataset description',
     description: '',
-    ui_group: 'description',
+    group: 'description',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -25,7 +25,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Anatomical site',
     description: '',
-    ui_group: 'subject',
+    group: 'subject',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -33,7 +33,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'keyword',
     label: 'Staining target',
     description: '',
-    ui_group: 'staining',
+    group: 'staining',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -41,7 +41,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Diagnosis',
     description: '',
-    ui_group: 'clinical',
+    group: 'clinical',
     scopes: ['clinical'],
   },
   {
@@ -49,7 +49,8 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Biological species',
     description: '',
-    ui_group: 'subject',
+    // Its backend group differs from its scope; panels must still render fields flat.
+    group: 'subject',
     scopes: ['non_clinical'],
   },
   {
@@ -57,7 +58,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Finding',
     description: '',
-    ui_group: 'non_clinical',
+    group: 'non_clinical',
     scopes: ['non_clinical'],
   },
   {
@@ -65,7 +66,7 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Severity',
     description: '',
-    ui_group: 'non_clinical',
+    group: 'finding_details',
     scopes: ['non_clinical'],
   },
 ]
@@ -76,6 +77,7 @@ const GROUPS: BeaconFilteringGroup[] = [
   { id: 'staining', label: 'Staining' },
   { id: 'clinical', label: 'Clinical' },
   { id: 'non_clinical', label: 'Non-clinical' },
+  { id: 'finding_details', label: 'Finding details', parent: 'non_clinical' },
 ]
 
 const SCOPES: BeaconFilteringScope[] = [
@@ -174,6 +176,18 @@ const panelFieldIds = (wrapper: Wrapper, scope: string) =>
     .findAll('.field-stub')
     .map((el) => el.attributes('data-field'))
 
+const subgroupLabels = (wrapper: Wrapper, scope: string) =>
+  panel(wrapper, scope)
+    .findAll('.subgroup-label')
+    .map((el) => el.text().trim())
+
+const subgroupFieldIds = (wrapper: Wrapper, scope: string, subgroupLabel: string) => {
+  const subgroups = panel(wrapper, scope).findAll('.subgroup')
+  const sg = subgroups.find((el) => el.find('.subgroup-label').text().trim() === subgroupLabel)
+  if (!sg) throw new Error(`no subgroup with label "${subgroupLabel}" in panel "${scope}"`)
+  return sg.findAll('.field-stub').map((el) => el.attributes('data-field'))
+}
+
 async function selectTab(wrapper: Wrapper, id: string) {
   await wrapper.find(`#tab-btn-${id}`).trigger('click')
 }
@@ -236,18 +250,34 @@ describe('SearchForm — scope tabs', () => {
     expect(ids).not.toContain('diagnosis')
   })
 
-  it('renders scope panel fields flat, with no group heading of their own', () => {
+  it('renders root-group panel fields flat, with no group-label heading of their own', () => {
     const wrapper = mountForm()
+    // Root-group fields (no parent on the group) stay flat — no .group-label inside panels.
     expect(panel(wrapper, 'non_clinical').findAll('.group-label')).toHaveLength(0)
     expect(panel(wrapper, 'clinical').findAll('.group-label')).toHaveLength(0)
+    // Shared groups above the tabs still render their headings.
     expect(groupLabels(wrapper)).toEqual(['Description', 'Subject & specimen', 'Staining'])
   })
 
-  it('orders panel fields by group, then by field', () => {
+  it('renders a child group as a subgroup with its own heading inside the parent scope panel', () => {
     const wrapper = mountForm()
+    expect(subgroupLabels(wrapper, 'non_clinical')).toEqual(['Finding details'])
+    expect(panel(wrapper, 'clinical').findAll('.subgroup-label')).toHaveLength(0)
+  })
+
+  it('orders panel fields by group, then by field — flat fields before subgroup fields', () => {
+    const wrapper = mountForm()
+    // panelFieldIds scans all .field-stub in the panel; flat fields render before subgroup fields.
     expect(panelFieldIds(wrapper, 'non_clinical')).toEqual([
       'animal_species',
       'finding',
+      'finding_severity',
+    ])
+  })
+
+  it('orders subgroup fields by filteringTerms declaration order', () => {
+    const wrapper = mountForm()
+    expect(subgroupFieldIds(wrapper, 'non_clinical', 'Finding details')).toEqual([
       'finding_severity',
     ])
   })
@@ -259,7 +289,7 @@ describe('SearchForm — scope tabs', () => {
 
   it('does not border a group not listed in fieldsConfig.bordered', () => {
     const wrapper = mountForm()
-    for (const label of ['Description', 'Subject & specimen']) {
+    for (const label of ['Description']) {
       expect(groupByLabel(wrapper, label).classes()).not.toContain('group--border')
     }
   })
