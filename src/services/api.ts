@@ -1,7 +1,6 @@
 import type {
   BeaconCountResponse,
   BeaconFilteringGroup,
-  BeaconFilteringQualifier,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconQueryRequest,
@@ -16,23 +15,11 @@ export async function getFilteringTerms(): Promise<BeaconFilteringTermsResponse>
   return apiClient.get<BeaconFilteringTermsResponse>('/filtering_terms').then((r) => r.data)
 }
 
-export async function getFieldValues(
-  fieldId: string,
-  scope?: string,
-  qualifiers?: Record<string, string>,
-): Promise<FieldValue[]> {
-  const params: Record<string, string | string[]> = {}
+export async function getFieldValues(fieldId: string, scope?: string): Promise<FieldValue[]> {
+  const params: Record<string, string> = {}
   if (scope && scope !== 'all') params.scope = scope
-  if (qualifiers) {
-    params.qualifier = Object.entries(qualifiers).map(([id, value]) => `${id}:${value}`)
-  }
   return apiClient
-    .get<FieldValue[]>(`/filtering_terms/${fieldId}/values`, {
-      params,
-      // FastAPI expects repeated `qualifier` keys (`qualifier=a&qualifier=b`);
-      // Axios otherwise serializes this array as `qualifier[]=a&qualifier[]=b`.
-      paramsSerializer: { indexes: null },
-    })
+    .get<FieldValue[]>(`/filtering_terms/${fieldId}/values`, { params })
     .then((r) => r.data)
 }
 
@@ -41,37 +28,23 @@ export async function getSuggestions(
   term: string,
   signal: AbortSignal,
   scope?: string,
-  qualifiers?: Record<string, string>,
 ): Promise<FieldValue[]> {
-  const params: Record<string, string | string[]> = { term, word_match: 'true' }
+  const params: Record<string, string> = { term, word_match: 'true' }
   if (scope && scope !== 'all') params.scope = scope
-  if (qualifiers) {
-    params.qualifier = Object.entries(qualifiers).map(([id, value]) => `${id}:${value}`)
-  }
   return apiClient
-    .get<FieldValue[]>(`/filtering_terms/${fieldId}/suggestions`, {
-      params,
-      signal,
-      // FastAPI expects repeated `qualifier` keys (`qualifier=a&qualifier=b`);
-      // Axios otherwise serializes this array as `qualifier[]=a&qualifier[]=b`.
-      paramsSerializer: { indexes: null },
-    })
+    .get<FieldValue[]>(`/filtering_terms/${fieldId}/suggestions`, { params, signal })
     .then((r) => r.data)
 }
 
 export async function postQuery(
   filters: BeaconQueryFilter[],
   scope?: string,
-  qualifiers: Record<string, string> = {},
 ): Promise<BeaconResultSetsResponse> {
   const body: BeaconQueryRequest = {
     query: {
       filters,
       requestedGranularity: 'record',
       ...(scope ? { requestedScope: scope } : {}),
-      requestedQualifiers: Object.fromEntries(
-        Object.entries(qualifiers).map(([id, value]) => [id, [value]]),
-      ),
     },
   }
 
@@ -83,16 +56,12 @@ export async function postQuery(
 // per-dataset identity or imageIds for non-clinical results (see BeaconCountResponse).
 export async function postNonClinicalQuery(
   filters: BeaconQueryFilter[],
-  qualifiers: Record<string, string> = {},
 ): Promise<BeaconCountResponse> {
   const body: BeaconQueryRequest = {
     query: {
       filters,
       requestedGranularity: 'count',
       requestedScope: 'non_clinical',
-      requestedQualifiers: Object.fromEntries(
-        Object.entries(qualifiers).map(([id, value]) => [id, [value]]),
-      ),
     },
   }
 
@@ -106,10 +75,6 @@ export async function getFilteringGroups(): Promise<BeaconFilteringGroup[]> {
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {
   return apiClient.get<BeaconFilteringScope[]>('/filtering_scopes').then((r) => r.data)
-}
-
-export async function getFilteringQualifiers(): Promise<BeaconFilteringQualifier[]> {
-  return apiClient.get<BeaconFilteringQualifier[]>('/filtering_qualifiers').then((r) => r.data)
 }
 
 export async function getStatus(): Promise<DeploymentStatus> {

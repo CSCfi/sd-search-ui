@@ -7,11 +7,11 @@ import { storeToRefs } from 'pinia'
 
 export function useNonClinicalSearch() {
   const store = useSearchStore()
-  const { committedFilters, committedDatasetType, committedQualifiers } = storeToRefs(store)
+  const { committedFilters, committedDatasetType } = storeToRefs(store)
 
   return useQuery<BeaconCountResponse>({
-    queryKey: ['search', 'non_clinical', committedFilters, committedQualifiers],
-    queryFn: () => postNonClinicalQuery(committedFilters.value, committedQualifiers.value),
+    queryKey: ['search', 'non_clinical', committedFilters],
+    queryFn: () => postNonClinicalQuery(committedFilters.value),
     enabled: computed(
       () =>
         store.hasCommittedFilters &&
