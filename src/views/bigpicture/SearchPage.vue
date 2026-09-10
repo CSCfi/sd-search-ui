@@ -6,7 +6,7 @@ import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/ResultsTable.vue'
 import NonClinicalResults from '@/components/NonClinicalResults.vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
-import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
+import { useResolveUrlLabels } from '@/composables/query/useResolveUrlLabels'
 import type { BeaconQueryFilter } from '@/types/beacon'
 
 const route = useRoute()

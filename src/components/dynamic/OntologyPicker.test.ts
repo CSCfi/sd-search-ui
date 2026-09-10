@@ -32,7 +32,7 @@ vi.mock('@vueuse/core', async (importOriginal) => {
   }
 })
 
-vi.mock('@/composables/useFieldValues', async () => {
+vi.mock('@/composables/query/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
     useFieldValues: vi.fn<
@@ -46,7 +46,7 @@ vi.mock('@/composables/useFieldValues', async () => {
 })
 
 // Simulates TanStack Query `enabled: term.length > 1` — no data returned for short terms.
-vi.mock('@/composables/useSuggestions', async () => {
+vi.mock('@/composables/query/useSuggestions', async () => {
   const { ref, watchEffect } = await import('vue')
   return {
     useSuggestions: vi.fn<

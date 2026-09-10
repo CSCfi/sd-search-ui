@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useContentConfig } from '@/composables/useContentConfig'
+import { useContentConfig } from '@/composables/ui/useContentConfig'
 
 const content = useContentConfig()
 </script>

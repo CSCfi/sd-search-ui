@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { QueryClient, useQueryClient } from '@tanstack/vue-query'
 import { getFieldValues, getFilteringTerms } from '@/services/api'
-import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
+import { useResolveUrlLabels } from '@/composables/query/useResolveUrlLabels'
 import { useSearchStore } from '@/stores/searchStore'
 import type { BeaconFilteringTermsResponse, BeaconQueryFilter, FieldValue } from '@/types/beacon'
 

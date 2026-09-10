@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
 import { X } from '@lucide/vue'
-import { useContentConfig } from '@/composables/useContentConfig'
+import { useContentConfig } from '@/composables/ui/useContentConfig'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()

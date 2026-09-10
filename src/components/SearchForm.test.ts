@@ -91,7 +91,7 @@ const FIELD_SCOPES = new Map<string, string[]>([
   ['hidden_scope_only', ['non_clinical']],
 ])
 
-vi.mock('@/composables/useFilteringTerms', () => ({
+vi.mock('@/composables/query/useFilteringTerms', () => ({
   useFilteringTerms: () => ({
     data: ref(TERMS),
     isLoading: ref(false),
@@ -99,7 +99,7 @@ vi.mock('@/composables/useFilteringTerms', () => ({
   }),
 }))
 
-vi.mock('@/composables/useFilteringGroups', () => ({
+vi.mock('@/composables/query/useFilteringGroups', () => ({
   useFilteringGroups: () => ({
     data: ref(GROUPS),
     isLoading: ref(false),
@@ -107,7 +107,7 @@ vi.mock('@/composables/useFilteringGroups', () => ({
   }),
 }))
 
-vi.mock('@/composables/useFilteringScopes', () => ({
+vi.mock('@/composables/query/useFilteringScopes', () => ({
   useFilteringScopes: () => ({
     data: ref(SCOPES),
     isLoading: ref(false),
@@ -115,7 +115,7 @@ vi.mock('@/composables/useFilteringScopes', () => ({
   }),
 }))
 
-vi.mock('@/composables/useFieldScopes', () => ({
+vi.mock('@/composables/ui/useFieldScopes', () => ({
   useFieldScopes: () => ({ data: ref(FIELD_SCOPES) }),
 }))
 
