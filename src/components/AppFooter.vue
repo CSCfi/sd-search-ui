@@ -1,34 +1,32 @@
+<script setup lang="ts">
+import { useContentConfig } from '@/composables/useContentConfig'
+
+const content = useContentConfig()
+</script>
+
 <template>
   <footer class="app-footer">
     <div class="footer-columns">
       <div class="footer-col-links">
-        <a href="https://discovery.bigpicture.eu/" class="footer-link">About</a>
-        <a href="https://datasets.bp.nbis.se/index.html" class="footer-link">Datasets</a>
         <a
-          href="https://bigpicture.eu/bigpicture-privacy-notice"
+          v-for="link in content.footer.links"
+          :key="link.href"
+          :href="link.href"
           class="footer-link"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Privacy policy</a
+          v-bind="link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {}"
+          >{{ link.label }}</a
         >
         <div class="footer-contact">
           <span class="footer-col-heading">Contact</span>
-          <a href="mailto:support@bigpicture.eu" class="footer-link">support@bigpicture.eu</a>
+          <a :href="`mailto:${content.footer.contact.email}`" class="footer-link">{{
+            content.footer.contact.email
+          }}</a>
         </div>
       </div>
       <div class="footer-col-images">
-        <p class="footer-funding-text">
-          This project has received funding from the Innovative Medicines Initiative 2 Joint
-          Undertaking under grant agreement No 945358. This Joint Undertaking receives support from
-          the European Union's Horizon 2020 research and innovation program and EFPIA.
-          www.imi.europa.eu
-        </p>
+        <p class="footer-funding-text">{{ content.footer.fundingText }}</p>
         <div class="footer-images">
-          <img
-            src="@/assets/images/footer_logos.png"
-            alt="Logos of BigPicture project partners including EU, IMI, and EFPIA"
-            class="partner-logos"
-          />
+          <img :src="content.footer.logoSrc" :alt="content.footer.logoAlt" class="partner-logos" />
         </div>
       </div>
     </div>
@@ -101,11 +99,6 @@
   justify-content: center;
   align-items: center;
   gap: 2rem;
-}
-
-.eu-flag {
-  width: auto;
-  height: 3rem;
 }
 
 .partner-logos {

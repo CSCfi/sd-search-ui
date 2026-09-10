@@ -1,4 +1,4 @@
-import fieldsConfigRaw from '@/configs/fields.yaml'
+import fieldsConfigRaw from '@service/fields.yaml'
 
 export interface FieldsConfig {
   header: string[]

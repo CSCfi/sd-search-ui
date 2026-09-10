@@ -6,10 +6,11 @@ import cookieConsentPlugin from '@/plugins/cookieConsent'
 import { vControl } from '@/directives/vControl.ts'
 
 import 'modern-normalize/modern-normalize.css'
+import '@service/theme.scss'
 import '@/assets/styles/main.scss'
 
 import App from './App.vue'
-import router from './router'
+import router from '@service-router'
 
 const app = createApp(App)
 

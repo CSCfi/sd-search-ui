@@ -11,7 +11,10 @@ import { useFilteringGroups } from '@/composables/useFilteringGroups.ts'
 import { useFilteringScopes } from '@/composables/useFilteringScopes'
 import { useFieldScopes } from '@/composables/useFieldScopes'
 import { fieldsConfig } from '@/services/config'
+import { useContentConfig } from '@/composables/useContentConfig'
 import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
+
+const { search } = useContentConfig()
 
 const {
   data: filteringTerms,
@@ -228,11 +231,8 @@ async function copySearch() {
       class="form-content"
       @submit.prevent
     >
-      <p class="filter-hint">
-        The fields display available values and the number of matching images. Selecting multiple
-        values within the same field uses OR logic, while selections across different fields use AND
-        logic. For more information, click the <strong>?</strong> Help icon in the top-right corner.
-      </p>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <p class="filter-hint" v-html="search.filterHintHtml" />
       <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">
         <h2 class="group-label">{{ group.label }}</h2>
         <div class="fields-grid">

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { router } from '@/router'
+import { router } from '@service-router'
 import type { BeaconQueryFilter } from '@/types/beacon.ts'
 
 export type DatasetType = 'all' | 'clinical' | 'non_clinical'

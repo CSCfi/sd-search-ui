@@ -1,33 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
 import { X } from '@lucide/vue'
+import { useContentConfig } from '@/composables/useContentConfig'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const sidebarRef = ref<HTMLElement | null>(null)
 
-interface HelpSection {
-  id: string
-  title: string
-  html: string
-}
-
-const sections: HelpSection[] = [
-  {
-    id: 'help-filters',
-    title: 'How the filters work together',
-    html: `<p>When you apply the filters in the dropdown lists, the search combines them in two different ways:</p>
-<p><strong>1. Selecting multiple values in the same field:</strong><br>If you select several values within one filter field, the search uses OR logic.<br><em>Example:</em> Selecting <em>Liver</em> and <em>Kidney</em> from the Anatomical Site dropdown will return records related to Liver, Kidney, or both.</p>
-<p><strong>2. Combining filters from different fields:</strong><br>When you apply filters in different fields, the search uses AND logic.<br><em>Example:</em> If you select Anatomical Site = <em>Liver</em> and Staining Procedure = <em>H&amp;E stain</em>, the results will only include records that match both criteria.</p>`,
-  },
-  {
-    id: 'help-snomed',
-    title: 'The hierarchical SNOMED CT terms',
-    html: `<p>The fields <strong>Staining procedure</strong>, <strong>Staining substance</strong>, and <strong>Diagnosis</strong> use SNOMED CT, which organizes concepts in a hierarchy from broad to more specific terms. When a broad term is selected, records coded with any of its more specific subtypes are automatically included.</p>
-<p><em>Example:</em> When selecting <em>adenocarcinoma</em> from the Diagnosis dropdown, the search also returns records coded with <em>adenocarcinoma morphologic abnormality</em> as it is one of the subtypes of adenocarcinoma.</p>`,
-  },
-]
+const { help } = useContentConfig()
 
 let previouslyFocused: HTMLElement | null = null
 
@@ -109,12 +90,17 @@ function onKeydown(e: KeyboardEvent) {
 
         <div class="help-body">
           <nav class="help-toc" aria-label="Help sections">
-            <a v-for="section in sections" :key="section.id" :href="'#' + section.id">
+            <a v-for="section in help.sections" :key="section.id" :href="'#' + section.id">
               {{ section.title }}
             </a>
           </nav>
 
-          <div v-for="section in sections" :id="section.id" :key="section.id" class="help-section">
+          <div
+            v-for="section in help.sections"
+            :id="section.id"
+            :key="section.id"
+            class="help-section"
+          >
             <h3 class="help-section-title">{{ section.title }}</h3>
             <!-- eslint-disable-next-line vue/no-v-html -->
             <div class="help-section-body" v-html="section.html" />
