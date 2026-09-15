@@ -1,6 +1,11 @@
 import logoSrc from '@/assets/bigpicture/footer_logos.png'
+import navLogoSrc from '@/assets/bigpicture/bg-logo.png'
 
 export interface ContentConfig {
+  navLogo: {
+    src: string
+    alt: string
+  }
   footer: {
     links: { label: string; href: string; external?: boolean }[]
     contact: { email: string }
@@ -17,6 +22,10 @@ export interface ContentConfig {
 }
 
 export const contentConfig: ContentConfig = {
+  navLogo: {
+    src: navLogoSrc,
+    alt: 'Bigpicture Discovery',
+  },
   footer: {
     links: [
       { label: 'About', href: 'https://discovery.bigpicture.eu/' },

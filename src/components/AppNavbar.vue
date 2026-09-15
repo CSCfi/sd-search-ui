@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { CircleHelp } from '@lucide/vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useContentConfig } from '@/composables/ui/useContentConfig'
 import HelpSidebar from '@/components/HelpSidebar.vue'
 
 const auth = useAuthStore()
+const { navLogo } = useContentConfig()
 const helpOpen = ref(false)
 
 function logout() {
@@ -20,7 +22,7 @@ function logout() {
       aria-label="CSC Discovery home"
       class="app-logo-link"
     >
-      <img src="@/assets/images/bg-logo.png" alt="" class="app-logo" />
+      <img :src="navLogo.src" :alt="navLogo.alt" class="app-logo" />
     </RouterLink>
     <nav class="app-nav" aria-label="Main navigation">
       <button

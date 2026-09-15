@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -9,6 +10,15 @@ import yaml from '@rollup/plugin-yaml'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const service = env.VITE_SERVICE || 'bigpicture'
+
+  const meta = JSON.parse(readFileSync(`./config/${service}/meta.json`, 'utf-8')) as {
+    appTitle: string
+  }
+
+  const faviconRelPath = `src/assets/${service}/favicon.ico`
+  const faviconAbsPath = fileURLToPath(new URL(faviconRelPath, import.meta.url))
+
+  let viteCommand = 'serve'
 
   return {
     server: {
@@ -25,6 +35,29 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      {
+        name: 'service-meta',
+        configResolved(config) {
+          viteCommand = config.command
+        },
+        transformIndexHtml(html) {
+          const faviconHref = viteCommand === 'build' ? '/favicon.ico' : `/${faviconRelPath}`
+          return html
+            .replace(/%VITE_APP_TITLE%/g, meta.appTitle)
+            .replace(/%VITE_APP_FAVICON%/g, faviconHref)
+        },
+        generateBundle() {
+          try {
+            this.emitFile({
+              type: 'asset',
+              fileName: 'favicon.ico',
+              source: readFileSync(faviconAbsPath),
+            })
+          } catch {
+            console.warn(`[service-meta] favicon not found at ${faviconAbsPath} — skipping`)
+          }
+        },
+      },
       yaml(),
       vue({
         template: {

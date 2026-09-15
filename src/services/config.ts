@@ -5,6 +5,7 @@ export interface FieldsConfig {
   hidden: string[]
   hidden_description: string[]
   bordered: string[]
+  hidden_scopes: string[]
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig
