@@ -14,6 +14,12 @@ hidden:
 hidden_description:
   - dataset_description
 
+# Scope ids (from /filtering_scopes) to hide entirely from the search UI.
+# When listed, the scope's tab and all its fields are hidden.
+# If only one scope remains visible, the "All data" tab is also hidden
+# and the search automatically targets that scope.
+hidden_scopes: []
+
 # Group ids (from /filtering_groups) and scope ids (from /filtering_scopes)
 # that render with a bordered box in the search form.
 # All groups/scopes render without a border by default.

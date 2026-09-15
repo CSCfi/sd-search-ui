@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '@/stores/searchStore'
-import { useFilteringTerms } from '@/composables/useFilteringTerms'
+import { useFilteringTerms } from '@/composables/query/useFilteringTerms'
 
 const { committedFilters, hasCommittedFilters } = storeToRefs(useSearchStore())
 const { data: filteringTermsData } = useFilteringTerms()

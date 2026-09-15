@@ -4,9 +4,9 @@ import { ChevronDown, ChevronUp, RotateCcw } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
 import FieldLabel from '@/components/ui/FieldLabel.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
-import { useDropdown } from '@/composables/useDropdown'
-import { useFieldValues } from '@/composables/useFieldValues'
-import { useListKeyboardNav } from '@/composables/useListKeyboardNav'
+import { useDropdown } from '@/composables/ui/useDropdown'
+import { useFieldValues } from '@/composables/query/useFieldValues'
+import { useListKeyboardNav } from '@/composables/ui/useListKeyboardNav'
 
 const props = defineProps<{
   label: string

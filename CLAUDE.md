@@ -135,6 +135,7 @@ EVERY subagent, under ALL circumstances. No exception. No override.
 - Auth pattern, route guards, env variables → `auth.md`
 - Design tokens, CSC UI setup, component API → `design-system.md`
 - API endpoints, query format, response types → `endpoints.md`
+- Multi-service architecture — build/deploy per service, router, views/components, fields.yaml, theme, content → `multi-service.md`
 - Product requirements, user stories, acceptance criteria → `prd.md`
 - Project overview, stack, commands → `project.md`
 - Pinia vs TanStack Query, caching rules → `state.md`

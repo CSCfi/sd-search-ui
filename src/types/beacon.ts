@@ -64,21 +64,11 @@ export interface BeaconQueryFilter {
 
 // Results
 
-export interface BeaconResultSetResult {
-  datasetId: string
-  datasetTitle: string | null
-  datasetDescription: string | null
-  datasetUrl: string | null
-  totalImageCount: number
-  matchingImageCount: number
-  imageIds: string[]
-}
-
-export interface BeaconResultSet {
+export interface BeaconResultSet<T = unknown> {
   id: string
-  setType: 'dataset'
+  setType: string
   exists: boolean
-  results: BeaconResultSetResult[]
+  results: T[]
 }
 
 export interface BeaconResultSets {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { type Ref, nextTick } from 'vue'
 import MultiSelect from './MultiSelect.vue'
-import { useFieldValues } from '@/composables/useFieldValues'
+import { useFieldValues } from '@/composables/query/useFieldValues'
 import type { FieldValue } from '@/types/beacon'
 
 const MOCK_VALUES = vi.hoisted((): FieldValue[] => [
@@ -11,7 +11,7 @@ const MOCK_VALUES = vi.hoisted((): FieldValue[] => [
   { value: 'Unknown', count: 5, concept_id: null },
 ])
 
-vi.mock('@/composables/useFieldValues', async () => {
+vi.mock('@/composables/query/useFieldValues', async () => {
   const { ref } = await import('vue')
   return {
     useFieldValues: vi.fn<

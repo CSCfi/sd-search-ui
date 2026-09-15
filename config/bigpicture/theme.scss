@@ -1,0 +1,27 @@
+:root {
+  --color-dark-blue: #1c007a; /* primary — headers, nav, primary buttons */
+  --color-pink: #ff457d; /* accent — CTA, Search button, highlights */
+  --color-light-pink: #f2d9e8; /* backgrounds, hover states, tags */
+  --color-bright-blue: #2661db; /* links, secondary actions, info */
+  --color-light-grey: #cccfdc; /* borders, disabled states, subtle bg */
+  --color-light-purple: #f2f0f7; /* footer background */
+  --color-text: #1c1c1c; /* primary body text */
+  --color-surface: #fafafa; /* input/control backgrounds */
+  --color-text-secondary: #666; /* muted / placeholder text */
+  --color-white: #ffffff;
+  --color-stats-label: #8a86ab; /* deployment stats strip — label text */
+  --color-stats-value: #4a4570; /* deployment stats strip — value text */
+
+  /* Dataset scope accents. Channel triples, not hex, so borders and translucent fills derive
+     the alpha variants from one source: rgb(var(--color-scope-clinical-rgb) / 0.15).
+     `-light` variants are the text-safe tints for use on the dark blue search panel. */
+  --color-scope-clinical-rgb: 120 140 255;
+  --color-scope-clinical-light-rgb: 168 182 255;
+  --color-scope-non-clinical-rgb: 221 122 51;
+  --color-scope-non-clinical-light-rgb: 249 168 102;
+
+  --font-family: 'Lato', sans-serif;
+  --font-weight-heading: 900; /* Lato Black — letter-spacing: 0.15em */
+  --font-weight-subheading: 300; /* Lato Light */
+  --font-weight-body: 400; /* Lato Regular */
+}

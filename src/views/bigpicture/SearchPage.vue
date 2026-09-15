@@ -2,11 +2,12 @@
 import { useRoute } from 'vue-router'
 import DeploymentStatusBar from '@/components/ui/DeploymentStatusBar.vue'
 import SearchForm from '@/components/SearchForm.vue'
+import ScopeSection from '@/components/filters/ScopeSection.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
-import ResultsTable from '@/components/ResultsTable.vue'
-import NonClinicalResults from '@/components/NonClinicalResults.vue'
+import ResultsTable from '@/components/bigpicture/ResultsTable.vue'
+import NonClinicalResults from '@/components/bigpicture/NonClinicalResults.vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
-import { useResolveUrlLabels } from '@/composables/useResolveUrlLabels'
+import { useResolveUrlLabels } from '@/composables/query/useResolveUrlLabels'
 import type { BeaconQueryFilter } from '@/types/beacon'
 
 const route = useRoute()
@@ -50,7 +51,11 @@ if (parsed.length > 0) {
       <div class="section-inner">
         <h1 class="title">Discover digital pathology sets</h1>
         <div class="filters-wrapper">
-          <SearchForm />
+          <SearchForm>
+            <template #scope-section>
+              <ScopeSection />
+            </template>
+          </SearchForm>
         </div>
       </div>
     </section>
