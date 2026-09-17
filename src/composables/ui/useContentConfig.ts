@@ -1,7 +1,6 @@
 import { contentConfig } from '@service/content'
+import type { ContentConfig } from '@/types/content'
 
-export type { ContentConfig } from '@service/content'
-
-export function useContentConfig() {
+export function useContentConfig(): ContentConfig {
   return contentConfig
 }

@@ -1,0 +1,57 @@
+# UI group definitions — shared across services.
+#
+# Each group lists its field ids in render order. Group order here is the render order.
+# A service that needs to diverge from this structure creates config/<service>/groups.yaml
+# and the build resolver picks it up automatically.
+#
+# Groups with a parent render as labelled subgroups inside their parent scope panel.
+# Groups without a parent render flat.
+
+- id: description
+  label: "Description"
+  fields:
+    - dataset_title
+    - dataset_description
+    - observation_type
+
+- id: subject
+  label: "Subject & specimen"
+  fields:
+    - anatomical_site
+    - sex
+    - age_at_extraction
+
+- id: sample
+  label: "Sample & block"
+  fields:
+    - block_preparation
+    - specimen_type
+    - fixation_type
+
+- id: staining
+  label: "Staining"
+  fields:
+    - staining_target
+    - staining_procedure
+    - staining_substance
+
+- id: clinical
+  label: "Clinical"
+  fields:
+    - diagnosis
+
+- id: non_clinical
+  label: "Non-clinical"
+  fields:
+    - animal_species
+    - finding
+    - control_terminology
+
+- id: finding_details
+  label: "Finding details"
+  parent: non_clinical
+  fields:
+    - finding_severity
+    - finding_chronicity
+    - finding_distribution
+    - finding_result_category

@@ -13,7 +13,6 @@ export interface BeaconFilteringTerm {
   type: BeaconFilteringTermType
   label: string
   description: string
-  group?: string | null
   scopes: string[]
   ontology?: {
     id: string
@@ -30,13 +29,6 @@ export interface BeaconFilteringTermsResponse {
   response: {
     filteringTerms: BeaconFilteringTerm[]
   }
-}
-
-export interface BeaconFilteringGroup {
-  id: string
-  label: string
-  description?: string
-  parent?: string | null
 }
 
 export interface BeaconFilteringScope {

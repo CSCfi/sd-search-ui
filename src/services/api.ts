@@ -1,6 +1,5 @@
 import type {
   BeaconCountResponse,
-  BeaconFilteringGroup,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
   BeaconQueryRequest,
@@ -67,10 +66,6 @@ export async function postNonClinicalQuery(
 
   const res = await apiClient.post<BeaconCountResponse>('/images', body)
   return res.data
-}
-
-export async function getFilteringGroups(): Promise<BeaconFilteringGroup[]> {
-  return apiClient.get<BeaconFilteringGroup[]>('/filtering_groups').then((r) => r.data)
 }
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {

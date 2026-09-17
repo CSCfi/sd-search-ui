@@ -1,27 +1,8 @@
 import logoSrc from '@/assets/bigpicture/footer_logos.png'
 import navLogoSrc from '@/assets/bigpicture/bg-logo.png'
+import type { ContentConfig } from '@/types/content'
 
-export interface ContentConfig {
-  navLogo: {
-    src: string
-    alt: string
-  }
-  footer: {
-    links: { label: string; href: string; external?: boolean }[]
-    contact: { email: string }
-    fundingText: string
-    logoSrc: string
-    logoAlt: string
-  }
-  help: {
-    sections: { id: string; title: string; html: string }[]
-  }
-  search: {
-    filterHintHtml: string
-  }
-}
-
-export const contentConfig: ContentConfig = {
+export const contentConfig = {
   navLogo: {
     src: navLogoSrc,
     alt: 'Bigpicture Discovery',
@@ -63,4 +44,4 @@ export const contentConfig: ContentConfig = {
     filterHintHtml:
       'The fields display available values and the number of matching images. Selecting multiple values within the same field uses OR logic, while selections across different fields use AND logic. For more information, click the <strong>?</strong> Help icon in the top-right corner.',
   },
-}
+} satisfies ContentConfig

@@ -20,7 +20,6 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | GET | `/filtering_terms` | All filter field definitions — static list | `staleTime: Infinity` |
 | GET | `/filtering_terms/{field_id}/values` | Field values with counts | `staleTime: 4h` |
 | GET | `/filtering_terms/{field_id}/suggestions?term=xxx` | Autocomplete | `staleTime: 5min` |
-| GET | `/filtering_groups` | UI grouping config for filter fields | `staleTime: Infinity` |
 | GET | `/filtering_scopes` | Available scope definitions (`clinical` / `non_clinical`) | `staleTime: Infinity` |
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
@@ -64,19 +63,6 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
     ]
   }
 }
-```
-
-## GET /filtering_groups — Response
-
-```ts
-[
-    {
-        id: string
-        label: string
-        description?: string
-        border?: boolean        // visual separator in UI
-    }
-]
 ```
 
 ## GET /filtering_scopes — Response

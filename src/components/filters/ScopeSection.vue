@@ -5,15 +5,16 @@ import FilterTabGroup from '@/components/filters/FilterTabGroup.vue'
 import FilterTabPanel from '@/components/filters/FilterTabPanel.vue'
 import ObservationTypeSelector from '@/components/filters/ObservationTypeSelector.vue'
 import { useFilteringTerms } from '@/composables/query/useFilteringTerms'
-import { useFilteringGroups } from '@/composables/query/useFilteringGroups'
+import { useResolvedGroups } from '@/composables/query/useResolvedGroups'
+import type { ResolvedGroup } from '@/types/config'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
 import { useFieldScopes } from '@/composables/ui/useFieldScopes'
 import { fieldsConfig } from '@/services/config'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
-import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
+import type { BeaconFilteringTerm } from '@/types/beacon'
 
 const { data: filteringTerms } = useFilteringTerms()
-const { data: filteringGroups } = useFilteringGroups()
+const { groups } = useResolvedGroups()
 const { data: filteringScopes } = useFilteringScopes()
 const { data: fieldScopes } = useFieldScopes()
 const store = useSearchStore()
@@ -113,41 +114,37 @@ function onObservationTypeChange(fieldId: string, value: string) {
   }
 }
 
-// Scope sections preserve filteringTerms order: root-group fields render flat, while
-// child-group fields render in labelled subgroups. `kind` discriminates the two layouts.
 type FlatSection = { kind: 'flat'; fields: BeaconFilteringTerm[] }
 type SubgroupSection = {
   kind: 'subgroup'
-  group: BeaconFilteringGroup
+  group: ResolvedGroup
   fields: BeaconFilteringTerm[]
 }
 type Section = FlatSection | SubgroupSection
 
 const scopedSections = (scope: string): Section[] => {
   const sections: Section[] = []
-  const groups = filteringGroups.value ?? []
 
-  for (const field of filteringTerms.value ?? []) {
-    if (isShared(field) || !field.scopes.includes(scope)) continue
+  for (const group of groups.value) {
+    for (const field of group.fields) {
+      if (isShared(field) || !field.scopes.includes(scope)) continue
 
-    const group = groups.find((g) => g.id === field.group)
-    if (!group) continue
-
-    if (group.parent) {
-      // Append to the current subgroup if it's the same group; otherwise start a new one.
-      const last = sections.at(-1)
-      if (last?.kind === 'subgroup' && last.group.id === group.id) {
-        last.fields.push(field)
+      if (group.parent) {
+        // Append to the current subgroup if it's the same group; otherwise start a new one.
+        const last = sections.at(-1)
+        if (last?.kind === 'subgroup' && last.group.id === group.id) {
+          last.fields.push(field)
+        } else {
+          sections.push({ kind: 'subgroup', group, fields: [field] })
+        }
       } else {
-        sections.push({ kind: 'subgroup', group, fields: [field] })
-      }
-    } else {
-      // Merge into current flat segment if adjacent; otherwise start a new one.
-      const last = sections.at(-1)
-      if (last?.kind === 'flat') {
-        last.fields.push(field)
-      } else {
-        sections.push({ kind: 'flat', fields: [field] })
+        // Merge into current flat segment if adjacent; otherwise start a new one.
+        const last = sections.at(-1)
+        if (last?.kind === 'flat') {
+          last.fields.push(field)
+        } else {
+          sections.push({ kind: 'flat', fields: [field] })
+        }
       }
     }
   }
@@ -162,7 +159,7 @@ const scopePanelSections = computed(() =>
 
 const scopeGroupHasBorder = (scope: string) => fieldsConfig.bordered.includes(scope)
 
-const subgroupClass = (group: BeaconFilteringGroup) => ({
+const subgroupClass = (group: ResolvedGroup) => ({
   'subgroup--border': fieldsConfig.bordered.includes(group.id),
 })
 </script>

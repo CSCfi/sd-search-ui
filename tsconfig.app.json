@@ -11,7 +11,8 @@
       "@/*": ["./src/*"],
       // Service aliases — hardcoded to bigpicture for type-checking.
       // The actual runtime alias is set by VITE_SERVICE in vite.config.ts.
-      "@service/*": ["./config/bigpicture/*"],
+      // Service-specific files take precedence.
+      "@service/*": ["./config/bigpicture/*", "./config/*"],
       "@service-router": ["./src/router/bigpicture.ts"]
     },
 
