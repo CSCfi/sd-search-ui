@@ -1,4 +1,6 @@
 import fieldsConfigRaw from '@service/fields.yaml'
+import groupsConfigRaw from '@service/groups.yaml'
+import type { FilteringGroup } from '@/types/config'
 
 export interface FieldsConfig {
   header: string[]
@@ -9,3 +11,4 @@ export interface FieldsConfig {
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig
+export const groupsConfig: FilteringGroup[] = groupsConfigRaw as unknown as FilteringGroup[]

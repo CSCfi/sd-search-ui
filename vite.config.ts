@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -36,6 +36,38 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       {
+        // Resolves all @service/<path> imports.
+        //
+        // For imports with an explicit extension (e.g. .yaml, .json): tries the
+        // service-specific file first, then falls back to the shared config root.
+        // This lets shared config files (e.g. groups.yaml) live at config/<file>
+        // without requiring every service to copy them. A service that diverges creates
+        // config/<service>/<file> and the fallback never triggers for it.
+        //
+        // For extensionless imports (e.g. @service/content, @service/theme): probes
+        // service-specific files with common extensions (.ts, .js, .scss, .css) so
+        // Vite receives an absolute path it can load and transform normally.
+        //
+        // This plugin replaces the resolve.alias entry for @service so that it runs
+        // before Vite's built-in alias plugin and can apply the fallback logic.
+        name: 'service-alias',
+        enforce: 'pre',
+        resolveId(id) {
+          if (!id.startsWith('@service/')) return
+          const rel = id.slice('@service/'.length)
+          const extensions = rel.includes('.') ? [''] : ['.ts', '.js', '.scss', '.css']
+          for (const ext of extensions) {
+            const p = fileURLToPath(new URL(`./config/${service}/${rel}${ext}`, import.meta.url))
+            if (existsSync(p)) return p
+          }
+          // For exact-extension imports only: fall back to the shared config root.
+          if (rel.includes('.')) {
+            const p = fileURLToPath(new URL(`./config/${rel}`, import.meta.url))
+            if (existsSync(p)) return p
+          }
+        },
+      },
+      {
         name: 'service-meta',
         configResolved(config) {
           viteCommand = config.command
@@ -71,7 +103,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
-        '@service': fileURLToPath(new URL(`./config/${service}`, import.meta.url)),
         '@service-router': fileURLToPath(new URL(`./src/router/${service}.ts`, import.meta.url)),
       },
     },

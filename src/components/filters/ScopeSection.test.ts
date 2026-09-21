@@ -1,23 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, ref } from 'vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
-import type {
-  BeaconFilteringGroup,
-  BeaconFilteringScope,
-  BeaconFilteringTerm,
-} from '@/types/beacon'
+import type { BeaconFilteringScope, BeaconFilteringTerm } from '@/types/beacon'
+import type { ResolvedGroup } from '@/types/config'
 
-// Mirrors backend grouping: `animal_species` is in `subject` but only available in
-// the non-clinical scope.
 const TERMS: BeaconFilteringTerm[] = [
   {
     id: 'dataset_description',
     type: 'text',
     label: 'Dataset description',
     description: '',
-    group: 'description',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -25,7 +20,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Anatomical site',
     description: '',
-    group: 'subject',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -33,7 +27,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'keyword',
     label: 'Staining target',
     description: '',
-    group: 'staining',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -41,7 +34,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Diagnosis',
     description: '',
-    group: 'clinical',
     scopes: ['clinical'],
   },
   {
@@ -49,8 +41,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Biological species',
     description: '',
-    // Its backend group differs from its scope; panels must still render fields flat.
-    group: 'subject',
     scopes: ['non_clinical'],
   },
   {
@@ -58,7 +48,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Finding',
     description: '',
-    group: 'non_clinical',
     scopes: ['non_clinical'],
   },
   {
@@ -66,18 +55,31 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Severity',
     description: '',
-    group: 'finding_details',
     scopes: ['non_clinical'],
   },
 ]
 
-const GROUPS: BeaconFilteringGroup[] = [
-  { id: 'description', label: 'Description' },
-  { id: 'subject', label: 'Subject & specimen' },
-  { id: 'staining', label: 'Staining' },
-  { id: 'clinical', label: 'Clinical' },
-  { id: 'non_clinical', label: 'Non-clinical' },
-  { id: 'finding_details', label: 'Finding details', parent: 'non_clinical' },
+const termById = (id: string) => TERMS.find((t) => t.id === id)!
+
+// Resolved groups matching the real groups.yaml structure. Groups.yaml is the authority for
+// field membership and render order. animal_species and finding are in non_clinical (not subject).
+// finding_severity is in finding_details which has parent: non_clinical — renders as a subgroup.
+const RESOLVED_GROUPS: ResolvedGroup[] = [
+  { id: 'description', label: 'Description', fields: [termById('dataset_description')] },
+  { id: 'subject', label: 'Subject & specimen', fields: [termById('anatomical_site')] },
+  { id: 'staining', label: 'Staining', fields: [termById('staining_target')] },
+  { id: 'clinical', label: 'Clinical', fields: [termById('diagnosis')] },
+  {
+    id: 'non_clinical',
+    label: 'Non-clinical',
+    fields: [termById('animal_species'), termById('finding')],
+  },
+  {
+    id: 'finding_details',
+    label: 'Finding details',
+    parent: 'non_clinical',
+    fields: [termById('finding_severity')],
+  },
 ]
 
 const SCOPES: BeaconFilteringScope[] = [
@@ -99,11 +101,9 @@ vi.mock('@/composables/query/useFilteringTerms', () => ({
   }),
 }))
 
-vi.mock('@/composables/query/useFilteringGroups', () => ({
-  useFilteringGroups: () => ({
-    data: ref(GROUPS),
-    isLoading: ref(false),
-    isError: ref(false),
+vi.mock('@/composables/query/useResolvedGroups', () => ({
+  useResolvedGroups: () => ({
+    groups: computed(() => RESOLVED_GROUPS),
   }),
 }))
 
@@ -245,7 +245,7 @@ describe('ScopeSection — scope tabs', () => {
     expect(panel(wrapper, 'clinical').findAll('.subgroup-label')).toHaveLength(0)
   })
 
-  it('orders panel fields by group, then by field — flat fields before subgroup fields', () => {
+  it('orders panel fields by groups.yaml order — flat fields before subgroup fields', () => {
     const wrapper = mountSection()
     // panelFieldIds scans all .field-stub in the panel; flat fields render before subgroup fields.
     expect(panelFieldIds(wrapper, 'non_clinical')).toEqual([
@@ -255,7 +255,7 @@ describe('ScopeSection — scope tabs', () => {
     ])
   })
 
-  it('orders subgroup fields by filteringTerms declaration order', () => {
+  it('orders subgroup fields by groups.yaml order', () => {
     const wrapper = mountSection()
     expect(subgroupFieldIds(wrapper, 'non_clinical', 'Finding details')).toEqual([
       'finding_severity',

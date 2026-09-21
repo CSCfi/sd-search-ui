@@ -55,6 +55,29 @@ Supported keys:
 
 **`hidden_scopes` and `isShared` interaction:** A field is considered "shared" (rendered above the tabs in the common grid) only when it exists in every scope the backend reports via `/filtering_scopes` — not just the subset visible after `hidden_scopes` filtering. This means hiding a scope never accidentally promotes scope-specific fields (e.g. `diagnosis`) into the shared grid.
 
+## groups.yaml (filter group structure)
+
+`groups.yaml` defines which filter fields belong to which UI groups, in what order they render, and which groups are subgroups of another (via `parent`).
+
+The file lives at `config/groups.yaml` (shared default). A service that needs to diverge from the shared structure creates `config/<service>/groups.yaml` — the build resolver picks it up automatically with no code change required.
+
+Schema:
+
+```yaml
+- id: <group-id>
+  label: "Group label"
+  parent: <parent-group-id>   # optional — omit for root groups
+  fields:
+    - field_id_1              # field ids in render order
+    - field_id_2
+```
+
+Group order in the file is the render order. Field order within each group is also yaml-defined. A field absent from `groups.yaml` will not appear anywhere in the UI (silently dropped) — keep the file in sync with the backend's `/filtering_terms` field list.
+
+Groups without a `parent` render as flat sections. Groups with a `parent` render as labelled subgroups inside their parent's scope panel.
+
+**Starting point for a new service:** copy `config/groups.yaml` to `config/<service>/groups.yaml` and edit from there. Only do this when the service genuinely needs a different structure; if the shared default is correct, no copy is needed.
+
 ## Theme (colors, fonts, logo)
 
 Colors are already CSS custom properties (`--csc-color-*` and related). Each service gets its own theme file (for example `config/<service>/theme.css`) defining these variables, plus its own logo file. Fonts are file-based, not just a font-family name swap, so each service bundles its own font files alongside its theme file. The build-time environment variable selects which service's theme directory is loaded.
@@ -66,6 +89,18 @@ Shared view components that currently contain hardcoded text (Footer, HelpSideba
 Components read this content through a composable (`useContentConfig()` in `src/composables/ui/useContentConfig.ts`) rather than receiving it purely as props passed down from views. The composable resolves to the currently loaded service's content config based on the same build-time environment variable used elsewhere. Shared components remain free of service-conditional branching; they only consume whatever content the composable returns.
 
 `content.ts` may import service assets (e.g. logo images) using `@/assets/<service>/` paths — these imports are resolved by Vite at bundle time. Do not import `content.ts` from `vite.config.ts`; Node.js cannot resolve the `@/` alias or process binary asset imports. Use `meta.json` instead (see below).
+
+The shared contract for `content.ts` is `ContentConfig` in `src/types/content.ts`. A new service's file must satisfy this interface:
+
+```ts
+import type { ContentConfig } from '@/types/content'
+
+export const contentConfig = {
+  // all required ContentConfig fields
+} satisfies ContentConfig
+```
+
+Use `satisfies` (not `: ContentConfig`) — it enforces the contract while preserving the precise inferred type. Service-specific fields beyond `ContentConfig` may be added freely; `satisfies` permits extra fields. Consume those extra fields by importing directly from the service file, not through `useContentConfig()`, which returns the shared `ContentConfig` type only.
 
 The UI is single-language at this stage; the content config does not need a locale key structure yet. If multi-language support becomes a requirement later, the content config's structure will need to be revisited.
 

@@ -1,23 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, ref } from 'vue'
 import { useSearchStore } from '@/stores/searchStore'
-import type {
-  BeaconFilteringGroup,
-  BeaconFilteringScope,
-  BeaconFilteringTerm,
-} from '@/types/beacon'
+import type { BeaconFilteringScope, BeaconFilteringTerm } from '@/types/beacon'
+import type { ResolvedGroup } from '@/types/config'
 
-// Mirrors backend grouping: `animal_species` is in `subject` but only available in
-// the non-clinical scope.
 const TERMS: BeaconFilteringTerm[] = [
   {
     id: 'dataset_description',
     type: 'text',
     label: 'Dataset description',
     description: '',
-    group: 'description',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -25,7 +20,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Anatomical site',
     description: '',
-    group: 'subject',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -33,7 +27,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'keyword',
     label: 'Staining target',
     description: '',
-    group: 'staining',
     scopes: ['clinical', 'non_clinical'],
   },
   {
@@ -41,7 +34,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Diagnosis',
     description: '',
-    group: 'clinical',
     scopes: ['clinical'],
   },
   {
@@ -49,7 +41,6 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Biological species',
     description: '',
-    group: 'subject',
     scopes: ['non_clinical'],
   },
   {
@@ -57,17 +48,23 @@ const TERMS: BeaconFilteringTerm[] = [
     type: 'ontology',
     label: 'Finding',
     description: '',
-    group: 'non_clinical',
     scopes: ['non_clinical'],
   },
 ]
 
-const GROUPS: BeaconFilteringGroup[] = [
-  { id: 'description', label: 'Description' },
-  { id: 'subject', label: 'Subject & specimen' },
-  { id: 'staining', label: 'Staining' },
-  { id: 'clinical', label: 'Clinical' },
-  { id: 'non_clinical', label: 'Non-clinical' },
+const termById = (id: string) => TERMS.find((t) => t.id === id)!
+
+// Resolved groups matching the real groups.yaml structure.
+const RESOLVED_GROUPS: ResolvedGroup[] = [
+  { id: 'description', label: 'Description', fields: [termById('dataset_description')] },
+  { id: 'subject', label: 'Subject & specimen', fields: [termById('anatomical_site')] },
+  { id: 'staining', label: 'Staining', fields: [termById('staining_target')] },
+  { id: 'clinical', label: 'Clinical', fields: [termById('diagnosis')] },
+  {
+    id: 'non_clinical',
+    label: 'Non-clinical',
+    fields: [termById('animal_species'), termById('finding')],
+  },
 ]
 
 const SCOPES: BeaconFilteringScope[] = [
@@ -83,11 +80,9 @@ vi.mock('@/composables/query/useFilteringTerms', () => ({
   }),
 }))
 
-vi.mock('@/composables/query/useFilteringGroups', () => ({
-  useFilteringGroups: () => ({
-    data: ref(GROUPS),
-    isLoading: ref(false),
-    isError: ref(false),
+vi.mock('@/composables/query/useResolvedGroups', () => ({
+  useResolvedGroups: () => ({
+    groups: computed(() => RESOLVED_GROUPS),
   }),
 }))
 

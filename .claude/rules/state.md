@@ -23,7 +23,6 @@ alwaysApply: false
 | Query key | staleTime | enabled | Notes |
 |---|---|---|---|
 | `['filteringTerms']` | Infinity | always | `ui_display=false` fields filtered out via `select` |
-| `['filteringGroups']` | Infinity | always | |
 | `['filteringScopes']` | Infinity | always | |
 | `['values', fieldId, datasetType]` | 4h | always | |
 | `['suggestions', fieldId, term, datasetType]` | 5min | `term.length > 1` | |

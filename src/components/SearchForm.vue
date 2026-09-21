@@ -4,11 +4,12 @@ import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
 import { useFilteringTerms } from '@/composables/query/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
-import { useFilteringGroups } from '@/composables/query/useFilteringGroups'
+import { useResolvedGroups } from '@/composables/query/useResolvedGroups'
+import type { ResolvedGroup } from '@/types/config'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
 import { fieldsConfig } from '@/services/config'
 import { useContentConfig } from '@/composables/ui/useContentConfig'
-import type { BeaconFilteringGroup, BeaconFilteringTerm } from '@/types/beacon'
+import type { BeaconFilteringTerm } from '@/types/beacon'
 
 const { search } = useContentConfig()
 
@@ -17,11 +18,7 @@ const {
   isLoading: isFilteringTermsLoading,
   isError: isFilteringTermsError,
 } = useFilteringTerms()
-const {
-  data: filteringGroups,
-  isLoading: isFilteringGroupsLoading,
-  isError: isFilteringGroupsError,
-} = useFilteringGroups()
+const { groups } = useResolvedGroups()
 const {
   data: filteringScopes,
   isLoading: isFilteringScopesLoading,
@@ -44,14 +41,7 @@ const allScopeIds = computed(() => (filteringScopes.value ?? []).map((s) => s.id
 const isShared = (field: BeaconFilteringTerm) =>
   allScopeIds.value.every((id) => field.scopes.includes(id))
 
-const groupedFields = computed(() => {
-  return (
-    filteringGroups.value?.map((group) => ({
-      ...group,
-      fields: filteringTerms.value?.filter((field) => field.group === group.id) ?? [],
-    })) ?? []
-  )
-})
+const groupedFields = computed(() => groups.value)
 
 // Header fields are excluded from the grid — they render above the tabs via ObservationTypeSelector.
 const isHeaderField = (field: BeaconFilteringTerm) => fieldsConfig.header.includes(field.id)
@@ -66,7 +56,7 @@ const sharedGroups = computed(() =>
 )
 
 // Shared group borders come from fieldsConfig.bordered
-const groupClass = (group: BeaconFilteringGroup) => ({
+const groupClass = (group: ResolvedGroup) => ({
   'group--border': fieldsConfig.bordered.includes(group.id),
 })
 
@@ -90,7 +80,7 @@ async function copySearch() {
 <template>
   <section class="search-form">
     <div
-      v-if="isFilteringTermsLoading || isFilteringGroupsLoading || isFilteringScopesLoading"
+      v-if="isFilteringTermsLoading || isFilteringScopesLoading"
       class="state-loading"
       aria-live="polite"
       aria-label="Loading filters"
@@ -98,19 +88,11 @@ async function copySearch() {
       <Loader :size="24" class="spinner" aria-hidden="true" />
     </div>
 
-    <p
-      v-else-if="isFilteringTermsError || isFilteringGroupsError || isFilteringScopesError"
-      class="state-error"
-      role="alert"
-    >
+    <p v-else-if="isFilteringTermsError || isFilteringScopesError" class="state-error" role="alert">
       Service is currently unavailable. Please try again later.
     </p>
 
-    <form
-      v-else-if="filteringTerms && filteringGroups && filteringScopes"
-      class="form-content"
-      @submit.prevent
-    >
+    <form v-else-if="filteringTerms && filteringScopes" class="form-content" @submit.prevent>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <p class="filter-hint" v-html="search.filterHintHtml" />
       <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">
