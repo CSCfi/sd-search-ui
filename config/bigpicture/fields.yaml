@@ -20,6 +20,24 @@ hidden_description:
 # and the search automatically targets that scope.
 hidden_scopes: []
 
+# Field ids for which the ontology concept ID is shown in parentheses next to
+# the term label in the dropdown. Concept IDs are only shown when non-null
+# (i.e. not for free-text entries in ontologyOrValue / keyword fields).
+show_concept_id:
+  - animal_species
+  - anatomical_site
+  - block_preparation
+  - diagnosis
+  - finding
+  - finding_severity
+  - finding_chronicity
+  - finding_distribution
+  - finding_result_category
+  - fixation_type
+  - specimen_type
+  - staining_procedure
+  - staining_substance
+
 # Group ids (from /filtering_groups) and scope ids (from /filtering_scopes)
 # that render with a bordered box in the search form.
 # All groups/scopes render without a border by default.
