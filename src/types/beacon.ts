@@ -13,7 +13,6 @@ export interface BeaconFilteringTerm {
   type: BeaconFilteringTermType
   label: string
   description: string
-  ui_group?: string | null
   scopes: string[]
   ontology?: {
     id: string
@@ -32,24 +31,10 @@ export interface BeaconFilteringTermsResponse {
   }
 }
 
-export interface BeaconFilteringGroup {
-  id: string
-  label: string
-  description?: string
-}
-
 export interface BeaconFilteringScope {
   id: string
   label: string
   description: string
-}
-
-export interface BeaconFilteringQualifier {
-  id: string
-  label: string
-  description: string
-  values: string[]
-  groups: string[]
 }
 
 // Query
@@ -59,7 +44,6 @@ export interface BeaconQueryRequest {
     filters: BeaconQueryFilter[]
     requestedGranularity: 'boolean' | 'count' | 'record'
     requestedScope?: string
-    requestedQualifiers?: Record<string, string[]>
   }
 }
 
@@ -67,26 +51,17 @@ export interface BeaconQueryFilter {
   id: string
   value: string | string[]
   operator: '='
+  includeDescendantTerms?: boolean
   label?: string[]
 }
 
 // Results
 
-export interface BeaconResultSetResult {
-  datasetId: string
-  datasetTitle: string | null
-  datasetDescription: string | null
-  datasetUrl: string | null
-  totalImageCount: number
-  matchingImageCount: number
-  imageIds: string[]
-}
-
-export interface BeaconResultSet {
+export interface BeaconResultSet<T = unknown> {
   id: string
-  setType: 'dataset'
+  setType: string
   exists: boolean
-  results: BeaconResultSetResult[]
+  results: T[]
 }
 
 export interface BeaconResultSets {

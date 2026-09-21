@@ -1,6 +1,10 @@
-# CSC Discovery
+# sd-search-ui
 
-A federated digital pathology image search portal built on top of [Bigpicture](https://bp.nbis.se). Researchers can search for pathology image datasets using structured filters and then request access via [REMS](https://github.com/CSCfi/rems/).
+A multi-service search UI framework for Beacon V2-compatible backends. Currently deployed as
+[BigPicture Discovery](https://bp.nbis.se) — a federated digital pathology image search portal
+where researchers find whole-slide image datasets and request access via [REMS](https://github.com/CSCfi/rems/).
+
+One codebase, one deploy per service. Service identity is fixed at build time via `VITE_SERVICE`.
 
 ## Tech Stack
 
@@ -21,9 +25,105 @@ A federated digital pathology image search portal built on top of [Bigpicture](h
 ```bash
 pnpm install
 cp .env.example .env
-# Fill in the required environment variables in .env
+# Edit VITE_SERVICE to select which service to run (default: bigpicture)
 pnpm dev
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---:|---|
+| `VITE_SERVICE` | yes | Service identity — selects router, views, config, and theme at build time. Default: `bigpicture` |
+| `VITE_AUTH_BYPASS` | no | `"true"` bypasses the route auth guard for local development |
+| `BACKEND_URL` | runtime | nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
+
+## Project Structure
+
+```
+config/
+    <service>/
+        content.ts      # Shared-component text (footer links, help content, etc.)
+        fields.yaml     # Field and group visibility configuration
+        meta.json       # Build-time metadata (app title)
+        theme.scss      # CSS custom properties for colors and fonts
+src/
+    assets/
+        <service>/      # Service-specific assets (logo, favicon)
+        images/         # Shared assets (login button icon, etc.)
+        fonts/          # Font files
+        styles/         # Global SCSS (variables, base styles, fonts)
+    components/
+        <service>/      # Service-specific components (e.g. bigpicture/ResultsTable.vue)
+        dynamic/        # Schema-driven field components (DynamicField + one per FilteringTerm.type)
+        filters/        # Scope tabs, observation type selector, scope badge
+        ui/             # Generic shared components (Badge, ErrorBanner, LoadingSpinner, etc.)
+    composables/
+        query/          # TanStack Query composables (search, field values, suggestions, status)
+        ui/             # UI composables (content config, cookie consent, keyboard nav, etc.)
+    directives/         # vControl — v-model bridge for c-* web components
+    plugins/            # Cookie consent
+    router/
+        <service>.ts    # Service-specific router — landing page and route definitions
+    services/           # api.ts (all API functions) + apiClient.ts (Axios instance + interceptors)
+    stores/             # Pinia: searchStore, authStore
+    types/
+        beacon.ts       # Beacon V2 protocol types (filtering terms, query, responses)
+        <service>.ts    # Service-specific result types (e.g. bigpicture.ts)
+    utils/              # Small shared helpers
+    views/
+        <service>/      # Service-specific page views (HomePage, SearchPage, etc.)
+        shared/         # Views shared across services (NotFoundPage, etc.)
+```
+
+## Adding a New Service
+
+1. **Create config files** — copy `config/bigpicture/` to `config/<service>/` and edit each file:
+   - `meta.json` — set `appTitle`
+   - `content.ts` — update footer links, contact email, help text, logo import
+   - `fields.yaml` — adjust field/group visibility for your backend's fields
+   - `theme.scss` — define CSS custom properties for your brand
+
+2. **Add assets** — create `src/assets/<service>/` with `favicon.ico` and a logo image.
+
+3. **Add a router** — create `src/router/<service>.ts`. Copy `src/router/bigpicture.ts` as a starting point and adjust routes and views.
+
+4. **Add views** — create `src/views/<service>/`. Copy from `src/views/bigpicture/` as a starting point, then edit or replace views as needed.
+
+5. **Add service-specific components** (if needed) — create `src/components/<service>/`. Copy components from `src/components/bigpicture/` as a starting point. Service-specific components must not be imported from shared components.
+
+6. **Add service-specific types** (if needed) — create `src/types/<service>.ts` for result shapes that differ from standard Beacon V2.
+
+7. **Set `VITE_SERVICE=<service>`** in `.env` and run `pnpm dev`.
+
+### What not to touch
+
+Shared components (`components/dynamic/`, `components/filters/`, `components/ui/`, `SearchForm.vue`, `HelpSidebar.vue`, etc.) must not contain service-specific branching. If a shared component needs to vary per service, use slots or props — or give the service its own copy under `components/<service>/`.
+
+## Configuration Reference
+
+### `config/<service>/fields.yaml`
+
+Controls which fields and groups are visible in the search form. Bundled at build time — restart `pnpm dev` or rebuild after changes.
+
+| Field | Type | Notes |
+|---|---|---|
+| `header` | `string[]` | Field ids rendered in the header slot above the filter tabs (e.g. `observation_type`) |
+| `hidden` | `string[]` | Field ids to hide entirely. Groups with all fields hidden are hidden automatically |
+| `hidden_description` | `string[]` | Field ids whose info tooltip is suppressed. Field still shows — only the (i) icon is hidden |
+| `hidden_scopes` | `string[]` | Scope ids to hide entirely. The scope's tab and all its fields are removed from the UI. When only one scope remains visible, the "All data" tab is also hidden and searches are automatically scoped. When all scopes are hidden, the entire tab group (including the observation type selector) is hidden |
+| `bordered` | `string[]` | Group and scope ids to render with a bordered box |
+
+### `config/<service>/content.ts`
+
+Text and links for shared components: footer links, contact email, cookie consent text, help sidebar content, and the navbar logo. Read via `useContentConfig()` composable — shared components never hardcode service content.
+
+### `config/<service>/theme.scss`
+
+CSS custom properties for colors and fonts. Replaces `src/assets/styles/_variables.scss` per service. Edit directly and rebuild.
+
+### `config/<service>/meta.json`
+
+Plain JSON read by `vite.config.ts` at Node.js time. Currently only `appTitle` (browser tab title).
 
 ## Docker
 
@@ -31,43 +131,33 @@ pnpm dev
 
 Multi-stage build:
 
-1. **build** (`node:26-alpine`) — installs dependencies with pnpm and runs `pnpm build`.
-2. **serve** (`nginx:1.31-alpine`) — copies the built `dist/` into nginx. Configured for Rahti/OpenShift: the nginx process runs as an arbitrary UID in the root group (no fixed user), and listens on port **8081** (non-root cannot bind ports below 1024).
+1. **build** (`node:26-alpine`) — installs dependencies and runs `pnpm build`. Pass `VITE_SERVICE` as a build arg to select the service.
+2. **serve** (`nginx:1.31-alpine`) — copies `dist/` into nginx. Runs as an arbitrary UID in the root group (OpenShift compatible), listens on port **8081**.
 
-`nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html` itself.
+`nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html`.
 
-The API base URL and the login/logout URLs are not configurable — the app always calls `/api`, `/login`,
-and `/logout` on its own origin, and relies on nginx (below) to proxy those through to the real backend.
-This isn't a placeholder default; it's the only origin that works, because the backend's OIDC `/callback`
-sets a host-only session cookie that must be set on this same origin to reach later `/api/` calls.
+API and auth routes (`/api/`, `/login`, `/callback`, `/logout`) are always called on this app's own origin — nginx proxies them to the backend. The backend's OIDC `/callback` sets a host-only session cookie scoped to this origin; cross-origin calls would break auth.
 
 ### Building for deployment
 
 ```bash
 docker build --platform=linux/amd64 \
+  --build-arg VITE_SERVICE=bigpicture \
   -f docker/Dockerfile \
   -t <image-registry-url>/sd-search-ui:latest .
 
 docker push <image-registry-url>/sd-search-ui:latest
 ```
 
-Pushing under the `sd-search-ui:latest` tag is enough to deploy when 
-OpenShift's ImageStream triggering rollout automatically.
-
 ### Continuous deployment
 
-Pushing to `main` (including merging a PR) automatically builds and pushes
-the image to Rahti via `.github/workflows/ci.yml`'s `rahti-image-stream`
-job — the manual `docker build`/`docker push` steps above are only needed
-for one-off or out-of-band builds. Once pushed under the `:latest` tag,
-Rahti's ImageStream triggers the rollout on its own; no manual OpenShift
-step is needed after a merge to `main`.
+Merging a PR to `main` automatically builds and pushes the image to Rahti via `.github/workflows/ci.yml`. Direct pushes to `main` are not allowed — use a PR. Once pushed under `:latest`, Rahti's ImageStream triggers the rollout automatically. The manual build/push steps above are only needed for out-of-band builds.
 
 ### Running with docker-compose
 
 ```bash
 cp .env.example .env
-# Fill in BACKEND_URL if the default doesn't reach your backend
+# Set BACKEND_URL if the default doesn't reach your backend
 
 docker compose up --build
 ```
@@ -76,28 +166,11 @@ The app is served at `http://localhost:8081`.
 
 ### Runtime container environment
 
-Unlike the API base/login/logout URLs above, the nginx proxy *target* — where `/api/`, `/login`,
-`/callback`, `/logout` actually get forwarded to — is runtime configuration, not baked into the image.
-The official `nginx:1.31-alpine` image renders `nginx.conf` from `/etc/nginx/templates/default.conf.template`
-using environment variables before nginx starts.
-
 | Variable | Required | Description |
 |---|---:|---|
-| `BACKEND_URL` | yes | Base URL for the backend proxied from `/api/`, `/login`, `/callback`, `/logout` |
+| `BACKEND_URL` | yes | Base URL the nginx proxy forwards `/api/`, `/login`, `/callback`, `/logout` to |
 
-If `BACKEND_URL` is missing, the container fails fast at startup with
-`BACKEND_URL is required` (`docker/docker-entrypoint-validate.sh`) rather
-than starting nginx with a broken, unsubstituted config.
-
-`BACKEND_URL` is referenced in `nginx.conf`:
-
-```nginx
-location /api/ {
-    proxy_pass ${BACKEND_URL}/;
-}
-```
-
-`/login`, `/callback`, and `/logout` are proxied the same way, unprefixed.
+If `BACKEND_URL` is missing, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
 
 Example:
 
@@ -106,100 +179,6 @@ docker run --rm -p 8081:8081 \
   -e BACKEND_URL=http://host.docker.internal:8000 \
   sd-search-ui
 ```
-
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| `VITE_AUTH_BYPASS` | Bypass the router's auth guard, for local development |
-| `BACKEND_URL` | Runtime nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
-
-## Configuration
-
-### Field and group visibility — `src/configs/fields.yaml`
-
-Controls which search-form fields are shown, which fields' info tooltips
-are shown, and which filter groups/scopes render with a bordered box,
-without touching component code.
-
-| Field                | Type | Notes |
-|----------------------|---|---|
-| `hidden`             | `string[]` | Field ids (from `/filtering_terms`) to hide entirely. All others are shown by default. If every field in a group is hidden, the group heading is hidden automatically. |
-| `hidden_description` | `string[]` | Field ids whose info tooltip (i) is suppressed, even when the field has a description. The field itself still shows — only the tooltip icon is hidden. All fields show their tooltip by default. |
-| `bordered`           | `string[]` | Group ids (from `/filtering_groups`) and scope ids (from `/filtering_scopes`) to render with a bordered box. All others render without one by default. |
-
-Edit `src/configs/fields.yaml` directly and rebuild (or restart `pnpm dev`) — it's bundled at build time, not fetched at runtime.
-
-### Styling and Branding
-
-#### Colours
-
-Edit the CSS custom properties in `src/assets/styles/_variables.scss` directly and rebuild.
-Components reference these variables — no other code changes needed to change the colour scheme.
-
-#### Logos and images
-
-Replace these files under `src/assets/images/` with your own, keeping the same filenames:
-
-| File | Used in |
-|---|---|
-| `bg-logo.png` | Navbar logo |
-| `footer_logos.png` | Footer logos |
-| `loginImage.png` | Home page hero image |
-| `button-login.svg` | "Login with LifeScience AAI" button — follow [LS AAI's login button design guidelines](https://lifescience-ri.eu) if changing this |
-
-#### Browser tab title and favicon
-
-Edit `index.html` directly — not part of any config file:
-
-```html
-<title>Your Deployment Name</title>
-<link rel="icon" href="your-favicon.ico" />
-```
-
-### Rebranding for a new deployment
-
-Beyond colours/logos/`fields.yaml` above, the following text and links are
-hardcoded directly in source — no config file controls them:
-
-| Content | File(s) |
-|---|---|
-| Footer links (About, Datasets, Privacy policy, Contact email), funding text | `src/components/AppFooter.vue` |
-| Cookie consent banner text and its own privacy policy link | `src/plugins/cookieConsent.ts` |
-| Home page heading and hero paragraph | `src/views/HomePage.vue` |
-| REMS apply-for URL | `src/components/ResultsTable.vue` |
-
-**Two of these are duplicated and easy to update inconsistently:**
-- The privacy policy URL appears in both `AppFooter.vue` and
-  `cookieConsent.ts` — update both.
-- The REMS URL appears **twice within `ResultsTable.vue` itself**
-  (lines 47 and 54) — update both.
-
-## Project Structure
-
-```
-src/
-    assets/
-        fonts/        # Lato font files (.ttf)
-        images/       # Logos and other static images — see Styling and Branding
-        styles/       # SCSS — variables, base styles, fonts
-    components/
-        dynamic/      # Schema-driven field components
-        filters/      # Scope tabs, qualifier selector, scope badge
-        ui/           # Shared UI components
-    composables/      # TanStack Query composables
-    configs/          # fields.yaml — see Configuration
-    directives/       # vControl — v-model bridge for CSC UI components
-    plugins/          # Cookie consent banner
-    router/           # Vue Router + auth guards
-    services/         # API layer
-    stores/           # Pinia stores
-    tasks/            # Claude-written scratch files (e.g. todo.md) — gitignored, not part of the actual source
-    types/            # TypeScript types
-    utils/            # Small shared helpers (e.g. pluralize)
-    views/            # Page-level components
-```
-
 
 ## Commands
 
@@ -221,25 +200,19 @@ pnpm format:ci      # Check code format with Prettier in CI mode
 
 ## IDE Setup
 
-To show CSC UI components in autocomplete and get prop type hints, set up the IDE as follows.
-
 ### JetBrains (Rider / WebStorm)
 
-Install the [Web Components Language Server](https://plugins.jetbrains.com/plugin/18322-web-components-language-server) plugin for component autocomplete.
+Install the [Web Components Language Server](https://plugins.jetbrains.com/plugin/18322-web-components-language-server) plugin for CSC UI component autocomplete.
 
-Generate the Custom Elements Manifest from CSC UI's component definitions:
+Generate the Custom Elements Manifest:
 
 ```bash
 python3 scripts/convert-cem.py
 ```
 
-This creates `custom-elements.json` in the project root which the plugin picks up automatically.
-The file is gitignored — run the script once after `pnpm install`. You need to re-run the script after updating `@cscfi/csc-ui` to get new components in autocomplete.
+Creates `custom-elements.json` in the project root (gitignored). Re-run after updating `@cscfi/csc-ui`.
 
 ### VS Code
-
-The CSC UI component definitions are available via HTML custom data.
-Add to `.vscode/settings.json`:
 
 ```json
 {
@@ -250,6 +223,6 @@ Add to `.vscode/settings.json`:
 ## Related
 
 - [Search API](https://github.com/CSCfi/sd-search-api) — FastAPI backend
-- [Bigpicture submitter guide (NBIS)](https://bp.nbis.se) —  The contributors submit data + metadata to NBIS. 
-- [REMS](https://bp-rems.sd.csc.fi) — access request management system, where the link from Discovery UI leads
-- [Landing pages](https://datasets.bigpicture.eu/index.html) - the public landing pages, where Discovery UI need to link the datasets in output
+- [BigPicture / NBIS](https://bp.nbis.se) — data source for the BigPicture service
+- [REMS](https://bp-rems.sd.csc.fi) — access request management system
+- [Dataset landing pages](https://datasets.bigpicture.eu/index.html) — public landing pages linked from search results

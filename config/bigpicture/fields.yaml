@@ -1,0 +1,51 @@
+# Field ids rendered above the filter tabs in the #header slot of FilterTabGroup,
+# instead of the regular filter grid. Matched against filteringTerms at runtime.
+header:
+  - observation_type
+
+# Field ids to hide in the search UI.
+# All fields returned by /filtering_terms are shown by default.
+# Add a field id here to hide it. If all fields in a group are hidden,
+# the group heading is also hidden automatically.
+hidden:
+  - dataset_title
+
+# Field ids whose description tooltip is hidden even when a description exists.
+hidden_description:
+  - dataset_description
+
+# Scope ids (from /filtering_scopes) to hide entirely from the search UI.
+# When listed, the scope's tab and all its fields are hidden.
+# If only one scope remains visible, the "All data" tab is also hidden
+# and the search automatically targets that scope.
+hidden_scopes: []
+
+# Field ids for which the ontology concept ID is shown in parentheses next to
+# the term label in the dropdown. Concept IDs are only shown when non-null
+# (i.e. not for free-text entries in ontologyOrValue / keyword fields).
+show_concept_id:
+  - animal_species
+  - anatomical_site
+  - block_preparation
+  - diagnosis
+  - finding
+  - finding_severity
+  - finding_chronicity
+  - finding_distribution
+  - finding_result_category
+  - fixation_type
+  - specimen_type
+  - staining_procedure
+  - staining_substance
+
+# Group ids (from /filtering_groups) and scope ids (from /filtering_scopes)
+# that render with a bordered box in the search form.
+# All groups/scopes render without a border by default.
+# Note: group ids and scope ids share this list — they don't collide today.
+bordered:
+  - subject
+  - sample
+  - staining
+  - clinical
+  - non_clinical
+  - finding_details

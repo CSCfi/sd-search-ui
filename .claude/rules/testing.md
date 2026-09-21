@@ -20,7 +20,7 @@ Scope: individual functions, stores, composables.
 No DOM, no mounting. Fast and deterministic.
 
 Best for:
-- `searchStore` filter logic (setFilter, clearFilters, AND/OR behavior, qualifier handling)
+- `searchStore` filter logic (setFilter, clearFilters, AND/OR behavior)
 - ISO 8601 range formatting utility (RangePicker output)
 - API response parsing / type mapping
 
@@ -33,7 +33,7 @@ Best for:
 - Dynamic field rendering — does `type: "ontology"` render OntologyPicker?
 - OntologyPicker internal state (selection, tag removal, suggestion triggering)
 - RangePicker validation (from > to, missing unit)
-- SearchForm scope tab rendering and qualifier selector behavior
+- SearchForm scope tab rendering and observation type selector behavior
 - NonClinicalResults display states (loading, error, empty, count)
 
 ### E2E tests (Playwright — future)
@@ -58,10 +58,10 @@ E2E is not in scope for the initial build. Add once the core search flow is stab
 |---|---|---|---|
 | Dynamic component selection | Component | 🔴 Critical | Wrong component = silent incorrect behavior |
 | searchStore AND/OR logic | Unit | 🔴 Critical | Wrong query structure = wrong results |
-| searchStore scope + qualifier logic | Unit | 🔴 Critical | Draft/committed separation must be correct |
+| searchStore scope logic | Unit | 🔴 Critical | Draft/committed separation must be correct |
 | RangePicker ISO 8601 output | Unit | 🔴 Critical | Easy to get wrong, hard to notice |
 | OntologyPicker multiselect | Component | 🟡 High | Complex internal state |
-| SearchForm scope tabs + qualifier selector | Component | 🟡 High | Schema-driven rendering |
+| SearchForm scope tabs + observation type selector | Component | 🟡 High | Schema-driven rendering |
 | NonClinicalResults display states | Component | 🟡 High | Count-only response, no resultSet |
 | Full search flow | E2E | 🟡 High | Core user journey |
 | Results rendering | Component | 🟢 Normal | Regression protection |
@@ -99,23 +99,18 @@ The query sent to `POST /query` must follow these rules:
 - Setting a field to empty must remove it from the filters array entirely
 - Updating an existing field must replace, not append
 - `removeFilters(ids)` removes from draft only — `committedFilters` must stay unchanged
-- `clearFilters()` resets both draft and committed, including scope and qualifiers
+- `clearFilters()` resets both draft and committed, including scope
 
 Test the store directly without mounting any UI.
 
 ---
 
-## Critical: Scope and Qualifier Logic
+## Critical: Scope Logic
 
-Draft and committed state are separate — changing the tab or qualifier without committing must
-not affect the active query.
+Draft and committed state are separate — changing the tab without committing must not affect the active query.
 
 - `datasetType` changes do not touch `committedDatasetType` until `commit()`
-- `draftQualifiers` changes do not touch `committedQualifiers` until `commit()` or `commitQualifiers()`
-- `initFromUrl` sets `draftQualifiers` but leaves `committedQualifiers` empty — qualifiers from
-  URL are untrusted until validated by SearchForm
-- `resetQualifiers()` empties both refs
-- `commitQualifiers()` copies draft qualifiers without touching filters or scope
+- `observation_type` is an ordinary filter in `draftFilters` — draft/committed separation handled by `setFilter`/`commit()` like any other field
 
 ---
 
@@ -162,10 +157,9 @@ describe('searchStore — setFilter')
   it('supports string array value — OR logic')
   it('multiple different fields — AND logic')
 
-describe('searchStore — qualifiers')
-  it('setQualifier writes the value to draft')
-  it('commit copies draftQualifiers to committedQualifiers')
-  it('initFromUrl sets draftQualifiers but leaves committedQualifiers empty')
+describe('ObservationTypeSelector')
+  it('calls store.setFilter when a value pill is clicked')
+  it('calls store.removeFilters when the All pill is clicked')
 ```
 
 Use plain English descriptions. Describe the expected behavior, not the implementation.
@@ -204,9 +198,9 @@ Run before every PR that touches the search form or results view.
 - [ ] Switching tabs clears filters that belong to the other scope
 - [ ] Invalid `?tab=` URL value is reset silently
 
-### Qualifiers
-- [ ] Selecting a qualifier updates results
-- [ ] Invalid `?qualifiers=` URL value is reset with a visible announcement
+### Observation type
+- [ ] Selecting Confirmed / Candidate updates results
+- [ ] Selecting All removes the observation_type filter
 
 ### Edge cases
 - [ ] Search with no filters shows a prompt to select at least one filter — does not submit
@@ -219,7 +213,7 @@ Run before every PR that touches the search form or results view.
 - [ ] Dataset title, description, and match counts are displayed
 - [ ] Non-clinical panel shows total matching image count
 - [ ] "Apply for access" opens REMS in a new tab with correct URL
-- [ ] "Clear search" resets all fields, tabs, qualifiers, and removes results
+- [ ] "Clear search" resets all fields, tabs, and removes results
 
 ### Auth
 - [ ] Unauthenticated user is redirected to login

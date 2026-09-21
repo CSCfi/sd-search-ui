@@ -30,7 +30,7 @@ Biomedical researchers at universities and research institutions who:
 ## User Journey
 
 1. Researcher logs in via their institutional account (LifeScience AAI)
-2. Researcher selects a scope tab (All data / Clinical / Non-clinical) and optionally a qualifier
+2. Researcher selects a scope tab (All data / Clinical / Non-clinical) and optionally an observation type (All / Confirmed / Candidate)
 3. Researcher fills in search filters describing their criteria
    (e.g. human tissue, lung, specific staining method, age range)
 4. Researcher submits the search and sees matching datasets with image counts

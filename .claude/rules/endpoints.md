@@ -20,9 +20,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | GET | `/filtering_terms` | All filter field definitions — static list | `staleTime: Infinity` |
 | GET | `/filtering_terms/{field_id}/values` | Field values with counts | `staleTime: 4h` |
 | GET | `/filtering_terms/{field_id}/suggestions?term=xxx` | Autocomplete | `staleTime: 5min` |
-| GET | `/filtering_groups` | UI grouping config for filter fields | `staleTime: Infinity` |
 | GET | `/filtering_scopes` | Available scope definitions (`clinical` / `non_clinical`) | `staleTime: Infinity` |
-| GET | `/filtering_qualifiers` | Available qualifier definitions (e.g. `observation`) | `staleTime: Infinity` |
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
 | GET | `/status` | Deployment/indexing status — document counts per scope | `staleTime: 5min`, `refetchInterval: 5min` |
@@ -55,8 +53,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
         type: "text" | "keyword" | "controlledValue" | "ontology" | "ontologyOrValue" | "iso8601Range"
         label: string                       // e.g. "Anatomical site"
         description: string
-        ui_group?: string | null            // maps to a BeaconFilteringGroup id
-        ui_display?: boolean                // if false, field is hidden from UI
+        group?: string | null            // maps to a BeaconFilteringGroup id
         scopes: string[]                    // e.g. ["specimen"]
         ontology?: {
           id: string                        // always "SCTID"
@@ -66,19 +63,6 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
     ]
   }
 }
-```
-
-## GET /filtering_groups — Response
-
-```ts
-[
-    {
-        id: string
-        label: string
-        description?: string
-        border?: boolean        // visual separator in UI
-    }
-]
 ```
 
 ## GET /filtering_scopes — Response
@@ -93,26 +77,11 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 ]
 ```
 
-## GET /filtering_qualifiers — Response
-
-```ts
-[
-    {
-        id: string          // e.g. "observation"
-        label: string
-        description: string
-        values: string[]    // e.g. ["confirmed", "candidate"]
-        groups: string[]    // filter group ids this qualifier applies to
-    }
-]
-```
-
 ## GET /filtering_terms/{field_id}/values — Query parameters
 
 | Param | Type | Notes |
 |---|---|---|
 | `scope` | string | Omit when `"all"`. Values: `"clinical"`, `"non_clinical"` |
-| `qualifier` | repeated string | Each entry: `"id:value"` e.g. `"observation:confirmed"`. FastAPI expects repeated keys — Axios must use `paramsSerializer: { indexes: null }` |
 
 Response:
 
@@ -134,7 +103,6 @@ Response:
 | `term` | string | User's search string (min 2 chars before firing) |
 | `word_match` | `"true"` | Always sent |
 | `scope` | string | Omit when `"all"`. Values: `"clinical"`, `"non_clinical"` |
-| `qualifier` | repeated string | Each entry: `"id:value"` e.g. `"observation:confirmed"`. FastAPI expects repeated keys — Axios must use `paramsSerializer: { indexes: null }` |
 
 Response: same shape as `/values`. First call may be slow (Snowstorm cold cache) — always show loading state. `ontologyOrValue` fields return both SNOMED concepts and free-text values in the same list.
 
@@ -148,11 +116,8 @@ Response: same shape as `/values`. First call may be slow (Snowstorm cold cache)
             { id: "animal_species",    value: ["337915000"], operator: "=" },
             { id: "age_at_extraction", value: "P40Y-P50Y",   operator: "=" }
         ],
-            requestedGranularity: "record" | "count",
-            requestedScope?: string,            // "clinical" | "non_clinical" — omit for all data
-            requestedQualifiers?: {
-                [qualifierId: string]: string[]   // e.g. { observation: ["confirmed"] }
-    }
+        requestedGranularity: "record" | "count",
+        requestedScope?: string,            // "clinical" | "non_clinical" — omit for all data
     }
 }
 ```

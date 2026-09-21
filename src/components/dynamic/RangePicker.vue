@@ -2,7 +2,7 @@
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { ChevronDown, ChevronUp } from '@lucide/vue'
 import FieldLabel from '@/components/ui/FieldLabel.vue'
-import { useDropdown } from '@/composables/useDropdown'
+import { useDropdown } from '@/composables/ui/useDropdown'
 
 const props = defineProps<{
   label: string

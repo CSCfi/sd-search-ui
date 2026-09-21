@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useSearchStore } from '@/stores/searchStore'
+import { fieldsConfig } from '@/services/config'
 import type { BeaconFilteringTerm } from '@/types/beacon'
 import TextInput from './TextField.vue'
 import MultiSelect from './MultiSelect.vue'
@@ -28,6 +29,8 @@ const currentArrayValue = computed(() => {
 
 const ontologyDisplayLabels = ref<string[]>([])
 
+const ONTOLOGY_TYPES: BeaconFilteringTerm['type'][] = ['ontology', 'ontologyOrValue']
+
 function handleStringUpdate(value: string) {
   store.setFilter(props.field.id, value)
 }
@@ -37,16 +40,16 @@ function handleArrayUpdate(value: string[]) {
 }
 
 function handleOntologyUpdate(value: string[]) {
-  if (ontologyDisplayLabels.value.length > 0) {
-    store.setFilter(props.field.id, value, ontologyDisplayLabels.value)
-  } else {
-    store.setFilter(props.field.id, value)
-  }
+  const includeDescendantTerms = ONTOLOGY_TYPES.includes(props.field.type) ? true : undefined
+  const labels = ontologyDisplayLabels.value.length > 0 ? ontologyDisplayLabels.value : undefined
+  store.setFilter(props.field.id, value, labels, includeDescendantTerms)
 }
 
 function handleDisplayLabels(labels: string[]) {
   ontologyDisplayLabels.value = labels
 }
+
+const showConceptId = computed(() => (fieldsConfig.show_concept_id ?? []).includes(props.field.id))
 
 const KNOWN_TYPES: BeaconFilteringTerm['type'][] = [
   'text',
@@ -82,6 +85,7 @@ onMounted(() => {
     :field-id="field.id"
     :description="field.description"
     :model-value="currentArrayValue"
+    :controlled-values="field.controlledValues"
     @update:model-value="handleArrayUpdate"
   />
 
@@ -92,6 +96,7 @@ onMounted(() => {
     :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="false"
+    :show-concept-id="showConceptId"
     @update:model-value="handleOntologyUpdate"
     @update:display-labels="handleDisplayLabels"
   />
@@ -103,6 +108,7 @@ onMounted(() => {
     :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="true"
+    :show-concept-id="showConceptId"
     @update:model-value="handleOntologyUpdate"
     @update:display-labels="handleDisplayLabels"
   />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useDeploymentStatus } from '@/composables/useDeploymentStatus'
-import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { useDeploymentStatus } from '@/composables/query/useDeploymentStatus'
+import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
 
 const { data } = useDeploymentStatus()
 const { data: filteringScopes } = useFilteringScopes()

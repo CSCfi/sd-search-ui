@@ -3,11 +3,11 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
-import { useClinicalSearch } from '@/composables/useClinicalSearch'
-import { useFilteringScopes } from '@/composables/useFilteringScopes'
+import { useClinicalSearch } from '@/composables/query/useClinicalSearch'
+import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
 import { pluralize } from '@/utils/pluralize'
 import { buildRemsUrl } from '@/utils/rems'
-import type { BeaconResultSetResult } from '@/types/beacon'
+import type { BigPictureDatasetResult } from '@/types/bigpicture'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
@@ -42,8 +42,9 @@ watch(committedFilters, () => {
 const selectedCount = computed(() => selectedDatasetRows.value.size)
 const selectedIdsArray = computed(() => Array.from(selectedDatasetRows.value))
 
-const flatResults = computed<BeaconResultSetResult[]>(
-  () => data.value?.response.resultSet.flatMap((rs) => rs.results) ?? [],
+const flatResults = computed<BigPictureDatasetResult[]>(
+  () =>
+    data.value?.response.resultSet.flatMap((rs) => rs.results as BigPictureDatasetResult[]) ?? [],
 )
 
 const isEmpty = computed(
@@ -80,11 +81,11 @@ function toggleSelection(id: string) {
 }
 
 const modalOpen = ref(false)
-const activeResult = ref<BeaconResultSetResult | null>(null)
+const activeResult = ref<BigPictureDatasetResult | null>(null)
 const triggerRefs = ref<HTMLButtonElement[]>([])
 const activeTriggerIndex = ref<number>(-1)
 
-function openModal(result: BeaconResultSetResult, index: number) {
+function openModal(result: BigPictureDatasetResult, index: number) {
   activeResult.value = result
   activeTriggerIndex.value = index
   modalOpen.value = true

@@ -3,11 +3,15 @@ import { computed, useTemplateRef } from 'vue'
 import type { DatasetType } from '@/stores/searchStore'
 import type { BeaconFilteringScope } from '@/types/beacon'
 
-const props = defineProps<{ modelValue: DatasetType; scopes: BeaconFilteringScope[] }>()
+const props = defineProps<{
+  modelValue: DatasetType
+  scopes: BeaconFilteringScope[]
+  showAllTab?: boolean
+}>()
 const emit = defineEmits<{ 'update:modelValue': [DatasetType] }>()
 
 const tabs = computed<{ id: DatasetType; label: string }[]>(() => [
-  { id: 'all', label: 'All data' },
+  ...(props.showAllTab ? [{ id: 'all' as DatasetType, label: 'All data' }] : []),
   ...props.scopes.map((s) => ({ id: s.id as DatasetType, label: s.label })),
 ])
 
@@ -42,7 +46,13 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
     <div v-if="$slots.header" class="tab-header">
       <slot name="header" />
     </div>
-    <div ref="strip" class="tab-strip" role="tablist" aria-label="Dataset type">
+    <div
+      v-if="tabs.length > 1"
+      ref="strip"
+      class="tab-strip"
+      role="tablist"
+      aria-label="Dataset type"
+    >
       <button
         v-for="(tab, index) in tabs"
         :key="tab.id"
@@ -78,7 +88,6 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.5rem;
   background-color: rgba(255, 255, 255, 0.06);
-  overflow: hidden;
 }
 
 .tab-header {
