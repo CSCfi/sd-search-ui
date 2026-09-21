@@ -28,6 +28,8 @@ const currentArrayValue = computed(() => {
 
 const ontologyDisplayLabels = ref<string[]>([])
 
+const ONTOLOGY_TYPES: BeaconFilteringTerm['type'][] = ['ontology', 'ontologyOrValue']
+
 function handleStringUpdate(value: string) {
   store.setFilter(props.field.id, value)
 }
@@ -37,11 +39,9 @@ function handleArrayUpdate(value: string[]) {
 }
 
 function handleOntologyUpdate(value: string[]) {
-  if (ontologyDisplayLabels.value.length > 0) {
-    store.setFilter(props.field.id, value, ontologyDisplayLabels.value)
-  } else {
-    store.setFilter(props.field.id, value)
-  }
+  const includeDescendantTerms = ONTOLOGY_TYPES.includes(props.field.type) ? true : undefined
+  const labels = ontologyDisplayLabels.value.length > 0 ? ontologyDisplayLabels.value : undefined
+  store.setFilter(props.field.id, value, labels, includeDescendantTerms)
 }
 
 function handleDisplayLabels(labels: string[]) {

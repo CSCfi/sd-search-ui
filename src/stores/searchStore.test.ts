@@ -54,6 +54,18 @@ describe('searchStore — setFilter', () => {
     expect(store.draftFilters).toHaveLength(2)
     expect(store.draftFilters.map((f) => f.id)).toEqual(['sex', 'anatomical_site'])
   })
+
+  it('sets includeDescendantTerms when passed as true', () => {
+    const store = useSearchStore()
+    store.setFilter('anatomical_site', ['80248007'], undefined, true)
+    expect(store.draftFilters[0]).toMatchObject({ includeDescendantTerms: true })
+  })
+
+  it('omits includeDescendantTerms when not passed', () => {
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    expect(store.draftFilters[0]).not.toHaveProperty('includeDescendantTerms')
+  })
 })
 
 describe('searchStore — commit', () => {
