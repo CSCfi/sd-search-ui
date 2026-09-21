@@ -28,8 +28,6 @@ vi.mock('./apiClient', () => ({
 const {
   postQuery,
   postNonClinicalQuery,
-  getFieldValues,
-  getSuggestions,
   getNonClinicalImageIds,
   submitDatasetOnDemand,
   pollDatasetOnDemandStatus,
