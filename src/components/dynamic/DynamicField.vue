@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useSearchStore } from '@/stores/searchStore'
+import { fieldsConfig } from '@/services/config'
 import type { BeaconFilteringTerm } from '@/types/beacon'
 import TextInput from './TextField.vue'
 import MultiSelect from './MultiSelect.vue'
@@ -48,6 +49,8 @@ function handleDisplayLabels(labels: string[]) {
   ontologyDisplayLabels.value = labels
 }
 
+const showConceptId = computed(() => (fieldsConfig.show_concept_id ?? []).includes(props.field.id))
+
 const KNOWN_TYPES: BeaconFilteringTerm['type'][] = [
   'text',
   'keyword',
@@ -93,6 +96,7 @@ onMounted(() => {
     :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="false"
+    :show-concept-id="showConceptId"
     @update:model-value="handleOntologyUpdate"
     @update:display-labels="handleDisplayLabels"
   />
@@ -104,6 +108,7 @@ onMounted(() => {
     :description="field.description"
     :model-value="currentArrayValue"
     :allow-free-text="true"
+    :show-concept-id="showConceptId"
     @update:model-value="handleOntologyUpdate"
     @update:display-labels="handleDisplayLabels"
   />

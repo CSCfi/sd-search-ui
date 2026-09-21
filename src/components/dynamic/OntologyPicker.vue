@@ -17,6 +17,7 @@ const props = defineProps<{
   modelValue: string[]
   allowFreeText: boolean
   description?: string
+  showConceptId?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -217,7 +218,12 @@ watch(
           @click="toggleItem(item)"
           @keydown="onOptionKeydown($event, index)"
         >
-          <span class="option-label">{{ item.value }}</span>
+          <span class="option-label">
+            {{ item.value }}
+            <span v-if="showConceptId && item.concept_id" class="concept-id"
+              >({{ item.concept_id }})</span
+            >
+          </span>
           <span v-if="item.count > 0" class="option-count">{{ item.count }}</span>
         </li>
         <li v-if="filteredSuggestions.length === 0 && searchTerm.length >= 2" class="no-options">
@@ -388,6 +394,11 @@ watch(
 
 .option-label {
   flex: 1;
+}
+
+.concept-id {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
 }
 
 .option-count {

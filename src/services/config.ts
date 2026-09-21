@@ -8,6 +8,7 @@ export interface FieldsConfig {
   hidden_description: string[]
   bordered: string[]
   hidden_scopes: string[]
+  show_concept_id?: string[]
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig
