@@ -32,7 +32,6 @@ function toggle(checked: boolean) {
         />
       </div>
       <div class="toggle-with-labels">
-        <span class="side-label" :class="{ 'side-label--dim': isConfirmed }">All</span>
         <ToggleSwitch
           :input-id="`obs-toggle-${field.id}`"
           :model-value="isConfirmed"
