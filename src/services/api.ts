@@ -2,15 +2,14 @@ import axios from 'axios'
 import type {
   BeaconCountResponse,
   BeaconFilteringTermsResponse,
-  BeaconImageResultSetsResponse,
   BeaconQueryFilter,
   BeaconQueryRequest,
   BeaconFilteringScope,
   BeaconResultSetsResponse,
-  DatasetOnDemandResult,
   DeploymentStatus,
   FieldValue,
 } from '@/types/beacon'
+import type { BigPictureImageResultSetsResponse, DatasetOnDemandResult } from '@/types/bigpicture'
 import apiClient from './apiClient'
 import type { ApiError } from './apiClient'
 
@@ -81,7 +80,7 @@ export async function getNonClinicalImageIds(filters: BeaconQueryFilter[]): Prom
     },
   }
 
-  const res = await apiClient.post<BeaconImageResultSetsResponse>('/images', body)
+  const res = await apiClient.post<BigPictureImageResultSetsResponse>('/images', body)
   return res.data.response.resultSet.map((resultSet) => resultSet.id)
 }
 
