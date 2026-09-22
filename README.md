@@ -29,21 +29,27 @@ cp .env.example .env
 pnpm dev
 ```
 
+The dev server proxies `/api`, `/login`, `/logout`, and `/callback` to `http://localhost:8000`. A running backend is required for the search and auth flows to work. See the [Search API](https://github.com/CSCfi/sd-search-api) repo for backend setup.
+
 ## Environment Variables
 
 | Variable | Required | Description |
 |---|---:|---|
 | `VITE_SERVICE` | yes | Service identity — selects router, views, config, and theme at build time. Default: `bigpicture` |
 | `VITE_AUTH_BYPASS` | no | `"true"` bypasses the route auth guard for local development |
+| `VITE_REMS_URL` | yes | REMS base URL — set per environment (test/prod). Used to build access request links |
+| `VITE_DOD_ENDPOINT_URL` | yes* | Dataset-on-Demand (DoD) submission endpoint URL. Used by `useDatasetOnDemand` to create a virtual dataset from matching non-clinical image IDs, poll for its release, then open REMS. Set per environment; leave empty to disable the DoD flow |
 | `BACKEND_URL` | runtime | nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
 
 ## Project Structure
 
 ```
 config/
+    groups.yaml         # Filter group structure — shared default across services
     <service>/
         content.ts      # Shared-component text (footer links, help content, etc.)
-        fields.yaml     # Field and group visibility configuration
+        fields.yaml     # Field and scope visibility configuration (per-service)
+        groups.yaml     # Optional override — copy from root only when structure diverges
         meta.json       # Build-time metadata (app title)
         theme.scss      # CSS custom properties for colors and fonts
 src/
@@ -53,21 +59,32 @@ src/
         fonts/          # Font files
         styles/         # Global SCSS (variables, base styles, fonts)
     components/
-        <service>/      # Service-specific components (e.g. bigpicture/ResultsTable.vue)
-        dynamic/        # Schema-driven field components (DynamicField + one per FilteringTerm.type)
-        filters/        # Scope tabs, observation type selector, scope badge
-        ui/             # Generic shared components (Badge, ErrorBanner, LoadingSpinner, etc.)
+        AppFooter.vue       # Shared footer (content via useContentConfig)
+        AppNavbar.vue       # Shared navbar with service logo
+        DescriptionModal.vue # Modal for expanded dataset descriptions
+        HelpSidebar.vue     # Help sidebar (content via useContentConfig)
+        ResultsBanner.vue   # Banner shown above search results
+        SearchForm.vue      # Shared search form — scope tabs + filter grid
+        <service>/          # Service-specific components (e.g. bigpicture/ResultsTable.vue)
+        dynamic/            # Schema-driven field components (DynamicField + one per FilteringTerm.type)
+        filters/            # Scope tabs, observation type selector, scope badge
+        ui/                 # Generic shared components (Badge, ErrorBanner, LoadingSpinner, etc.)
     composables/
-        query/          # TanStack Query composables (search, field values, suggestions, status)
-        ui/             # UI composables (content config, cookie consent, keyboard nav, etc.)
+        query/          # TanStack Query composables (search, field values, suggestions, status, groups)
+        ui/             # UI composables (content config, field scopes, cookie consent, keyboard nav, etc.)
     directives/         # vControl — v-model bridge for c-* web components
     plugins/            # Cookie consent
     router/
         <service>.ts    # Service-specific router — landing page and route definitions
-    services/           # api.ts (all API functions) + apiClient.ts (Axios instance + interceptors)
+    services/
+        api.ts          # All API functions (getFilteringTerms, postQuery, submitDatasetOnDemand, etc.)
+        apiClient.ts    # Axios instance with auth interceptor
+        config.ts       # Typed exports of fields.yaml and groups.yaml via @service/ alias
     stores/             # Pinia: searchStore, authStore
     types/
         beacon.ts       # Beacon V2 protocol types (filtering terms, query, responses)
+        config.ts       # FilteringGroup, ResolvedGroup — types for groups.yaml at config and runtime
+        content.ts      # ContentConfig interface — contract for config/<service>/content.ts
         <service>.ts    # Service-specific result types (e.g. bigpicture.ts)
     utils/              # Small shared helpers
     views/
@@ -80,8 +97,9 @@ src/
 1. **Create config files** — copy `config/bigpicture/` to `config/<service>/` and edit each file:
    - `meta.json` — set `appTitle`
    - `content.ts` — update footer links, contact email, help text, logo import
-   - `fields.yaml` — adjust field/group visibility for your backend's fields
+   - `fields.yaml` — adjust field/scope visibility for your backend's fields
    - `theme.scss` — define CSS custom properties for your brand
+   - `groups.yaml` — only if your service needs a different group structure; otherwise the shared `config/groups.yaml` is used automatically
 
 2. **Add assets** — create `src/assets/<service>/` with `favicon.ico` and a logo image.
 
@@ -111,7 +129,31 @@ Controls which fields and groups are visible in the search form. Bundled at buil
 | `hidden` | `string[]` | Field ids to hide entirely. Groups with all fields hidden are hidden automatically |
 | `hidden_description` | `string[]` | Field ids whose info tooltip is suppressed. Field still shows — only the (i) icon is hidden |
 | `hidden_scopes` | `string[]` | Scope ids to hide entirely. The scope's tab and all its fields are removed from the UI. When only one scope remains visible, the "All data" tab is also hidden and searches are automatically scoped. When all scopes are hidden, the entire tab group (including the observation type selector) is hidden |
+| `show_concept_id` | `string[]` | Field ids for which the ontology concept ID is shown in parentheses next to the term label in the dropdown. Only applies when a non-null `concept_id` is returned by the backend |
 | `bordered` | `string[]` | Group and scope ids to render with a bordered box |
+
+### `config/groups.yaml` (and optional `config/<service>/groups.yaml`)
+
+Defines which filter fields belong to which UI groups, in what order they render, and which groups are subgroups of another.
+
+`config/groups.yaml` is the shared default used by all services. A service that needs a different structure creates `config/<service>/groups.yaml` — the build resolver picks it up automatically with no code change required.
+
+A field absent from `groups.yaml` is silently dropped from the UI. Keep it in sync with the backend's `/filtering_terms` field list.
+
+```yaml
+- id: <group-id>
+  label: "Group label"
+  parent: <parent-group-id>   # optional — omit for root groups
+  fields:
+    - field_id_1              # field ids in render order
+    - field_id_2
+```
+
+- Groups without `parent` render as flat sections in their scope panel.
+- Groups with `parent` render as labelled subgroups inside the parent group.
+- Group order in the file is the render order; field order within each group is also yaml-defined.
+
+Group resolution at runtime is handled by the `useResolvedGroups` composable (`composables/query/useResolvedGroups.ts`), which merges `groups.yaml` with the backend's `/filtering_terms` response.
 
 ### `config/<service>/content.ts`
 

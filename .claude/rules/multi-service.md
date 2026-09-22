@@ -19,11 +19,35 @@ A single environment variable (for example `VITE_SERVICE`) determines which serv
 
 Any change to the codebase, whether shared or service-specific, triggers a new build and deploy for every affected service.
 
+## Build-time aliases
+
+Two Vite aliases resolve service-specific code at build time. Both are configured in `vite.config.ts` and invisible to the TypeScript compiler — they are pure Vite/Rollup resolution hooks.
+
+### `@service/<path>`
+
+A custom `service-alias` plugin resolves `@service/<path>` imports:
+
+1. Checks `config/<service>/<path>` first (service-specific override).
+2. Falls back to `config/<path>` (shared root — used for `groups.yaml` when no service override exists).
+
+Extensions tried in order when `<path>` has no extension: `.ts`, `.js`, `.scss`, `.css`. For exact-extension imports (e.g. `@service/groups.yaml`), only the fallback to the shared root is attempted — extension-less probing is skipped.
+
+All config imports in `src/services/config.ts` use this alias:
+
+```ts
+import fieldsConfigRaw from '@service/fields.yaml'   // always config/<service>/fields.yaml
+import groupsConfigRaw from '@service/groups.yaml'   // config/<service>/groups.yaml if it exists, else config/groups.yaml
+```
+
+### `@service-router`
+
+A plain `resolve.alias` entry maps `@service-router` directly to `src/router/<service>.ts`. Used in `searchStore.ts` to import the active router without hardcoding a service name.
+
 ## Router
 
 Each service has its own router file (for example `router/bigpicture.ts`, `router/<other-service>.ts`). The router determines which view acts as the landing page and which routes exist for that service; services are not required to expose the same set of routes.
 
-The build-time environment variable selects which router file is loaded. This is the single point where a service's available views and navigation structure are defined.
+The router file is selected via the `@service-router` alias — it is the single point where a service's available views and navigation structure are defined.
 
 ## Views and components
 
@@ -80,7 +104,7 @@ Groups without a `parent` render as flat sections. Groups with a `parent` render
 
 ## Theme (colors, fonts, logo)
 
-Colors are already CSS custom properties (`--csc-color-*` and related). Each service gets its own theme file (for example `config/<service>/theme.css`) defining these variables, plus its own logo file. Fonts are file-based, not just a font-family name swap, so each service bundles its own font files alongside its theme file. The build-time environment variable selects which service's theme directory is loaded.
+Colors are already CSS custom properties (`--csc-color-*` and related). Each service gets its own theme file (for example `config/<service>/theme.scss`) defining these variables, plus its own logo file. Fonts are file-based, not just a font-family name swap, so each service bundles its own font files alongside its theme file. The build-time environment variable selects which service's theme directory is loaded.
 
 ## Content configuration (shared component text)
 
@@ -101,6 +125,30 @@ export const contentConfig = {
 ```
 
 Use `satisfies` (not `: ContentConfig`) — it enforces the contract while preserving the precise inferred type. Service-specific fields beyond `ContentConfig` may be added freely; `satisfies` permits extra fields. Consume those extra fields by importing directly from the service file, not through `useContentConfig()`, which returns the shared `ContentConfig` type only.
+
+The full `ContentConfig` shape (from `src/types/content.ts`):
+
+```ts
+interface ContentConfig {
+  navLogo: {
+    src: string
+    alt: string
+  }
+  footer: {
+    links: { label: string; href: string; external?: boolean }[]
+    contact: { email: string }
+    fundingText: string
+    logoSrc: string
+    logoAlt: string
+  }
+  help: {
+    sections: { id: string; title: string; html: string }[]
+  }
+  search: {
+    filterHintHtml: string
+  }
+}
+```
 
 The UI is single-language at this stage; the content config does not need a locale key structure yet. If multi-language support becomes a requirement later, the content config's structure will need to be revisited.
 

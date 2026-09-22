@@ -183,7 +183,7 @@ Run before every PR that touches the search form or results view.
 - [ ] All fields from `/filtering_terms` appear in the UI
 - [ ] Each field shows the correct input type (text / dropdown / autocomplete / range)
 - [ ] No fields are missing or duplicated
-- [ ] Fields with `ui_display: false` are hidden
+- [ ] Fields listed in `fields.yaml` `hidden` are not shown in the UI
 
 ### Filter logic
 - [ ] Selecting Sex=Female and searching returns only female datasets
