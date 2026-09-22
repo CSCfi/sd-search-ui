@@ -1,17 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import axios from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 import type { BeaconQueryRequest } from '@/types/beacon'
 
+vi.mock('axios', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('axios')>()
+  return {
+    default: {
+      ...actual.default,
+      post: vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>(),
+      get: vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>(),
+      isAxiosError: actual.default.isAxiosError,
+    },
+  }
+})
+
 const post = vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>()
-const get = vi.fn<(url: string) => Promise<{ data: unknown }>>()
+const get = vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
 
 vi.mock('./apiClient', () => ({
   default: {
     post: (url: string, body: BeaconQueryRequest) => post(url, body),
-    get: (url: string) => get(url),
+    get: (url: string, config?: AxiosRequestConfig) => get(url, config),
   },
 }))
 
-const { postQuery, postNonClinicalQuery } = await import('./api')
+const {
+  postQuery,
+  postNonClinicalQuery,
+  getNonClinicalImageIds,
+  submitDatasetOnDemand,
+  pollDatasetOnDemandStatus,
+} = await import('./api')
 
 function sentBody(): BeaconQueryRequest {
   return post.mock.calls[0]?.[1] as BeaconQueryRequest
@@ -52,5 +72,125 @@ describe('postNonClinicalQuery', () => {
     await postNonClinicalQuery([{ id: 'sex', value: 'Female', operator: '=' }])
     expect(sentBody().query.requestedGranularity).toBe('count')
     expect(sentBody().query.requestedScope).toBe('non_clinical')
+  })
+})
+
+describe('getNonClinicalImageIds', () => {
+  beforeEach(() => {
+    post.mockReset()
+  })
+
+  it('sends record granularity and non_clinical scope', async () => {
+    post.mockResolvedValue({
+      data: { response: { resultSet: [] } },
+    })
+    await getNonClinicalImageIds([{ id: 'sex', value: 'Female', operator: '=' }])
+    const body = post.mock.calls[0]?.[1] as BeaconQueryRequest
+    expect(body.query.requestedGranularity).toBe('record')
+    expect(body.query.requestedScope).toBe('non_clinical')
+  })
+
+  it('extracts resultSet[].id into a flat string array', async () => {
+    post.mockResolvedValue({
+      data: {
+        response: {
+          resultSet: [{ id: 'img-1' }, { id: 'img-2' }, { id: 'img-3' }],
+        },
+      },
+    })
+    const ids = await getNonClinicalImageIds([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(ids).toEqual(['img-1', 'img-2', 'img-3'])
+  })
+
+  it('returns empty array when resultSet is empty', async () => {
+    post.mockResolvedValue({
+      data: { response: { resultSet: [] } },
+    })
+    const ids = await getNonClinicalImageIds([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(ids).toEqual([])
+  })
+})
+
+describe('submitDatasetOnDemand', () => {
+  beforeEach(() => {
+    vi.mocked(axios.post).mockReset()
+  })
+
+  it('posts image_accessions and user to VITE_DOD_ENDPOINT_URL with withCredentials: false', async () => {
+    vi.mocked(axios.post).mockResolvedValue({
+      status: 200,
+      data: { on_demand_dataset_accession: 'SDA-abc' },
+    })
+    await submitDatasetOnDemand(['img-1', 'img-2'])
+    expect(vi.mocked(axios.post)).toHaveBeenCalledWith(
+      import.meta.env.VITE_DOD_ENDPOINT_URL,
+      { image_accessions: ['img-1', 'img-2'], user: 'placeholder' },
+      expect.objectContaining({ withCredentials: false }),
+    )
+  })
+
+  it('returns success result with onDemandDatasetAccession on 200', async () => {
+    vi.mocked(axios.post).mockResolvedValue({
+      status: 200,
+      data: { on_demand_dataset_accession: 'SDA-abc' },
+    })
+    const result = await submitDatasetOnDemand(['img-1'])
+    expect(result).toEqual({ status: 'success', onDemandDatasetAccession: 'SDA-abc' })
+  })
+
+  it('returns processing result with onDemandDatasetAccession on 202', async () => {
+    vi.mocked(axios.post).mockResolvedValue({
+      status: 202,
+      data: { on_demand_dataset_accession: 'SDA-abc' },
+    })
+    const result = await submitDatasetOnDemand(['img-1'])
+    expect(result).toEqual({ status: 'processing', onDemandDatasetAccession: 'SDA-abc' })
+  })
+
+  it('throws ApiError-shaped object on axios error', async () => {
+    const axiosError = Object.assign(new Error('Server error'), {
+      isAxiosError: true,
+      response: {
+        status: 500,
+        statusText: 'Internal Server Error',
+        data: { title: 'Server error', detail: 'Something broke' },
+      },
+    })
+    vi.mocked(axios.post).mockRejectedValue(axiosError)
+    await expect(submitDatasetOnDemand(['img-1'])).rejects.toMatchObject({
+      status: 500,
+      title: 'Server error',
+      detail: 'Something broke',
+    })
+  })
+})
+
+describe('pollDatasetOnDemandStatus', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset()
+  })
+
+  it('GETs {VITE_DOD_ENDPOINT_URL}/{accession}/status', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_CREATING' } })
+    await pollDatasetOnDemandStatus('SDA-abc')
+    expect(vi.mocked(axios.get)).toHaveBeenCalledWith(
+      `${import.meta.env.VITE_DOD_ENDPOINT_URL}/SDA-abc/status`,
+      expect.objectContaining({ withCredentials: false }),
+    )
+  })
+
+  it('returns STATUS_CREATING from response', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_CREATING' } })
+    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_CREATING')
+  })
+
+  it('returns STATUS_RELEASED from response', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_RELEASED' } })
+    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_RELEASED')
+  })
+
+  it('returns STATUS_INVALID from response', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_INVALID' } })
+    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_INVALID')
   })
 })
