@@ -22,13 +22,21 @@ alwaysApply: false
 
 | Query key | staleTime | enabled | Notes |
 |---|---|---|---|
-| `['filteringTerms']` | Infinity | always | `ui_display=false` fields filtered out via `select` |
+| `['filteringTerms']` | Infinity | always | Fields listed in `fields.yaml` `hidden` are filtered out via `select` in `useFilteringTerms`. `useFieldScopes` shares this key but uses its own `select` that intentionally includes hidden fields — see note below |
 | `['filteringScopes']` | Infinity | always | |
 | `['values', fieldId, datasetType]` | 4h | always | |
 | `['suggestions', fieldId, term, datasetType]` | 5min | `term.length > 1` | |
 | `['deploymentStatus']` | 5min | always | `refetchInterval: 5min` too — polls while mounted. Uses `getStatus` |
 | `['search', 'clinical', committedFilters]` | — | `hasCommittedFilters && tab is 'all' or 'clinical'` | Uses `postQuery` |
 | `['search', 'non_clinical', committedFilters]` | — | `hasCommittedFilters && tab is 'all' or 'non_clinical'` | Uses `postNonClinicalQuery` — always count granularity |
+
+### `useFieldScopes` — hidden fields are intentionally included
+
+`useFieldScopes` (`composables/ui/useFieldScopes.ts`) shares the `['filteringTerms']` query key but uses a different `select` that does **not** filter out hidden fields. This is intentional: some fields (e.g. `animal_species`) are hidden from the UI but are still scope-specific. If hidden fields were excluded, those filters would not be removed correctly when the user switches scope tabs.
+
+### `useResolveUrlLabels` — URL concept ID resolution
+
+`useResolveUrlLabels` (`composables/query/useResolveUrlLabels.ts`) runs on page load after `initFromUrl`. It fetches `['filteringTerms']` and then `['values', fieldId]` for each ontology filter restored from the URL, resolving raw concept IDs (e.g. `337915000`) to human-readable labels (e.g. `Human`). Failures are silent — raw IDs fall back to the `ResultsBanner` display. Not a reactive query; called imperatively from the route's setup.
 
 ## Pinia — Search Store (`stores/searchStore.ts`)
 

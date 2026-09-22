@@ -63,7 +63,7 @@ is backend-driven (`GET /filtering_terms`) — the table below reflects the curr
 | `finding_distribution` | Distribution | non_clinical only | ontology (SEND) |
 | `finding_result_category` | Result category | non_clinical only | ontology (SEND) |
 
-`dataset_title` is indexed but `ui_display: false` — not shown in the UI.
+`dataset_title` is indexed but listed in `fields.yaml` `hidden` — not shown in the UI.
 
 Multiple values within the same filter are combined with OR.
 Multiple different filters are combined with AND.
