@@ -52,10 +52,22 @@ const isLoading = computed(() =>
 )
 
 const rawItems = computed<FieldValue[]>(() => {
-  if (searchTerm.value.length >= 2) {
-    return suggestionsData.value ?? []
-  }
-  return valuesData.value ?? []
+  const term = debouncedTerm.value
+
+  if (term.length < 2) return valuesData.value ?? []
+
+  const apiResults = suggestionsData.value ?? []
+
+  if (!/^\d+$/.test(term)) return apiResults
+
+  const conceptMatches = (valuesData.value ?? []).filter((item) => item.concept_id?.includes(term))
+
+  // Keep suggestion counts when the same concept exists in both sources.
+  const seenConceptIds = new Set(
+    apiResults.filter((item) => item.concept_id !== null).map((item) => item.concept_id),
+  )
+
+  return [...apiResults, ...conceptMatches.filter((item) => !seenConceptIds.has(item.concept_id))]
 })
 
 const filteredSuggestions = computed(() => {
