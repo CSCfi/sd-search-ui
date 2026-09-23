@@ -10,6 +10,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY . .
 
+ARG VITE_SERVICE
+ARG VITE_REMS_URL
+ARG VITE_DOD_ENDPOINT_URL
+
 RUN pnpm build
 
 FROM nginx:1.31-alpine AS serve

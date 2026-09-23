@@ -113,6 +113,8 @@ src/
 
 7. **Set `VITE_SERVICE=<service>`** in `.env` and run `pnpm dev`.
 
+8. **Add to CI matrix** — add the service name to both matrix arrays in `.github/workflows/ci.yml`. See the [Image tag collision warning](#continuous-deployment) before doing this.
+
 ### What not to touch
 
 Shared components (`components/dynamic/`, `components/filters/`, `components/ui/`, `SearchForm.vue`, `HelpSidebar.vue`, etc.) must not contain service-specific branching. If a shared component needs to vary per service, use slots or props — or give the service its own copy under `components/<service>/`.
@@ -185,15 +187,29 @@ API and auth routes (`/api/`, `/login`, `/callback`, `/logout`) are always calle
 ```bash
 docker build --platform=linux/amd64 \
   --build-arg VITE_SERVICE=bigpicture \
+  --build-arg VITE_REMS_URL=https://... \
+  --build-arg VITE_DOD_ENDPOINT_URL=https://... \
   -f docker/Dockerfile \
-  -t <image-registry-url>/sd-search-ui:latest .
+  -t <image-registry-url>/sd-search-ui-bigpicture:latest .
 
-docker push <image-registry-url>/sd-search-ui:latest
+docker push <image-registry-url>/sd-search-ui-bigpicture:latest
 ```
 
 ### Continuous deployment
 
-Merging a PR to `main` automatically builds and pushes the image to Rahti via `.github/workflows/ci.yml`. Direct pushes to `main` are not allowed — use a PR. Once pushed under `:latest`, Rahti's ImageStream triggers the rollout automatically. The manual build/push steps above are only needed for out-of-band builds.
+`.github/workflows/ci.yml` uses a **matrix strategy** — each service in the matrix is built and pushed independently on merge to `main`. Direct pushes to `main` are not allowed — use a PR. Rahti's ImageStream triggers the rollout automatically once the image is pushed.
+
+**To add a new service to CI**, add its name to the `service` matrix in **both** the `ci` and `rahti-image-stream` jobs:
+
+```yaml
+strategy:
+  matrix:
+    service: [bigpicture, <new-service>]
+```
+
+Each service gets its own image tag: `sd-search-ui-<service>:latest` (e.g. `sd-search-ui-bigpicture:latest`). Each Rahti ImageStream must watch its matching tag. When adding a new service, create a new ImageStream for it — do not reuse the existing one.
+
+`VITE_REMS_URL` and `VITE_DOD_ENDPOINT_URL` are passed as build args from repository secrets (`secrets.VITE_REMS_URL`, `secrets.VITE_DOD_ENDPOINT_URL`). Set these in GitHub → Settings → Secrets before the first deploy. The manual build/push steps above are only needed for out-of-band builds.
 
 ### Running with docker-compose
 
