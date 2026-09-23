@@ -67,8 +67,8 @@ jobs:
 
       - name: Build and Tag Image
         run: |
-          docker build -f docker/Dockerfile --build-arg VITE_SERVICE=${{ matrix.service }} --build-arg VITE_REMS_URL=${{ secrets.VITE_REMS_URL }} --build-arg VITE_DOD_ENDPOINT_URL=${{ secrets.VITE_DOD_ENDPOINT_URL }} -t ${{ secrets.RAHTI_REGISTRY }}/${{ secrets.RAHTI_PROJECT }}/sd-search-ui-${{ matrix.service }}:latest .
+          docker build -f docker/Dockerfile --build-arg VITE_SERVICE=${{ matrix.service }} --build-arg VITE_REMS_URL=${{ secrets.VITE_REMS_URL }} --build-arg VITE_DOD_ENDPOINT_URL=${{ secrets.VITE_DOD_ENDPOINT_URL }} -t ${{ secrets.RAHTI_REGISTRY }}/${{ secrets.RAHTI_PROJECT }}/sd-search-ui:${{ matrix.service }}-latest .
 
       - name: Push Image
         run: |
-          docker push ${{ secrets.RAHTI_REGISTRY }}/${{ secrets.RAHTI_PROJECT }}/sd-search-ui-${{ matrix.service }}:latest
+          docker push ${{ secrets.RAHTI_REGISTRY }}/${{ secrets.RAHTI_PROJECT }}/sd-search-ui:${{ matrix.service }}-latest

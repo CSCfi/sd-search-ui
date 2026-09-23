@@ -190,9 +190,9 @@ docker build --platform=linux/amd64 \
   --build-arg VITE_REMS_URL=https://... \
   --build-arg VITE_DOD_ENDPOINT_URL=https://... \
   -f docker/Dockerfile \
-  -t <image-registry-url>/sd-search-ui-bigpicture:latest .
+  -t <image-registry-url>/sd-search-ui:bigpicture-latest .
 
-docker push <image-registry-url>/sd-search-ui-bigpicture:latest
+docker push <image-registry-url>/sd-search-ui:bigpicture-latest
 ```
 
 ### Continuous deployment
@@ -207,7 +207,7 @@ strategy:
     service: [bigpicture, <new-service>]
 ```
 
-Each service gets its own image tag: `sd-search-ui-<service>:latest` (e.g. `sd-search-ui-bigpicture:latest`). Each Rahti ImageStream must watch its matching tag. When adding a new service, create a new ImageStream for it — do not reuse the existing one.
+Each service gets its own image tag on the shared `sd-search-ui` ImageStream: `sd-search-ui:<service>-latest` (e.g. `sd-search-ui:bigpicture-latest`). The Rahti ImageStream trigger must be configured to watch the matching tag. When adding a new service, configure the ImageStream trigger to watch `<service>-latest` — do not create a separate ImageStream per service.
 
 `VITE_REMS_URL` and `VITE_DOD_ENDPOINT_URL` are passed as build args from repository secrets (`secrets.VITE_REMS_URL`, `secrets.VITE_DOD_ENDPOINT_URL`). Set these in GitHub → Settings → Secrets before the first deploy. The manual build/push steps above are only needed for out-of-band builds.
 
