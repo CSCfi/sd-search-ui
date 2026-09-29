@@ -10,6 +10,8 @@ export const useSearchStore = defineStore('search', () => {
   const committedFilters = ref<BeaconQueryFilter[]>([])
   const datasetType = ref<DatasetType>('all')
   const committedDatasetType = ref<DatasetType>('all')
+  const includeComplementary = ref(false)
+  const committedIncludeComplementary = ref(false)
 
   const setFilter = (
     id: string,
@@ -49,6 +51,10 @@ export const useSearchStore = defineStore('search', () => {
     datasetType.value = type
   }
 
+  const setIncludeComplementary = (value: boolean) => {
+    includeComplementary.value = value
+  }
+
   // Recover from an invalid `?tab=` query value by resetting both current and committed scope.
   // This prevents later searches from reusing an unsupported scope.
   const resetScope = () => {
@@ -61,6 +67,8 @@ export const useSearchStore = defineStore('search', () => {
     committedFilters.value = []
     datasetType.value = 'all'
     committedDatasetType.value = 'all'
+    includeComplementary.value = false
+    committedIncludeComplementary.value = false
     router.replace({ query: {} })
   }
 
@@ -70,6 +78,7 @@ export const useSearchStore = defineStore('search', () => {
   const commit = () => {
     committedFilters.value = [...draftFilters.value]
     committedDatasetType.value = datasetType.value
+    committedIncludeComplementary.value = includeComplementary.value
     const filterEntries = Object.fromEntries(
       committedFilters.value.map((f) => [
         f.id,
@@ -80,18 +89,27 @@ export const useSearchStore = defineStore('search', () => {
       query: {
         ...filterEntries,
         ...(datasetType.value !== 'all' ? { tab: datasetType.value } : {}),
+        ...(includeComplementary.value ? { complementary: 'true' } : {}),
       },
     })
   }
 
   // URL values are untrusted. Filters and scope commit immediately and self-correct if
   // invalid via resetScope().
-  const initFromUrl = (filters: BeaconQueryFilter[], scope?: DatasetType) => {
+  const initFromUrl = (
+    filters: BeaconQueryFilter[],
+    scope?: DatasetType,
+    complementary?: boolean,
+  ) => {
     draftFilters.value = filters
     committedFilters.value = [...filters]
     if (scope) {
       datasetType.value = scope
       committedDatasetType.value = scope
+    }
+    if (complementary) {
+      includeComplementary.value = true
+      committedIncludeComplementary.value = true
     }
   }
 
@@ -108,9 +126,12 @@ export const useSearchStore = defineStore('search', () => {
     hasCommittedFilters,
     datasetType,
     committedDatasetType,
+    includeComplementary,
+    committedIncludeComplementary,
     setFilter,
     removeFilters,
     setDatasetType,
+    setIncludeComplementary,
     resetScope,
     clearFilters,
     commit,

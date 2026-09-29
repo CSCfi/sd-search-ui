@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Link, Loader, RotateCcw, Search } from '@lucide/vue'
 import DynamicField from '@/components/dynamic/DynamicField.vue'
+import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import { useFilteringTerms } from '@/composables/query/useFilteringTerms'
 import { useSearchStore } from '@/stores/searchStore'
 import { useResolvedGroups } from '@/composables/query/useResolvedGroups'
@@ -109,6 +110,29 @@ async function copySearch() {
 
       <slot name="scope-section" />
 
+      <div class="complementary-card">
+        <ToggleSwitch
+          input-id="include-complementary-toggle"
+          :model-value="store.includeComplementary"
+          aria-labelledby="include-complementary-label"
+          @update:model-value="store.setIncludeComplementary"
+        />
+        <div class="complementary-text">
+          <span id="include-complementary-label" class="complementary-title">
+            Search also for complementary data
+          </span>
+          <span class="complementary-description">
+            Include annotations, observations and images that complement the matching datasets.
+          </span>
+        </div>
+        <span
+          class="complementary-status"
+          :class="{ 'complementary-status--on': store.includeComplementary }"
+        >
+          {{ store.includeComplementary ? 'ON' : 'OFF' }}
+        </span>
+      </div>
+
       <div class="form-actions">
         <c-button class="btn-search" type="submit" @click="store.commit()">
           <Search :size="16" aria-hidden="true" />
@@ -194,6 +218,53 @@ async function copySearch() {
   flex-wrap: wrap;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+.complementary-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 1rem 1.25rem;
+}
+
+.complementary-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.complementary-title {
+  color: var(--color-white);
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.complementary-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.complementary-status {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 0.25rem 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 700;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+
+  &--on {
+    background-color: var(--color-pink);
+    color: var(--color-white);
+  }
 }
 
 .btn-search {

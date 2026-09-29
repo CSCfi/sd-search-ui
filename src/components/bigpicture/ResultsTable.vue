@@ -1,19 +1,24 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Key, Search } from '@lucide/vue'
+import { ChevronDown, Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useClinicalSearch } from '@/composables/query/useClinicalSearch'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
 import { pluralize } from '@/utils/pluralize'
 import { buildRemsUrl } from '@/utils/rems'
-import type { BigPictureDatasetResult } from '@/types/bigpicture'
+import { complementaryContentLabels } from '@/utils/complementaryContent'
+import type { BigPictureDatasetResult, RelatedDataset } from '@/types/bigpicture'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
 
-const { hasCommittedFilters, committedFilters, committedDatasetType } =
-  storeToRefs(useSearchStore())
+const {
+  hasCommittedFilters,
+  committedFilters,
+  committedDatasetType,
+  committedIncludeComplementary,
+} = storeToRefs(useSearchStore())
 const { data, isLoading, isError } = useClinicalSearch()
 const { data: filteringScopes } = useFilteringScopes()
 
@@ -35,9 +40,25 @@ const countHeading = computed(() => {
 const errorDismissed = ref(false)
 const selectedDatasetRows = ref<Set<string>>(new Set())
 
+const collapsedPrimaryIds = ref<Set<string>>(new Set())
+
 watch(committedFilters, () => {
   selectedDatasetRows.value = new Set()
 })
+
+function isPanelExpanded(primaryDatasetId: string): boolean {
+  return !collapsedPrimaryIds.value.has(primaryDatasetId)
+}
+
+function togglePanel(primaryDatasetId: string) {
+  const next = new Set(collapsedPrimaryIds.value)
+  if (next.has(primaryDatasetId)) {
+    next.delete(primaryDatasetId)
+  } else {
+    next.add(primaryDatasetId)
+  }
+  collapsedPrimaryIds.value = next
+}
 
 const selectedCount = computed(() => selectedDatasetRows.value.size)
 const selectedIdsArray = computed(() => Array.from(selectedDatasetRows.value))
@@ -53,13 +74,38 @@ const isEmpty = computed(
     (data.value.responseSummary.numTotalResults === 0 || flatResults.value.length === 0),
 )
 
+function complements(result: BigPictureDatasetResult): RelatedDataset[] {
+  return result.relatedDatasets?.filter((rd) => rd.relationType === 'complementary') ?? []
+}
+
+// A complementary dataset may be linked to multiple primary datasets. This lookup ensures it is
+// removed from the selection only when none of its linked primary datasets remain selected.
+const complementOwners = computed(() => {
+  const owners = new Map<string, Set<string>>()
+  for (const primary of flatResults.value) {
+    for (const complement of complements(primary)) {
+      const set = owners.get(complement.datasetId) ?? new Set<string>()
+      set.add(primary.datasetId)
+      owners.set(complement.datasetId, set)
+    }
+  }
+  return owners
+})
+
 function truncate(text: string | null, max: number): string {
   if (!text) return ''
   return text.length > max ? text.slice(0, max) + '…' : text
 }
 
-function requestAccess(datasetId: string) {
-  window.open(buildRemsUrl(datasetId), '_blank', 'noopener,noreferrer')
+function requestAccess(result: BigPictureDatasetResult) {
+  const selectedComplementIds = complements(result)
+    .map((c) => c.datasetId)
+    .filter((id) => selectedDatasetRows.value.has(id))
+  window.open(
+    buildRemsUrl([result.datasetId, ...selectedComplementIds]),
+    '_blank',
+    'noopener,noreferrer',
+  )
 }
 
 function openBulkRems(ids: string[]) {
@@ -78,6 +124,32 @@ function toggleSelection(id: string) {
     next.add(id)
   }
   selectedDatasetRows.value = next
+}
+
+// Deselecting a primary drops its complements from the selection too, unless the same
+// complementary id is still owned by another primary that remains selected (see
+// complementOwners above).
+function togglePrimarySelection(result: BigPictureDatasetResult) {
+  const wasSelected = isSelected(result.datasetId)
+  toggleSelection(result.datasetId)
+  if (!wasSelected) return
+
+  const ownedComplementIds = complements(result).map((c) => c.datasetId)
+  if (ownedComplementIds.length === 0) return
+
+  const next = new Set(selectedDatasetRows.value)
+  for (const complementId of ownedComplementIds) {
+    const owners = complementOwners.value.get(complementId) ?? new Set<string>()
+    const stillOwned = Array.from(owners).some(
+      (ownerId) => ownerId !== result.datasetId && selectedDatasetRows.value.has(ownerId),
+    )
+    if (!stillOwned) next.delete(complementId)
+  }
+  selectedDatasetRows.value = next
+}
+
+function isPrimarySelected(primaryDatasetId: string): boolean {
+  return isSelected(primaryDatasetId)
 }
 
 const modalOpen = ref(false)
@@ -161,62 +233,177 @@ async function onModalClose(open: boolean) {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(result, index) in flatResults" :key="result.datasetId">
-                <td class="col-select">
-                  <input
-                    type="checkbox"
-                    :checked="isSelected(result.datasetId)"
-                    :id="`select-${result.datasetId}`"
-                    :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
-                    @change="toggleSelection(result.datasetId)"
-                  />
-                </td>
-                <td class="col-title">{{ result.datasetTitle ?? result.datasetId }}</td>
-                <td class="col-description">
-                  <span>{{ truncate(result.datasetDescription, 80) }}</span>
-                  <button
-                    v-if="result.datasetDescription && result.datasetDescription.length > 80"
-                    :ref="
-                      (el) => {
-                        if (el) triggerRefs[index] = el as HTMLButtonElement
-                      }
-                    "
-                    class="show-more-btn"
-                    :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
-                    @click="openModal(result, index)"
-                  >
-                    Show more
-                  </button>
-                </td>
-                <td class="col-more-details">
-                  <a
-                    v-if="result.datasetUrl"
-                    :href="result.datasetUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
-                  >
-                    View Details
-                  </a>
-                </td>
-                <td class="col-images" aria-label="Matching images">
-                  {{ result.matchingImageCount }} / {{ result.totalImageCount }}
-                </td>
-                <td class="col-action">
-                  <c-button
-                    ghost
-                    class="btn-access"
-                    :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
-                    @click="requestAccess(result.datasetId)"
-                  >
-                    Request access
-                  </c-button>
-                </td>
-              </tr>
+              <template v-for="(result, index) in flatResults" :key="result.datasetId">
+                <tr
+                  :class="{
+                    'primary-row--panel-open':
+                      committedIncludeComplementary &&
+                      complements(result).length > 0 &&
+                      isPanelExpanded(result.datasetId),
+                  }"
+                >
+                  <td class="col-select">
+                    <input
+                      type="checkbox"
+                      :checked="isSelected(result.datasetId)"
+                      :id="`select-${result.datasetId}`"
+                      :aria-label="`Select ${result.datasetTitle ?? result.datasetId}`"
+                      @change="togglePrimarySelection(result)"
+                    />
+                  </td>
+                  <td class="col-title">
+                    {{ result.datasetTitle ?? result.datasetId }}
+                    <button
+                      v-if="committedIncludeComplementary && complements(result).length > 0"
+                      type="button"
+                      class="complement-toggle"
+                      :aria-expanded="isPanelExpanded(result.datasetId)"
+                      :aria-controls="`complement-panel-${result.datasetId}`"
+                      @click="togglePanel(result.datasetId)"
+                    >
+                      <ChevronDown
+                        :size="14"
+                        class="complement-toggle-icon"
+                        :class="{
+                          'complement-toggle-icon--collapsed': !isPanelExpanded(result.datasetId),
+                        }"
+                        aria-hidden="true"
+                      />
+                      {{
+                        pluralize(
+                          complements(result).length,
+                          'complementary dataset',
+                          'complementary datasets',
+                        )
+                      }}
+                    </button>
+                  </td>
+                  <td class="col-description">
+                    <span>{{ truncate(result.datasetDescription, 80) }}</span>
+                    <button
+                      v-if="result.datasetDescription && result.datasetDescription.length > 80"
+                      :ref="
+                        (el) => {
+                          if (el) triggerRefs[index] = el as HTMLButtonElement
+                        }
+                      "
+                      class="show-more-btn"
+                      :aria-label="`Show full description for ${result.datasetTitle ?? result.datasetId}`"
+                      @click="openModal(result, index)"
+                    >
+                      Show more
+                    </button>
+                  </td>
+                  <td class="col-more-details">
+                    <a
+                      v-if="result.datasetUrl"
+                      :href="result.datasetUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      :aria-label="`View details for ${result.datasetTitle ?? result.datasetId} (opens in new tab)`"
+                    >
+                      View Details
+                    </a>
+                  </td>
+                  <td class="col-images" aria-label="Matching images">
+                    {{ result.matchingImageCount }} / {{ result.totalImageCount }}
+                  </td>
+                  <td class="col-action">
+                    <c-button
+                      ghost
+                      class="btn-access"
+                      :aria-label="`Request access for ${result.datasetTitle ?? result.datasetId}`"
+                      @click="requestAccess(result)"
+                    >
+                      Request access
+                    </c-button>
+                  </td>
+                </tr>
+                <tr
+                  v-if="
+                    committedIncludeComplementary &&
+                    complements(result).length > 0 &&
+                    isPanelExpanded(result.datasetId)
+                  "
+                  class="complement-panel-row"
+                >
+                  <td class="complement-panel-cell" colspan="6">
+                    <div :id="`complement-panel-${result.datasetId}`" class="complement-panel">
+                      <table class="complement-table">
+                        <caption class="sr-only">
+                          Complementary datasets for
+                          {{
+                            result.datasetTitle ?? result.datasetId
+                          }}
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col"><span class="sr-only">Select</span></th>
+                            <th scope="col">Complementary dataset</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Complementary content</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="complement in complements(result)"
+                            :key="`${result.datasetId}-${complement.datasetId}`"
+                            class="complement-row"
+                          >
+                            <td class="complement-col-select">
+                              <input
+                                type="checkbox"
+                                :checked="isSelected(complement.datasetId)"
+                                :disabled="!isPrimarySelected(result.datasetId)"
+                                :id="`select-${result.datasetId}-${complement.datasetId}`"
+                                :aria-label="`Select complementary dataset ${complement.datasetTitle ?? complement.datasetId}`"
+                                :aria-describedby="
+                                  !isPrimarySelected(result.datasetId)
+                                    ? 'complement-disabled-hint'
+                                    : undefined
+                                "
+                                @change="toggleSelection(complement.datasetId)"
+                              />
+                            </td>
+                            <td class="complement-col-title">
+                              <label :for="`select-${result.datasetId}-${complement.datasetId}`">
+                                {{ complement.datasetTitle ?? complement.datasetId }}
+                              </label>
+                            </td>
+                            <td class="complement-col-description">
+                              {{ truncate(complement.datasetDescription, 90) }}
+                            </td>
+                            <td class="complement-col-type">
+                              <template
+                                v-if="complementaryContentLabels(complement.resourceTypes).length"
+                              >
+                                <span
+                                  v-for="label in complementaryContentLabels(
+                                    complement.resourceTypes,
+                                  )"
+                                  :key="label"
+                                  class="resource-type-pill"
+                                >
+                                  {{ label }}
+                                </span>
+                              </template>
+                              <span v-else class="resource-type-pill resource-type-pill--empty">
+                                Not specified
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
       </div>
+
+      <span id="complement-disabled-hint" class="sr-only"> Select the primary dataset first </span>
 
       <DescriptionModal
         v-model="modalOpen"
@@ -358,7 +545,7 @@ async function onModalClose(open: boolean) {
   color: var(--color-text);
   font-size: 0.9375rem;
 
-  thead th {
+  > thead > tr > th {
     border-bottom: 2px solid var(--color-light-grey);
     padding: 0.75rem 1rem;
     color: var(--color-dark-blue);
@@ -367,8 +554,8 @@ async function onModalClose(open: boolean) {
     white-space: nowrap;
   }
 
-  tbody {
-    tr {
+  > tbody {
+    > tr {
       border-bottom: 1px solid var(--color-light-grey);
 
       &:last-child {
@@ -380,11 +567,19 @@ async function onModalClose(open: boolean) {
       }
     }
 
-    td {
+    > tr.primary-row--panel-open {
+      border-bottom: none;
+    }
+
+    > tr > td {
       vertical-align: top;
       padding: 0.875rem 1rem;
     }
   }
+}
+
+.results-table > tbody > tr.complement-panel-row:hover {
+  background-color: transparent;
 }
 
 .col-select {
@@ -398,6 +593,11 @@ async function onModalClose(open: boolean) {
       outline: 2px solid var(--color-pink);
       outline-offset: 2px;
     }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 }
 
@@ -405,6 +605,40 @@ async function onModalClose(open: boolean) {
   min-width: 10rem;
   color: var(--color-dark-blue);
   font-weight: var(--font-weight-subheading);
+}
+
+.complement-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  margin-top: 0.25rem;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-body);
+  font-size: 0.8125rem;
+  font-family: var(--font-family);
+
+  &:hover {
+    color: var(--color-dark-blue);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-pink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.complement-toggle-icon {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+
+  &--collapsed {
+    transform: rotate(-90deg);
+  }
 }
 
 .col-description {
@@ -419,6 +653,99 @@ async function onModalClose(open: boolean) {
 
 .col-action {
   white-space: nowrap;
+}
+
+.complement-panel-cell {
+  padding: 0 1rem 1rem !important;
+}
+
+.complement-panel {
+  border-radius: 0.5rem;
+  background-color: rgb(var(--color-scope-clinical-rgb) / 0.06);
+  overflow: hidden;
+}
+
+.complement-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+
+  thead th {
+    border-bottom: 1px solid rgb(var(--color-scope-clinical-rgb) / 0.12);
+    padding: 0.625rem 1rem;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    vertical-align: top;
+    padding: 0.625rem 1rem;
+  }
+
+  tbody tr:not(:last-child) td {
+    border-bottom: 1px solid rgb(var(--color-scope-clinical-rgb) / 0.12);
+  }
+}
+
+.complement-col-select {
+  width: 1px;
+
+  input[type='checkbox'] {
+    cursor: pointer;
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--color-dark-blue);
+
+    &:focus-visible {
+      outline: 2px solid var(--color-pink);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.complement-col-title {
+  min-width: 10rem;
+  color: var(--color-text);
+  font-weight: var(--font-weight-subheading);
+
+  label {
+    cursor: pointer;
+  }
+}
+
+.complement-col-description {
+  max-width: 24rem;
+  color: var(--color-text);
+}
+
+.complement-col-type {
+  white-space: nowrap;
+}
+
+.resource-type-pill {
+  display: inline-block;
+  margin: 0 0.25rem 0.25rem 0;
+  border-radius: 0.25rem;
+  background-color: var(--color-light-grey);
+  padding: 0.125rem 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.resource-type-pill--empty {
+  background-color: transparent;
+  padding-left: 0;
+  font-style: italic;
 }
 
 .show-more-btn {

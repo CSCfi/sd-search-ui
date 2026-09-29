@@ -218,3 +218,33 @@ describe('SearchForm — copy filter URL', () => {
     expect(url.searchParams.get('observation_type')).toBe('confirmed')
   })
 })
+
+describe('SearchForm — include complementary data toggle', () => {
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  it('defaults to unchecked (off)', () => {
+    const wrapper = mountForm()
+    const input = wrapper.find('#include-complementary-toggle')
+    expect((input.element as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('toggling updates the draft store value without affecting committed value', async () => {
+    const store = useSearchStore()
+    const wrapper = mountForm()
+
+    await wrapper.find('#include-complementary-toggle').setValue(true)
+
+    expect(store.includeComplementary).toBe(true)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+
+  it('is rendered regardless of the selected scope tab', () => {
+    const store = useSearchStore()
+    store.setDatasetType('non_clinical')
+    const wrapper = mountForm()
+    expect(wrapper.find('#include-complementary-toggle').exists()).toBe(true)
+  })
+})

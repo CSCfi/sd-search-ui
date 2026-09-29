@@ -44,6 +44,7 @@ export interface BeaconQueryRequest {
     filters: BeaconQueryFilter[]
     requestedGranularity: 'boolean' | 'count' | 'record'
     requestedScope?: string
+    includeComplementary?: boolean
   }
 }
 

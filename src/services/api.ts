@@ -41,12 +41,14 @@ export async function getSuggestions(
 export async function postQuery(
   filters: BeaconQueryFilter[],
   scope?: string,
+  includeComplementary?: boolean,
 ): Promise<BeaconResultSetsResponse> {
   const body: BeaconQueryRequest = {
     query: {
       filters,
       requestedGranularity: 'record',
       ...(scope ? { requestedScope: scope } : {}),
+      ...(includeComplementary ? { includeComplementary: true } : {}),
     },
   }
 

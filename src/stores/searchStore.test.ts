@@ -212,3 +212,52 @@ describe('searchStore — clearFilters', () => {
     expect(store.committedDatasetType).toBe('all')
   })
 })
+
+describe('searchStore — includeComplementary toggle', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('defaults both draft and committed toggle to false', () => {
+    const store = useSearchStore()
+    expect(store.includeComplementary).toBe(false)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+
+  it('setting the draft toggle alone does not change the committed value', () => {
+    const store = useSearchStore()
+    store.setIncludeComplementary(true)
+    expect(store.includeComplementary).toBe(true)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+
+  it('commit copies the draft toggle to the committed toggle', () => {
+    const store = useSearchStore()
+    store.setIncludeComplementary(true)
+    store.commit()
+    expect(store.committedIncludeComplementary).toBe(true)
+  })
+
+  it('clearFilters resets both toggle values to false', () => {
+    const store = useSearchStore()
+    store.setIncludeComplementary(true)
+    store.commit()
+    store.clearFilters()
+    expect(store.includeComplementary).toBe(false)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+
+  it('initFromUrl sets both toggle values when complementary is true', () => {
+    const store = useSearchStore()
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }], undefined, true)
+    expect(store.includeComplementary).toBe(true)
+    expect(store.committedIncludeComplementary).toBe(true)
+  })
+
+  it('initFromUrl leaves the toggle untouched when complementary is not given', () => {
+    const store = useSearchStore()
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }])
+    expect(store.includeComplementary).toBe(false)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+})
