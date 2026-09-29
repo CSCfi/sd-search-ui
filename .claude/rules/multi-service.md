@@ -76,6 +76,7 @@ Supported keys:
 | `hidden_description` | `string[]` | Field ids whose info tooltip is suppressed |
 | `hidden_scopes` | `string[]` | Scope ids removed from the UI — tab, fields, and (if only one scope remains) the "All data" tab. When all scopes are hidden, the entire tab group including the observation type selector is hidden. The search query automatically targets the single remaining visible scope |
 | `bordered` | `string[]` | Group and scope ids rendered with a bordered box |
+| `complementary` | `boolean` (optional, default off) | Enables the complementary data feature: the "Search also for complementary data" toggle in `SearchForm`, the `?complementary=true` URL param, and complementary rows in results. When off/omitted, the toggle is hidden and `searchStore` ignores both toggle and URL attempts to enable it, so `includeComplementary` is never sent to the API |
 
 **`hidden_scopes` and `isShared` interaction:** A field is considered "shared" (rendered above the tabs in the common grid) only when it exists in every scope the backend reports via `/filtering_scopes` — not just the subset visible after `hidden_scopes` filtering. This means hiding a scope never accidentally promotes scope-specific fields (e.g. `diagnosis`) into the shared grid.
 

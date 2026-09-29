@@ -65,6 +65,7 @@ async function copySearch() {
   const params = new URLSearchParams(
     store.draftFilters.map((f) => [f.id, Array.isArray(f.value) ? f.value.join(',') : f.value]),
   )
+  if (store.includeComplementary) params.set('complementary', 'true')
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   try {
     await navigator.clipboard.writeText(url)
@@ -110,7 +111,7 @@ async function copySearch() {
 
       <slot name="scope-section" />
 
-      <div class="complementary-card">
+      <div v-if="fieldsConfig.complementary === true" class="complementary-card">
         <ToggleSwitch
           input-id="include-complementary-toggle"
           :model-value="store.includeComplementary"
@@ -127,6 +128,7 @@ async function copySearch() {
         </div>
         <span
           class="complementary-status"
+          aria-hidden="true"
           :class="{ 'complementary-status--on': store.includeComplementary }"
         >
           {{ store.includeComplementary ? 'ON' : 'OFF' }}

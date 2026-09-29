@@ -2,8 +2,11 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { router } from '@service-router'
 import type { BeaconQueryFilter } from '@/types/beacon.ts'
+import { fieldsConfig } from '@/services/config'
 
 export type DatasetType = 'all' | 'clinical' | 'non_clinical'
+
+const isComplementaryEnabled = () => fieldsConfig.complementary === true
 
 export const useSearchStore = defineStore('search', () => {
   const draftFilters = ref<BeaconQueryFilter[]>([])
@@ -52,6 +55,7 @@ export const useSearchStore = defineStore('search', () => {
   }
 
   const setIncludeComplementary = (value: boolean) => {
+    if (value && !isComplementaryEnabled()) return
     includeComplementary.value = value
   }
 
@@ -107,7 +111,7 @@ export const useSearchStore = defineStore('search', () => {
       datasetType.value = scope
       committedDatasetType.value = scope
     }
-    if (complementary) {
+    if (complementary && isComplementaryEnabled()) {
       includeComplementary.value = true
       committedIncludeComplementary.value = true
     }

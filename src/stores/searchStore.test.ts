@@ -1,5 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { router } from '@service-router'
+import { fieldsConfig } from '@/services/config'
 import { useSearchStore } from './searchStore'
 
 describe('searchStore — setFilter', () => {
@@ -259,5 +261,50 @@ describe('searchStore — includeComplementary toggle', () => {
     store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }])
     expect(store.includeComplementary).toBe(false)
     expect(store.committedIncludeComplementary).toBe(false)
+  })
+})
+
+describe('searchStore — complementary disabled by service config', () => {
+  const original = fieldsConfig.complementary
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fieldsConfig.complementary = false
+  })
+
+  afterEach(() => {
+    fieldsConfig.complementary = original
+    vi.restoreAllMocks()
+  })
+
+  it('setIncludeComplementary(true) is a no-op', () => {
+    const store = useSearchStore()
+    store.setIncludeComplementary(true)
+    expect(store.includeComplementary).toBe(false)
+  })
+
+  it('initFromUrl ignores complementary=true', () => {
+    const store = useSearchStore()
+    store.initFromUrl([{ id: 'sex', value: 'Female', operator: '=' }], undefined, true)
+    expect(store.includeComplementary).toBe(false)
+    expect(store.committedIncludeComplementary).toBe(false)
+    expect(store.committedFilters).toHaveLength(1)
+  })
+
+  it('commit never enables the committed flag or writes complementary to the URL', () => {
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setIncludeComplementary(true)
+    store.commit()
+    expect(store.committedIncludeComplementary).toBe(false)
+    expect(replace).toHaveBeenCalledWith({ query: { sex: 'Female' } })
+  })
+
+  it('treats an omitted config key as disabled', () => {
+    fieldsConfig.complementary = undefined
+    const store = useSearchStore()
+    store.setIncludeComplementary(true)
+    expect(store.includeComplementary).toBe(false)
   })
 })
