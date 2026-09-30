@@ -12,6 +12,13 @@
   --color-stats-label: #8a86ab; /* deployment stats strip — label text */
   --color-stats-value: #4a4570; /* deployment stats strip — value text */
 
+  /* Announcement banner */
+  --color-announcement-bg: #2661db; /* info — brand bright blue, lighter than the navbar */
+  --color-announcement-text: #ffffff;
+  --color-announcement-link: #ffffff;
+  --color-announcement-warning-bg: #ff457d; /* warning — brand pink */
+  --color-announcement-warning-text: #1c1c1c;
+
   /* Dataset scope accents. Channel triples, not hex, so borders and translucent fills derive
      the alpha variants from one source: rgb(var(--color-scope-clinical-rgb) / 0.15).
      `-light` variants are the text-safe tints for use on the dark blue search panel. */
