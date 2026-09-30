@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import AppNavbar from '@/components/AppNavbar.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner.vue'
 </script>
 
 <template>
   <div class="app-layout">
+    <AnnouncementBanner />
     <AppNavbar />
     <div class="app-content">
       <RouterView />

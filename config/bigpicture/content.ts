@@ -3,6 +3,16 @@ import navLogoSrc from '@/assets/bigpicture/bg-logo.png'
 import type { ContentConfig } from '@/types/content'
 
 export const contentConfig = {
+  // Remove this block (or let `endsAt` pass) to hide the announcement banner.
+  // Change `id` to re-show it to users who dismissed it.
+  announcement: {
+    id: '2026-09-work-in-progress',
+    html: '<p>This service is still under development. Please use the <a href="https://datasets.bigpicture.eu">https://datasets.bigpicture.eu</a> as the main source of information.</p>',
+    variant: 'info',
+    dismissible: true,
+    startsAt: null,
+    endsAt: null,
+  },
   navLogo: {
     src: navLogoSrc,
     alt: 'Bigpicture Discovery',
