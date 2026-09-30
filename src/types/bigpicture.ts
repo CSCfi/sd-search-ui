@@ -33,6 +33,16 @@ export type DatasetOnDemandResult =
   | ({ status: 'success' } & DatasetOnDemandCreated)
   | { status: 'processing'; onDemandDatasetAccession: string }
 
+// Complementary datasets
+export interface RelatedDataset {
+  datasetId: string
+  datasetTitle: string | null
+  datasetDescription: string | null
+  datasetUrl: string | null
+  relationType: string
+  resourceTypes: string[]
+}
+
 export interface BigPictureDatasetResult {
   datasetId: string
   datasetTitle: string | null
@@ -41,4 +51,5 @@ export interface BigPictureDatasetResult {
   totalImageCount: number
   matchingImageCount: number
   imageIds: string[]
+  relatedDatasets?: RelatedDataset[]
 }

@@ -6,6 +6,7 @@ import { defineComponent, ref } from 'vue'
 import { useSearchStore } from '@/stores/searchStore'
 import type { BeaconFilteringScope, BeaconFilteringTerm } from '@/types/beacon'
 import type { ResolvedGroup } from '@/types/config'
+import type { FieldsConfig } from '@/services/config'
 
 const TERMS: BeaconFilteringTerm[] = [
   {
@@ -94,14 +95,19 @@ vi.mock('@/composables/query/useFilteringScopes', () => ({
   }),
 }))
 
-vi.mock('@/services/config', () => ({
-  fieldsConfig: {
+const mockFieldsConfig = vi.hoisted(
+  (): FieldsConfig => ({
     header: [],
     hidden: [],
     hidden_description: [],
     bordered: ['staining', 'clinical', 'non_clinical'],
     hidden_scopes: [],
-  },
+    complementary: true,
+  }),
+)
+
+vi.mock('@/services/config', () => ({
+  fieldsConfig: mockFieldsConfig,
 }))
 
 const DynamicFieldStub = defineComponent({
@@ -216,5 +222,81 @@ describe('SearchForm — copy filter URL', () => {
     const url = new URL(writeText.mock.calls[0]?.[0] as string)
     expect(url.searchParams.get('diagnosis')).toBe('64033007')
     expect(url.searchParams.get('observation_type')).toBe('confirmed')
+  })
+
+  it('includes complementary=true when the toggle is on', async () => {
+    mockFieldsConfig.complementary = true
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['64033007'])
+    store.setIncludeComplementary(true)
+
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    const wrapper = mountForm()
+    await wrapper.find('.btn-copy').trigger('click')
+    await flushPromises()
+
+    const url = new URL(writeText.mock.calls[0]?.[0] as string)
+    expect(url.searchParams.get('complementary')).toBe('true')
+  })
+
+  it('omits complementary when the toggle is off', async () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['64033007'])
+
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    const wrapper = mountForm()
+    await wrapper.find('.btn-copy').trigger('click')
+    await flushPromises()
+
+    const url = new URL(writeText.mock.calls[0]?.[0] as string)
+    expect(url.searchParams.has('complementary')).toBe(false)
+  })
+})
+
+describe('SearchForm — include complementary data toggle', () => {
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    mockFieldsConfig.complementary = true
+  })
+
+  it('defaults to unchecked (off)', () => {
+    const wrapper = mountForm()
+    const input = wrapper.find('#include-complementary-toggle')
+    expect((input.element as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('toggling updates the draft store value without affecting committed value', async () => {
+    const store = useSearchStore()
+    const wrapper = mountForm()
+
+    await wrapper.find('#include-complementary-toggle').setValue(true)
+
+    expect(store.includeComplementary).toBe(true)
+    expect(store.committedIncludeComplementary).toBe(false)
+  })
+
+  it('is rendered regardless of the selected scope tab', () => {
+    const store = useSearchStore()
+    store.setDatasetType('non_clinical')
+    const wrapper = mountForm()
+    expect(wrapper.find('#include-complementary-toggle').exists()).toBe(true)
+  })
+
+  it('is not rendered when the service disables complementary', () => {
+    mockFieldsConfig.complementary = false
+    const wrapper = mountForm()
+    expect(wrapper.find('.complementary-card').exists()).toBe(false)
+    expect(wrapper.find('#include-complementary-toggle').exists()).toBe(false)
+  })
+
+  it('is not rendered when the service config omits complementary', () => {
+    mockFieldsConfig.complementary = undefined
+    const wrapper = mountForm()
+    expect(wrapper.find('#include-complementary-toggle').exists()).toBe(false)
   })
 })

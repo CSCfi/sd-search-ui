@@ -48,6 +48,16 @@ describe('postQuery — requestedScope', () => {
     expect(sentBody().query).not.toHaveProperty('requestedScope')
   })
 
+  it('omits includeComplementary unless explicitly enabled', async () => {
+    await postQuery([{ id: 'sex', value: 'Female', operator: '=' }], 'clinical')
+    expect(sentBody().query).not.toHaveProperty('includeComplementary')
+  })
+
+  it('sends includeComplementary only when explicitly enabled', async () => {
+    await postQuery([{ id: 'sex', value: 'Female', operator: '=' }], 'clinical', true)
+    expect(sentBody().query.includeComplementary).toBe(true)
+  })
+
   it('sends the scope id verbatim when one is given', async () => {
     await postQuery([{ id: 'finding', value: ['12710003'], operator: '=' }], 'non_clinical')
     expect(sentBody().query.requestedScope).toBe('non_clinical')

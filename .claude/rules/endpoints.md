@@ -117,11 +117,12 @@ Response: same shape as `/values`. First call may be slow (Snowstorm cold cache)
         ],
         requestedGranularity: "record" | "count",
         requestedScope?: string,            // "clinical" | "non_clinical" — omit for all data
+        includeComplementary?: true,        // send only when complementary data is requested
     }
 }
 ```
 
-Filter logic: different fields → AND, multiple values on same field → OR. `includeDescendantTerms` is not sent — backend auto-expands SNOMED descendants. `iso8601Range` value format: `"P40Y-P50Y"`.
+Filter logic: different fields → AND, multiple values on same field → OR. `includeDescendantTerms` is not sent — backend auto-expands SNOMED descendants. `iso8601Range` value format: `"P40Y-P50Y"`. `includeComplementary` is omitted unless the user enables the complementary-data filter.
 
 There are two API functions for the two search paths — `postQuery` (calls `/datasets`, clinical, record granularity) and `postNonClinicalQuery` (calls `/images`, always count granularity, always `non_clinical` scope).
 
@@ -153,6 +154,16 @@ There are two API functions for the two search paths — `postQuery` (calls `/da
                         totalImageCount: number
                         matchingImageCount: number
                         imageIds: string[]
+                        relatedDatasets?: [
+                            {
+                                datasetId: string
+                                datasetTitle: string | null
+                                datasetDescription: string | null
+                                datasetUrl: string | null
+                                relationType: string
+                                resourceTypes: string[]
+                            }
+                        ]
                     }
                 ]
             }
@@ -162,6 +173,27 @@ There are two API functions for the two search paths — `postQuery` (calls `/da
 ```
 
 `accessionId` is not yet in the backend response — `datasetId` is used as REMS resource fallback.
+
+### Complementary datasets (clinical, `relatedDatasets`)
+
+- The "Include complementary data" toggle (`committedIncludeComplementary`, `searchStore.ts`) is a
+  committed search filter. When enabled, `useClinicalSearch.ts` includes `includeComplementary: true`
+  in the `/datasets` request; otherwise the property is omitted.
+- `ResultsTable.vue` renders, under each primary row, only the entries with
+  `relationType === "complementary"`. Other relation types are ignored today.
+- A complementary row's checkbox is disabled until its primary row is checked. Deselecting a primary
+  removes its complements from the selection unless another still-selected primary also owns the same
+  complementary `datasetId`.
+- Per-row "Request access" opens REMS for the primary plus any of its complements the user has
+  selected. Bulk "Apply for access" opens REMS for every selected id (primaries and complements),
+  deduplicated via the existing `Set`-based selection.
+- `responseSummary.numTotalResults` and the clinical count heading only ever count primaries.
+- **Complementary content column:** `resourceTypes` is a generic `string[]` at the API boundary.
+  The current UI recognizes `"image"`, `"observation"`, and `"annotation"`.
+  `src/utils/complementaryContent.ts` maps them to display labels `Images`/`Observations`/`Annotations`
+  in a fixed order, de-duplicated; unrecognized values are dropped (never shown raw) and an empty
+  result renders `Not specified`. The table column heading reads "Complementary content".
+
 
 ## POST /images — Response (count granularity)
 

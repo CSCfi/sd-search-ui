@@ -24,7 +24,7 @@ const parsed: BeaconQueryFilter[] = []
 
 for (const [id, raw] of entries) {
   if (typeof raw !== 'string' || raw === '') continue
-  if (id === 'tab') continue
+  if (id === 'tab' || id === 'complementary') continue
   parsed.push({
     id,
     value: parseFilterValue(raw),
@@ -35,12 +35,14 @@ for (const [id, raw] of entries) {
 // Unvalidated external string — an id that matches no backend scope is reset to 'all' by
 // SearchForm once /filtering_scopes resolves.
 const tabParam = typeof route.query.tab === 'string' ? (route.query.tab as DatasetType) : undefined
+const complementaryParam = route.query.complementary === 'true'
 
 if (parsed.length > 0) {
-  store.initFromUrl(parsed, tabParam)
+  store.initFromUrl(parsed, tabParam, complementaryParam)
   resolveLabelsFromUrl(parsed)
-} else if (tabParam) {
-  store.setDatasetType(tabParam)
+} else {
+  if (tabParam) store.setDatasetType(tabParam)
+  if (complementaryParam) store.setIncludeComplementary(true)
 }
 </script>
 

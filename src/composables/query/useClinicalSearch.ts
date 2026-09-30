@@ -7,11 +7,13 @@ import { storeToRefs } from 'pinia'
 
 export function useClinicalSearch() {
   const store = useSearchStore()
-  const { committedFilters, committedDatasetType } = storeToRefs(store)
+  const { committedFilters, committedDatasetType, committedIncludeComplementary } =
+    storeToRefs(store)
 
   return useQuery<BeaconResultSetsResponse>({
-    queryKey: ['search', 'clinical', committedFilters],
-    queryFn: () => postQuery(committedFilters.value, 'clinical'),
+    queryKey: ['search', 'clinical', committedFilters, committedIncludeComplementary],
+    queryFn: () =>
+      postQuery(committedFilters.value, 'clinical', committedIncludeComplementary.value),
     enabled: computed(
       () =>
         store.hasCommittedFilters &&

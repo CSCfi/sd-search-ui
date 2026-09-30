@@ -3,6 +3,11 @@
 header:
   - observation_type
 
+# Enables the complementary data feature (the "Search also for complementary data"
+# toggle, the `complementary` URL param, and complementary rows in the results).
+# Omitted or false = feature off for this service.
+complementary: false
+
 # Field ids to hide in the search UI.
 # All fields returned by /filtering_terms are shown by default.
 # Add a field id here to hide it. If all fields in a group are hidden,

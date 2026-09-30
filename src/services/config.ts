@@ -9,6 +9,7 @@ export interface FieldsConfig {
   bordered: string[]
   hidden_scopes: string[]
   show_concept_id?: string[]
+  complementary?: boolean
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig
