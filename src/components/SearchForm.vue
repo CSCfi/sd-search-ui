@@ -65,6 +65,7 @@ async function copySearch() {
   const params = new URLSearchParams(
     store.draftFilters.map((f) => [f.id, Array.isArray(f.value) ? f.value.join(',') : f.value]),
   )
+  if (store.datasetType !== 'all') params.set('tab', store.datasetType)
   if (store.includeComplementary) params.set('complementary', 'true')
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   try {
