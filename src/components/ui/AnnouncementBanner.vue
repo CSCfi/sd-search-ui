@@ -55,8 +55,7 @@ function dismiss() {
     v-if="visible && announcement"
     class="announcement"
     :class="`announcement--${variant}`"
-    role="region"
-    aria-label="Announcement"
+    :role="variant === 'warning' ? 'status' : undefined"
   >
     <!-- eslint-disable-next-line vue/no-v-html -->
     <div class="announcement-message" v-html="announcement.html"></div>
@@ -67,7 +66,7 @@ function dismiss() {
       aria-label="Dismiss announcement"
       @click="dismiss"
     >
-      ✕
+      <span aria-hidden="true">✕</span>
     </button>
   </div>
 </template>
