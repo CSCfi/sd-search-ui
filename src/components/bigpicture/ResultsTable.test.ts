@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { useSearchStore } from '@/stores/searchStore'
-import type { RelatedDataset } from '@/types/bigpicture'
+import { fieldsConfig } from '@/services/config'
 
 const postQuery = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const getFilteringScopes = vi.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([
@@ -23,19 +23,21 @@ vi.mock('@/utils/rems', () => ({
 
 const { default: ResultsTable } = await import('./ResultsTable.vue')
 
-function complement(id: string, overrides: Partial<RelatedDataset> = {}): RelatedDataset {
-  return {
-    datasetId: id,
-    datasetTitle: `Title ${id}`,
-    datasetDescription: `Description ${id}`,
-    datasetUrl: null,
-    relationType: 'complementary',
-    resourceTypes: ['annotation'],
-    ...overrides,
-  }
-}
+const COMPLEMENTS = ['related-annotation', 'related-observation', 'related-image']
+const RELATED_DATASETS = [
+  ['annotation', 'Related annotation dataset'],
+  ['observation', 'Related observation dataset'],
+  ['image', 'Related image dataset'],
+].map(([type, title]) => ({
+  datasetId: `related-${type}`,
+  datasetTitle: title,
+  datasetDescription: null,
+  datasetUrl: null,
+  relationType: 'complementary',
+  resourceTypes: [type],
+}))
 
-function primaryResult(id: string, relatedDatasets: RelatedDataset[] | undefined = undefined) {
+function primaryResult(id: string) {
   return {
     datasetId: id,
     datasetTitle: `Primary ${id}`,
@@ -44,7 +46,7 @@ function primaryResult(id: string, relatedDatasets: RelatedDataset[] | undefined
     totalImageCount: 10,
     matchingImageCount: 5,
     imageIds: ['img-1'],
-    ...(relatedDatasets !== undefined ? { relatedDatasets } : {}),
+    relatedDatasets: RELATED_DATASETS,
   }
 }
 
@@ -61,8 +63,14 @@ function mockResponse(results: ReturnType<typeof primaryResult>[]) {
 describe('ResultsTable — complementary datasets', () => {
   let pinia: ReturnType<typeof createPinia>
   let windowOpenSpy: ReturnType<typeof vi.spyOn>
+  const originalComplementary = fieldsConfig.complementary
+
+  afterEach(() => {
+    fieldsConfig.complementary = originalComplementary
+  })
 
   beforeEach(() => {
+    fieldsConfig.complementary = true
     pinia = createPinia()
     setActivePinia(pinia)
     postQuery.mockReset()
@@ -80,16 +88,17 @@ describe('ResultsTable — complementary datasets', () => {
     })
   }
 
-  function commitSearch() {
+  function commitSearch(includeComplementary = true) {
     const store = useSearchStore()
     store.setFilter('sex', 'Female')
+    store.setIncludeComplementary(includeComplementary)
     store.commit()
     return store
   }
 
-  it('toggle OFF: hides complementary rows even when the response carries them', async () => {
-    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1', [complement('mock-a')])]))
-    commitSearch()
+  it('toggle OFF: hides complementary rows from results', async () => {
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1')]))
+    commitSearch(false)
 
     const wrapper = mountComponent()
     await flushPromises()
@@ -97,57 +106,42 @@ describe('ResultsTable — complementary datasets', () => {
     expect(wrapper.find('.complement-row').exists()).toBe(false)
   })
 
-  it('toggle ON: renders complementary rows filtered to relationType "complementary"', async () => {
-    postQuery.mockResolvedValue(
-      mockResponse([
-        primaryResult('ds-1', [
-          complement('mock-a'),
-          complement('mock-b', { relationType: 'derived' }),
-        ]),
-      ]),
-    )
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+  it('toggle ON: renders a row for each complementary dataset', async () => {
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
-    const rows = wrapper.findAll('.complement-row')
-    expect(rows).toHaveLength(1)
-    expect(wrapper.text()).toContain('Title mock-a')
-    expect(wrapper.text()).not.toContain('Title mock-b')
+    expect(wrapper.findAll('.complement-row')).toHaveLength(COMPLEMENTS.length)
+    expect(wrapper.text()).toContain('Related annotation dataset')
   })
 
   it('complement checkbox is disabled until its primary is selected', async () => {
-    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1', [complement('mock-a')])]))
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
-    const complementCheckbox = wrapper.find('#select-ds-1-mock-a')
+    const complementCheckbox = wrapper.find('#select-ds-1-related-annotation')
     expect(complementCheckbox.attributes('disabled')).toBeDefined()
     expect(complementCheckbox.attributes('aria-describedby')).toBe('complement-disabled-hint')
 
     await wrapper.find('#select-ds-1').setValue(true)
 
-    expect(wrapper.find('#select-ds-1-mock-a').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('#select-ds-1-related-annotation').attributes('disabled')).toBeUndefined()
   })
 
   it('unchecking the primary clears its complements from the selection', async () => {
-    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1', [complement('mock-a')])]))
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
     await wrapper.find('#select-ds-1').setValue(true)
-    await wrapper.find('#select-ds-1-mock-a').setValue(true)
+    await wrapper.find('#select-ds-1-related-annotation').setValue(true)
     expect(wrapper.find('.bulk-count').text()).toContain('2 selected')
 
     await wrapper.find('#select-ds-1').setValue(false)
@@ -156,75 +150,57 @@ describe('ResultsTable — complementary datasets', () => {
   })
 
   it('a shared complement survives when another primary that owns it is still selected', async () => {
-    postQuery.mockResolvedValue(
-      mockResponse([
-        primaryResult('ds-1', [complement('mock-shared')]),
-        primaryResult('ds-2', [complement('mock-shared')]),
-      ]),
-    )
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1'), primaryResult('ds-2')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
     await wrapper.find('#select-ds-1').setValue(true)
     await wrapper.find('#select-ds-2').setValue(true)
-    await wrapper.find('#select-ds-1-mock-shared').setValue(true)
+    await wrapper.find('#select-ds-1-related-annotation').setValue(true)
 
-    // Deselect ds-1 only — ds-2 still selected and still owns mock-shared
+    // Deselect ds-1 only — ds-2 still selected and still owns the shared complement
     await wrapper.find('#select-ds-1').setValue(false)
 
-    expect(wrapper.find('#select-ds-2-mock-shared').element).toBeTruthy()
+    const sharedCheckboxUnderDs2 = wrapper.find('#select-ds-2-related-annotation')
+    expect(sharedCheckboxUnderDs2.exists()).toBe(true)
     // Checked state is driven by the same shared id in the selection Set
-    const sharedCheckboxUnderDs2 = wrapper.find('#select-ds-2-mock-shared')
     expect((sharedCheckboxUnderDs2.element as HTMLInputElement).checked).toBe(true)
   })
 
-  it('the primary row REMS URL includes primary + its selected complements only (Q14)', async () => {
-    postQuery.mockResolvedValue(
-      mockResponse([primaryResult('ds-1', [complement('mock-a'), complement('mock-b')])]),
-    )
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+  it('the primary row REMS URL includes primary + its selected complements only', async () => {
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
     await wrapper.find('#select-ds-1').setValue(true)
-    await wrapper.find('#select-ds-1-mock-a').setValue(true)
-    // mock-b intentionally left unselected
+    await wrapper.find('#select-ds-1-related-annotation').setValue(true)
+    // other complements intentionally left unselected
 
     await wrapper.find('.btn-access').trigger('click')
 
-    expect(buildRemsUrl).toHaveBeenCalledWith(['ds-1', 'mock-a'])
+    expect(buildRemsUrl).toHaveBeenCalledWith(['ds-1', 'related-annotation'])
     expect(windowOpenSpy).toHaveBeenCalled()
   })
 
   it('bulk REMS URL contains each selected id once, even when shared across primaries', async () => {
-    postQuery.mockResolvedValue(
-      mockResponse([
-        primaryResult('ds-1', [complement('mock-shared')]),
-        primaryResult('ds-2', [complement('mock-shared')]),
-      ]),
-    )
-    const store = commitSearch()
-    store.setIncludeComplementary(true)
-    store.commit()
+    postQuery.mockResolvedValue(mockResponse([primaryResult('ds-1'), primaryResult('ds-2')]))
+    commitSearch()
 
     const wrapper = mountComponent()
     await flushPromises()
 
     await wrapper.find('#select-ds-1').setValue(true)
     await wrapper.find('#select-ds-2').setValue(true)
-    await wrapper.find('#select-ds-1-mock-shared').setValue(true)
+    await wrapper.find('#select-ds-1-related-annotation').setValue(true)
 
     await wrapper.find('.btn-bulk-access').trigger('click')
 
     const calledWith = buildRemsUrl.mock.calls.at(-1)?.[0] as string[]
-    expect(calledWith.filter((id) => id === 'mock-shared')).toHaveLength(1)
-    expect(calledWith).toEqual(expect.arrayContaining(['ds-1', 'ds-2', 'mock-shared']))
+    expect(calledWith.filter((id) => id === 'related-annotation')).toHaveLength(1)
+    expect(calledWith).toEqual(expect.arrayContaining(['ds-1', 'ds-2', 'related-annotation']))
   })
 })

@@ -216,8 +216,15 @@ describe('searchStore — clearFilters', () => {
 })
 
 describe('searchStore — includeComplementary toggle', () => {
+  const original = fieldsConfig.complementary
+
   beforeEach(() => {
     setActivePinia(createPinia())
+    fieldsConfig.complementary = true
+  })
+
+  afterEach(() => {
+    fieldsConfig.complementary = original
   })
 
   it('defaults both draft and committed toggle to false', () => {

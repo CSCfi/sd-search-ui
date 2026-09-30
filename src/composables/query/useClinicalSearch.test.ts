@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import { useSearchStore } from '@/stores/searchStore'
+import { fieldsConfig } from '@/services/config'
 
 const postQuery = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 
@@ -30,8 +31,14 @@ const DataHost = defineComponent({
 
 describe('useClinicalSearch', () => {
   let pinia: ReturnType<typeof createPinia>
+  const originalComplementary = fieldsConfig.complementary
+
+  afterEach(() => {
+    fieldsConfig.complementary = originalComplementary
+  })
 
   beforeEach(() => {
+    fieldsConfig.complementary = true
     pinia = createPinia()
     setActivePinia(pinia)
     postQuery.mockReset()
@@ -136,7 +143,7 @@ describe('useClinicalSearch', () => {
     expect(postQuery).toHaveBeenCalledWith(store.committedFilters, 'clinical', true)
   })
 
-  it('provides complementary datasets when the toggle is committed', async () => {
+  it('passes through API related datasets when the toggle is committed', async () => {
     postQuery.mockResolvedValue({
       meta: { apiVersion: 'v2.0', beaconId: 'test', returnedGranularity: 'record' },
       responseSummary: { exists: true, numTotalResults: 1 },
@@ -183,9 +190,7 @@ describe('useClinicalSearch', () => {
       relatedDatasets?: { datasetId: string }[]
     }
     expect(result.relatedDatasets?.map((dataset) => dataset.datasetId)).toEqual([
-      'mock-related-annotation',
-      'mock-related-observation',
-      'mock-related-image',
+      'api-related-dataset',
     ])
   })
 
