@@ -226,9 +226,11 @@ The app is served at `http://localhost:8081`.
 
 | Variable | Required | Description |
 |---|---:|---|
-| `BACKEND_URL` | yes | Base URL the nginx proxy forwards `/api/`, `/login`, `/callback`, `/logout` to |
+| `BACKEND_URL` | yes | Base URL the nginx proxy forwards `/api/`, `/login`, `/callback`, `/logout` to. Must be `http(s)://host[:port]` — no path, no trailing slash |
 
-If `BACKEND_URL` is missing, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
+If `BACKEND_URL` is missing or not in that format, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
+
+Only the `/api/` routes the frontend uses are proxied (`filtering_terms`, `filtering_scopes`, `datasets`, `images`, `status`); every other `/api/*` path returns 404 from nginx. See `docker/nginx.conf`.
 
 Example:
 
