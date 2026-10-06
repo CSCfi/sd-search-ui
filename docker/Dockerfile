@@ -1,7 +1,8 @@
 FROM node:26-alpine AS build
 
 ENV CI=true
-RUN npm install -g pnpm
+# Keep in sync with "packageManager" in package.json.
+RUN npm install -g pnpm@11.9.0
 
 WORKDIR /app
 
@@ -35,6 +36,8 @@ RUN apk add --no-cache gettext && \
 # The official nginx entrypoint renders /etc/nginx/templates/*.template
 # with envsubst before nginx starts.
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
+# Plain include, no env substitution — kept outside templates/.
+COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker/docker-entrypoint-validate.sh /usr/local/bin/docker-entrypoint-validate.sh
 

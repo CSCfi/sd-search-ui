@@ -11,6 +11,12 @@ Always `/api` on this app's own origin — fixed, not configurable. nginx (`dock
 proxies it to the real backend (`BACKEND_URL`) server-side. See `auth.md` for why this must stay
 same-origin rather than pointing at the backend's own hostname directly.
 
+The proxy is an **allowlist**: only `filtering_terms`, `filtering_scopes`, `datasets`, `images`
+and `status` are forwarded; every other `/api/*` path returns 404 from nginx. A new endpoint
+called by the frontend must also be added to the regex location in `docker/nginx.conf`, or it
+404s in the container build (the Vite dev proxy is not restricted). `BACKEND_URL` must be
+scheme + host (+ port) only, with no path or trailing slash, or nginx refuses to start.
+
 Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxied through this app.
 
 ## Endpoints
@@ -24,7 +30,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
 | GET | `/status` | Deployment/indexing status — document counts per scope | `staleTime: 5min`, `refetchInterval: 5min` |
-| GET | `/health` | Health check | — |
+| GET | `/health` | Health check — backend only, not reachable through the nginx proxy | — |
 
 ## Filter Field Types → UI Components
 

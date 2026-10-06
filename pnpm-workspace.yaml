@@ -2,3 +2,9 @@ allowBuilds:
   '@parcel/watcher': false
   simple-git-hooks: true
   vue-demi: false
+
+auditConfig:
+  ignoreGhsas:
+    # swiper via @cscfi/csc-ui — bundled in csc-ui dist, c-swiper unused.
+    # Remove when csc-ui ships swiper >=12.1.2.
+    - GHSA-hmx5-qpq5-p643
