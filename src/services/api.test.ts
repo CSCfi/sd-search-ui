@@ -15,12 +15,13 @@ vi.mock('axios', async (importOriginal) => {
   }
 })
 
-const post = vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>()
+const post =
+  vi.fn<(url: string, body: unknown, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
 const get = vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
 
 vi.mock('./apiClient', () => ({
   default: {
-    post: (url: string, body: BeaconQueryRequest) => post(url, body),
+    post: (url: string, body: unknown, config?: AxiosRequestConfig) => post(url, body, config),
     get: (url: string, config?: AxiosRequestConfig) => get(url, config),
   },
 }))
@@ -29,6 +30,7 @@ const {
   postQuery,
   postNonClinicalQuery,
   getNonClinicalImageIds,
+  interpretFilters,
   submitDatasetOnDemand,
   pollDatasetOnDemandStatus,
 } = await import('./api')
@@ -118,6 +120,32 @@ describe('getNonClinicalImageIds', () => {
     })
     const ids = await getNonClinicalImageIds([{ id: 'sex', value: 'Female', operator: '=' }])
     expect(ids).toEqual([])
+  })
+})
+
+describe('interpretFilters', () => {
+  beforeEach(() => {
+    post.mockReset()
+    post.mockResolvedValue({ data: { interpretation: 'Male', filters: [] } })
+  })
+
+  it('posts only the query text to /ai/filters, without requestedScope', async () => {
+    await interpretFilters('male', new AbortController().signal)
+    expect(post.mock.calls[0]?.[0]).toBe('/ai/filters')
+    expect(post.mock.calls[0]?.[1]).toEqual({ query: 'male' })
+  })
+
+  it('passes the abort signal and a 75 second timeout', async () => {
+    const { signal } = new AbortController()
+    await interpretFilters('male', signal)
+    expect(post.mock.calls[0]?.[2]).toEqual({ signal, timeout: 75_000 })
+  })
+
+  it('returns the response body', async () => {
+    await expect(interpretFilters('male', new AbortController().signal)).resolves.toEqual({
+      interpretation: 'Male',
+      filters: [],
+    })
   })
 })
 

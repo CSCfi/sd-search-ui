@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type {
+  AIInterpretation,
   BeaconCountResponse,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
@@ -132,6 +133,23 @@ export async function pollDatasetOnDemandStatus(accession: string): Promise<DodP
     withCredentials: false,
   })
   return res.data.status as DodPollingStatus
+}
+
+// The backend sets no run timeout for the LLM agent, so the client enforces one.
+const AI_FILTERS_TIMEOUT_MS = 75_000
+
+// Stateless: the backend receives only the text. `requestedScope` is deliberately not sent,
+// so the model sees every field and the caller derives the tab from the fields it returns.
+export async function interpretFilters(
+  query: string,
+  signal: AbortSignal,
+): Promise<AIInterpretation> {
+  const res = await apiClient.post<AIInterpretation>(
+    '/ai/filters',
+    { query },
+    { signal, timeout: AI_FILTERS_TIMEOUT_MS },
+  )
+  return res.data
 }
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {

@@ -96,6 +96,7 @@ async function copySearch() {
     </p>
 
     <form v-else-if="filteringTerms && filteringScopes" class="form-content" @submit.prevent>
+      <slot name="ai-input" />
       <!-- eslint-disable-next-line vue/no-v-html -->
       <p class="filter-hint" v-html="search.filterHintHtml" />
       <div v-for="group in sharedGroups" :key="group.id" class="group" :class="groupClass(group)">

@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import DeploymentStatusBar from '@/components/ui/DeploymentStatusBar.vue'
 import SearchForm from '@/components/SearchForm.vue'
+import AiSearchInput from '@/components/AiSearchInput.vue'
 import ScopeSection from '@/components/filters/ScopeSection.vue'
 import ResultsBanner from '@/components/ResultsBanner.vue'
 import ResultsTable from '@/components/bigpicture/ResultsTable.vue'
@@ -9,6 +10,7 @@ import NonClinicalResults from '@/components/bigpicture/NonClinicalResults.vue'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
 import { useResolveUrlLabels } from '@/composables/query/useResolveUrlLabels'
 import type { BeaconQueryFilter } from '@/types/beacon'
+import { fieldsConfig } from '@/services/config'
 
 const route = useRoute()
 const store = useSearchStore()
@@ -54,6 +56,9 @@ if (parsed.length > 0) {
         <h1 class="title">Discover digital pathology sets</h1>
         <div class="filters-wrapper">
           <SearchForm>
+            <template v-if="fieldsConfig.ai_search === true" #ai-input>
+              <AiSearchInput />
+            </template>
             <template #scope-section>
               <ScopeSection />
             </template>

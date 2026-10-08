@@ -54,4 +54,22 @@ export const contentConfig = {
     filterHintHtml:
       'The fields display available values and the number of matching images. Selecting multiple values within the same field uses OR logic, while selections across different fields use AND logic. For more information, click the <strong>?</strong> Help icon in the top-right corner.',
   },
+  aiSearch: {
+    label: 'Describe your search',
+    marker: 'AI-assisted',
+    placeholder: 'e.g. Images of lung tissue from men aged 18 to 30',
+    helper: 'The text is interpreted by AI. Check the filters below.',
+    divider: 'or set filters manually',
+    applyLabel: 'Apply',
+    cancelLabel: 'Cancel',
+    dismissLabel: 'Dismiss message',
+    loading: 'Interpreting your search…',
+    switchedNote: 'Switched to {tab}.',
+    removedNote: 'Removed filters that are not available there: {fields}.',
+    notUnderstood:
+      'Could not turn this into filters. Try naming a field, for example sex, age or anatomical site.',
+    mixedScope:
+      'Your search mixes clinical-only and non-clinical-only filters. Search one dataset type at a time.',
+    error: 'The search could not be interpreted right now. Try again or set filters manually.',
+  },
 } satisfies ContentConfig

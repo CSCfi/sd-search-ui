@@ -38,4 +38,21 @@ export interface ContentConfig {
   search: {
     filterHintHtml: string
   }
+  /** Plain text only. `{tab}` and `{fields}` are replaced in the two note strings. */
+  aiSearch: {
+    label: string
+    marker: string
+    placeholder: string
+    helper: string
+    divider: string
+    applyLabel: string
+    cancelLabel: string
+    dismissLabel: string
+    loading: string
+    switchedNote: string
+    removedNote: string
+    notUnderstood: string
+    mixedScope: string
+    error: string
+  }
 }
