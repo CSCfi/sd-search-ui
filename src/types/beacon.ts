@@ -62,6 +62,8 @@ export interface AIFilter {
 
 export interface AIInterpretation {
   interpretation: string
+  // false: the text cannot be expressed as filters; `filters` are then the current ones unchanged.
+  answerable: boolean
   filters: AIFilter[]
 }
 

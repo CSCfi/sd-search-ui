@@ -96,13 +96,38 @@ describe('toStoreFilter', () => {
     )
   })
 
-  it('keeps a text value and rejects a list for a text field', () => {
+  it('gives the same text filter for a string and a one-item list', () => {
+    const expected = { id: 'dataset_description', value: 'lung' }
     expect(
       toStoreFilter('text', { id: 'dataset_description', value: 'lung', operator: '=' }),
-    ).toEqual({ id: 'dataset_description', value: 'lung' })
+    ).toEqual(expected)
     expect(
-      toStoreFilter('text', { id: 'dataset_description', value: ['a'], operator: '=' }),
+      toStoreFilter('text', { id: 'dataset_description', value: ['lung'], operator: '=' }),
+    ).toEqual(expected)
+  })
+
+  it('rejects a text list with more than one item', () => {
+    expect(
+      toStoreFilter('text', { id: 'dataset_description', value: ['a', 'b'], operator: '=' }),
     ).toBeNull()
+  })
+
+  it('gives the same age filter for a string and a one-item list', () => {
+    const expected = { id: 'age_at_extraction', value: 'P18Y-P30Y' }
+    expect(
+      toStoreFilter('iso8601Range', {
+        id: 'age_at_extraction',
+        value: 'P18Y-P30Y',
+        operator: '=',
+      }),
+    ).toEqual(expected)
+    expect(
+      toStoreFilter('iso8601Range', {
+        id: 'age_at_extraction',
+        value: ['P18Y-P30Y'],
+        operator: '=',
+      }),
+    ).toEqual(expected)
   })
 
   it('normalizes the age range and rejects an unusable one', () => {
@@ -111,6 +136,19 @@ describe('toStoreFilter', () => {
     ).toEqual({ id: 'age_at_extraction', value: 'P40Y-P40Y' })
     expect(
       toStoreFilter('iso8601Range', { id: 'age_at_extraction', value: 'nope', operator: '=' }),
+    ).toBeNull()
+    expect(
+      toStoreFilter('iso8601Range', { id: 'age_at_extraction', value: ['nope'], operator: '=' }),
+    ).toBeNull()
+  })
+
+  it('rejects an age list with more than one range', () => {
+    expect(
+      toStoreFilter('iso8601Range', {
+        id: 'age_at_extraction',
+        value: ['P10Y-P20Y', 'P30Y-P40Y'],
+        operator: '=',
+      }),
     ).toBeNull()
   })
 

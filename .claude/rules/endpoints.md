@@ -30,7 +30,7 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
 | GET | `/status` | Deployment/indexing status — document counts per scope | `staleTime: 5min`, `refetchInterval: 5min` |
-| POST | `/ai/filters` | Natural-language → suggested filters + interpretation, no search run. Only when `ai_search: true`; 404 if backend `FEATURE_AI` is off. Client timeout 75 s | none (mutation) |
+| POST | `/ai/filters` | `{query, filters}` (current draft filters, `label` stripped) → `{interpretation, answerable, filters}`: the complete filter set after the instruction; no search run. Only when `ai_search: true`; 404 if backend `FEATURE_AI` is off. Client timeout 75 s | none (mutation) |
 | GET | `/health` | Health check — backend only, not reachable through the nginx proxy | — |
 
 ## Filter Field Types → UI Components

@@ -130,7 +130,7 @@ describe('AiSearchInput', () => {
   })
 
   it.each([
-    ['mixed-scope', 'mixes clinical-only and non-clinical-only'],
+    ['mixed-scope', 'combines clinical and non-clinical fields'],
     ['error', 'could not be interpreted'],
   ] as const)('announces the %s state as an alert', (kind, expected) => {
     state.value = { kind }

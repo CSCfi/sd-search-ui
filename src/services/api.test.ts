@@ -124,28 +124,64 @@ describe('getNonClinicalImageIds', () => {
 })
 
 describe('interpretFilters', () => {
+  const response = { interpretation: 'Male', answerable: true, filters: [] }
+
   beforeEach(() => {
     post.mockReset()
-    post.mockResolvedValue({ data: { interpretation: 'Male', filters: [] } })
+    post.mockResolvedValue({ data: response })
   })
 
-  it('posts only the query text to /ai/filters, without requestedScope', async () => {
-    await interpretFilters('male', new AbortController().signal)
+  it('posts the query and the current filters to /ai/filters, without requestedScope', async () => {
+    await interpretFilters(
+      { query: 'male', filters: [{ id: 'sex', value: 'Male', operator: '=' }] },
+      new AbortController().signal,
+    )
     expect(post.mock.calls[0]?.[0]).toBe('/ai/filters')
-    expect(post.mock.calls[0]?.[1]).toEqual({ query: 'male' })
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      query: 'male',
+      filters: [{ id: 'sex', value: 'Male', operator: '=' }],
+    })
+  })
+
+  it('sends an empty filter list when the form has no filters', async () => {
+    await interpretFilters({ query: 'male', filters: [] }, new AbortController().signal)
+    expect(post.mock.calls[0]?.[1]).toEqual({ query: 'male', filters: [] })
+  })
+
+  it('keeps includeDescendantTerms and drops the UI-only label', async () => {
+    await interpretFilters(
+      {
+        query: 'x',
+        filters: [
+          {
+            id: 'animal_species',
+            value: ['337915000'],
+            operator: '=',
+            includeDescendantTerms: true,
+            label: ['Human'],
+          },
+        ],
+      },
+      new AbortController().signal,
+    )
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      query: 'x',
+      filters: [
+        { id: 'animal_species', value: ['337915000'], operator: '=', includeDescendantTerms: true },
+      ],
+    })
   })
 
   it('passes the abort signal and a 75 second timeout', async () => {
     const { signal } = new AbortController()
-    await interpretFilters('male', signal)
+    await interpretFilters({ query: 'male', filters: [] }, signal)
     expect(post.mock.calls[0]?.[2]).toEqual({ signal, timeout: 75_000 })
   })
 
   it('returns the response body', async () => {
-    await expect(interpretFilters('male', new AbortController().signal)).resolves.toEqual({
-      interpretation: 'Male',
-      filters: [],
-    })
+    await expect(
+      interpretFilters({ query: 'male', filters: [] }, new AbortController().signal),
+    ).resolves.toEqual(response)
   })
 })
 

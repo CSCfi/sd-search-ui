@@ -114,27 +114,38 @@ export interface StoreFilter {
 
 const asArray = (value: string | string[]) => (Array.isArray(value) ? value : [value])
 
+// One value, whether the backend sent it as a string or as a one-item list.
+const single = (value: string | string[]): string | null => {
+  const list = asArray(value)
+  return list.length === 1 ? (list[0] ?? null) : null
+}
+
 /**
  * Maps one backend filter to the arguments of `searchStore.setFilter`, in the shape the
  * matching field component would have produced itself. Returns `null` when the value is
- * invalid for the field type (age that cannot be shown, list value on a text field).
+ * invalid for the field type (age that cannot be shown, several values on a text or age field).
  *
  * `values` is the field's `/values` list, used only to label ontology concept ids.
+ * `knownLabels` (concept id -> label, from the current draft) wins over `values`.
  * `operator` and `includeDescendantTerms` from the backend are ignored.
  */
 export function toStoreFilter(
   type: BeaconFilteringTermType,
   filter: AIFilter,
   values: FieldValue[] = [],
+  knownLabels: ReadonlyMap<string, string> = new Map(),
 ): StoreFilter | null {
   const { id, value } = filter
   switch (type) {
-    case 'text':
-      return typeof value === 'string' ? { id, value } : null
+    case 'text': {
+      const text = single(value)
+      return text === null ? null : { id, value: text }
+    }
     case 'controlledValue':
       return { id, value }
     case 'iso8601Range': {
-      const age = typeof value === 'string' ? normalizeAge(value) : null
+      const raw = single(value)
+      const age = raw === null ? null : normalizeAge(raw)
       return age === null ? null : { id, value: age }
     }
     case 'keyword': {
@@ -147,7 +158,7 @@ export function toStoreFilter(
       return {
         id,
         value: list,
-        labels: resolveConceptLabels(list, values),
+        labels: resolveConceptLabels(list, values).map((l, i) => knownLabels.get(list[i]!) ?? l),
         includeDescendantTerms: true,
       }
     }

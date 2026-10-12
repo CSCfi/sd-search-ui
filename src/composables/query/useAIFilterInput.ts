@@ -8,12 +8,18 @@ import {
 } from '@/services/api'
 import { fieldsConfig } from '@/services/config'
 import { useSearchStore } from '@/stores/searchStore'
-import type { AIInterpretation, BeaconFilteringTerm, FieldValue } from '@/types/beacon'
+import type {
+  AIInterpretation,
+  BeaconFilteringTerm,
+  BeaconQueryFilter,
+  FieldValue,
+} from '@/types/beacon'
 import { deriveScope, toStoreFilter, type StoreFilter } from '@/utils/aiFilters'
 
 const ONTOLOGY_TYPES = new Set<BeaconFilteringTerm['type']>(['ontology', 'ontologyOrValue'])
 
-// Store actions that mean the user changed the filter form by hand (or reset it).
+// Store actions that mean the user changed the filter form by hand (or reset it). While a
+// request runs they abort it, because the response replaces the whole draft.
 const MANUAL_ACTIONS = new Set([
   'setFilter',
   'removeFilters',
@@ -32,9 +38,10 @@ export type AIInputState =
   | { kind: 'error' }
 
 /**
- * Natural-language filter input. `submit` asks the backend for filters, then applies the
- * response completely or not at all: labels are fetched first, nothing is written to the
- * store when any step fails, and the search is committed once at the end.
+ * Natural-language filter input. `submit` sends the instruction with the current draft filters
+ * and gets back the complete filter set after the instruction. The draft is replaced by that
+ * set, completely or not at all: labels for new concept ids are fetched first, nothing is
+ * written to the store when any step fails, and the search is committed once at the end.
  *
  * Returns `true` from `submit` only when the filters were applied.
  */
@@ -43,15 +50,25 @@ export function useAIFilterInput() {
   const store = useSearchStore()
   const state = ref<AIInputState>({ kind: 'idle' })
   const mutation = useMutation({
-    mutationFn: ({ query, signal }: { query: string; signal: AbortSignal }) =>
-      interpretFilters(query, signal),
+    mutationFn: ({
+      query,
+      filters,
+      signal,
+    }: {
+      query: string
+      filters: BeaconQueryFilter[]
+      signal: AbortSignal
+    }) => interpretFilters({ query, filters }, signal),
   })
 
   let controller: AbortController | null = null
-  // Our own writes happen while the state is still `loading`, which this ignores, and the
-  // result state is set only after them. So only later, manual changes dismiss the message.
+  // True only while apply() writes to the store, so its own writes are not taken for edits.
+  let applying = false
+  // A manual change during a request cancels it silently; otherwise it dismisses the message.
   store.$onAction(({ name }) => {
-    if (MANUAL_ACTIONS.has(name) && state.value.kind !== 'loading') state.value = { kind: 'idle' }
+    if (!MANUAL_ACTIONS.has(name) || applying) return
+    if (state.value.kind === 'loading') cancel()
+    else state.value = { kind: 'idle' }
   })
 
   onUnmounted(() => controller?.abort())
@@ -73,7 +90,11 @@ export function useAIFilterInput() {
     state.value = { kind: 'loading' }
 
     try {
-      const response = await mutation.mutateAsync({ query: text, signal: current.signal })
+      const response = await mutation.mutateAsync({
+        query: text,
+        filters: store.draftFilters,
+        signal: current.signal,
+      })
       if (current.signal.aborted) return false
       return await apply(response, current.signal)
     } catch {
@@ -110,25 +131,52 @@ export function useAIFilterInput() {
     ])
     const terms = new Map(termsResponse.response.filteringTerms.map((t) => [t.id, t] as const))
 
-    // The backend sees every field. Drop what the form cannot show (hidden or unknown fields).
-    const usable = response.filters.filter(
-      (f) => terms.has(f.id) && !fieldsConfig.hidden.includes(f.id),
-    )
-    if (usable.length === 0) {
+    // Nothing to apply: the filters stay exactly as they are.
+    if (!response.answerable) {
       state.value = { kind: 'not-understood', interpretation: response.interpretation }
       return false
     }
 
+    // The backend sees every field. Drop what the form cannot show (hidden or unknown fields);
+    // such draft filters are left alone below.
+    const isShown = (id: string) => terms.has(id) && !fieldsConfig.hidden.includes(id)
+    const usable = response.filters.filter((f) => isShown(f.id))
+    if (usable.length === 0 && response.filters.length > 0) {
+      state.value = { kind: 'not-understood', interpretation: response.interpretation }
+      return false
+    }
+
+    // Labels of concept ids that are already selected sit on the draft; only new ids need
+    // the `/values` list.
+    const draftLabels = (fieldId: string) => {
+      const draft = store.draftFilters.find((d) => d.id === fieldId)
+      const known = new Map<string, string>()
+      if (draft && Array.isArray(draft.value) && draft.label?.length === draft.value.length) {
+        draft.value.forEach((v, i) => known.set(v, draft.label![i]!))
+      }
+      return known
+    }
+    const knownByField = new Map<string, Map<string, string>>()
     const valuesByField = new Map<string, FieldValue[]>()
     await Promise.all(
       usable
         .filter((f) => ONTOLOGY_TYPES.has(terms.get(f.id)!.type))
-        .map(async (f) => valuesByField.set(f.id, await fetchValues(f.id))),
+        .map(async (f) => {
+          const known = draftLabels(f.id)
+          knownByField.set(f.id, known)
+          const isNew = (Array.isArray(f.value) ? f.value : [f.value]).some((v) => !known.has(v))
+          if (isNew) valuesByField.set(f.id, await fetchValues(f.id))
+        }),
     )
 
     const mapped: StoreFilter[] = []
     for (const f of usable) {
-      const result = toStoreFilter(terms.get(f.id)!.type, f, valuesByField.get(f.id))
+      const result = toStoreFilter(
+        terms.get(f.id)!.type,
+        f,
+        valuesByField.get(f.id),
+        knownByField.get(f.id),
+      )
       if (result === null) {
         state.value = { kind: 'error' }
         return false
@@ -155,17 +203,27 @@ export function useAIFilterInput() {
 
     let removed: string[] = []
     let switchedTo: string | undefined
-    // Tab first, so the fields exist in the form before their values are written.
-    if (decision.kind === 'switch') {
-      removed = store
-        .switchScope(decision.scope, fieldScopes)
-        .map((id) => terms.get(id)?.label ?? id)
-      switchedTo = scopes.find((s) => s.id === decision.scope)?.label ?? decision.scope
+    applying = true
+    try {
+      // Tab first, so the fields exist in the form before their values are written.
+      if (decision.kind === 'switch') {
+        removed = store
+          .switchScope(decision.scope, fieldScopes)
+          .map((id) => terms.get(id)?.label ?? id)
+        switchedTo = scopes.find((s) => s.id === decision.scope)?.label ?? decision.scope
+      }
+      // The response is the complete set: a shown field that is absent from it is cleared.
+      const kept = new Set(mapped.map((f) => f.id))
+      store.removeFilters(
+        store.draftFilters.filter((d) => isShown(d.id) && !kept.has(d.id)).map((d) => d.id),
+      )
+      for (const f of mapped) {
+        store.setFilter(f.id, f.value, f.labels, f.includeDescendantTerms)
+      }
+      store.commit()
+    } finally {
+      applying = false
     }
-    for (const f of mapped) {
-      store.setFilter(f.id, f.value, f.labels, f.includeDescendantTerms)
-    }
-    store.commit()
 
     state.value = {
       kind: 'success',

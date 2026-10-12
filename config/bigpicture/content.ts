@@ -69,7 +69,7 @@ export const contentConfig = {
     notUnderstood:
       'Could not turn this into filters. Try naming a field, for example sex, age or anatomical site.',
     mixedScope:
-      'Your search mixes clinical-only and non-clinical-only filters. Search one dataset type at a time.',
+      'This combines clinical and non-clinical fields. Clear the filters of one kind first, or search them separately.',
     error: 'The search could not be interpreted right now. Try again or set filters manually.',
   },
 } satisfies ContentConfig

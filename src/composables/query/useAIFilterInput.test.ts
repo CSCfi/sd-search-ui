@@ -15,6 +15,7 @@ import type {
   AIInterpretation,
   BeaconFilteringScope,
   BeaconFilteringTermsResponse,
+  BeaconQueryFilter,
   FieldValue,
 } from '@/types/beacon'
 
@@ -22,7 +23,13 @@ vi.mock('@/services/api', () => ({
   getFilteringTerms: vi.fn<() => Promise<BeaconFilteringTermsResponse>>(),
   getFilteringScopes: vi.fn<() => Promise<BeaconFilteringScope[]>>(),
   getFieldValues: vi.fn<(fieldId: string, scope?: string) => Promise<FieldValue[]>>(),
-  interpretFilters: vi.fn<(query: string, signal: AbortSignal) => Promise<AIInterpretation>>(),
+  interpretFilters:
+    vi.fn<
+      (
+        request: { query: string; filters: BeaconQueryFilter[] },
+        signal: AbortSignal,
+      ) => Promise<AIInterpretation>
+    >(),
 }))
 
 const BOTH = ['clinical', 'non_clinical']
@@ -55,8 +62,8 @@ function aiFilter(id: string, value: string | string[]) {
   return { id, value, operator: '=' as const, includeDescendantTerms: false }
 }
 
-function respond(interpretation: string, filters: AIInterpretation['filters']) {
-  vi.mocked(interpretFilters).mockResolvedValue({ interpretation, filters })
+function respond(interpretation: string, filters: AIInterpretation['filters'], answerable = true) {
+  vi.mocked(interpretFilters).mockResolvedValue({ interpretation, answerable, filters })
 }
 
 function setup() {
@@ -88,7 +95,7 @@ describe('useAIFilterInput', () => {
   it('writes the returned filters, commits once and reports success', async () => {
     respond('Male, age 18 to 30', [
       aiFilter('sex', 'Male'),
-      aiFilter('age_at_extraction', 'P18Y-P30Y'),
+      aiFilter('age_at_extraction', ['P18Y-P30Y']),
     ])
     const commit = vi.spyOn(store, 'commit')
     const { api } = setup()
@@ -108,24 +115,100 @@ describe('useAIFilterInput', () => {
     })
   })
 
-  it('does not send the current filters or a scope with the request', async () => {
+  it('accepts list values for sex and age, as the backend sends them', async () => {
+    respond('Males aged 20 to 60', [
+      aiFilter('sex', ['Male']),
+      aiFilter('age_at_extraction', ['P20Y-P60Y']),
+    ])
+    const commit = vi.spyOn(store, 'commit')
+    const { api } = setup()
+
+    expect(await api.submit('males aged 20 to 60')).toBe(true)
+
+    expect(api.state.value.kind).toBe('success')
+    expect(store.draftFilters.find((f) => f.id === 'age_at_extraction')?.value).toBe('P20Y-P60Y')
+    expect(commit).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps accepting a plain string age', async () => {
+    respond('Age 18 to 30', [aiFilter('age_at_extraction', 'P18Y-P30Y')])
+    const { api } = setup()
+    expect(await api.submit('age 18 to 30')).toBe(true)
+    expect(store.draftFilters.find((f) => f.id === 'age_at_extraction')?.value).toBe('P18Y-P30Y')
+  })
+
+  it('errors and applies nothing when the age list holds two ranges', async () => {
+    respond('Age', [aiFilter('age_at_extraction', ['P10Y-P20Y', 'P30Y-P40Y'])])
+    const commit = vi.spyOn(store, 'commit')
+    const { api } = setup()
+    expect(await api.submit('x')).toBe(false)
+    expect(api.state.value).toEqual({ kind: 'error' })
+    expect(store.draftFilters).toEqual([])
+    expect(commit).not.toHaveBeenCalled()
+  })
+
+  it('sends the instruction with the draft filters and no scope', async () => {
+    store.setFilter('sex', 'Male')
+    store.setDatasetType('clinical')
     respond('Male', [aiFilter('sex', 'Male')])
     const { api } = setup()
     await api.submit('male')
-    expect(vi.mocked(interpretFilters).mock.calls[0]?.[0]).toBe('male')
+    const [request] = vi.mocked(interpretFilters).mock.calls[0]!
+    expect(request).toEqual({
+      query: 'male',
+      filters: [{ id: 'sex', value: 'Male', operator: '=' }],
+    })
   })
 
-  it('replaces only the returned field and leaves other draft fields alone', async () => {
+  it('sends an empty filter list when the form has no filters', async () => {
+    respond('Male', [aiFilter('sex', 'Male')])
+    const { api } = setup()
+    await api.submit('male')
+    expect(vi.mocked(interpretFilters).mock.calls[0]?.[0].filters).toEqual([])
+  })
+
+  it('replaces the whole draft: an absent field is cleared and a value is replaced', async () => {
     store.setFilter('sex', 'Male')
     store.setFilter('age_at_extraction', 'P40Y-P50Y')
-    respond('Female', [aiFilter('sex', 'Female')])
+    respond('Female', [aiFilter('sex', ['Female'])])
     const { api } = setup()
 
-    await api.submit('female')
+    expect(await api.submit('female, no age')).toBe(true)
 
-    expect(store.draftFilters.find((f) => f.id === 'sex')?.value).toBe('Female')
+    expect(store.draftFilters.map((f) => [f.id, f.value])).toEqual([['sex', ['Female']]])
+    expect(store.committedFilters).toHaveLength(1)
+  })
+
+  it('keeps a hand-edited filter that the response returns unchanged', async () => {
+    store.setFilter('age_at_extraction', 'P40Y-P50Y')
+    respond('Male', [aiFilter('sex', 'Male'), aiFilter('age_at_extraction', 'P40Y-P50Y')])
+    const { api } = setup()
+    await api.submit('male')
     expect(store.draftFilters.find((f) => f.id === 'age_at_extraction')?.value).toBe('P40Y-P50Y')
     expect(store.draftFilters).toHaveLength(2)
+  })
+
+  it('clears the form and commits when answerable with an empty list', async () => {
+    store.setFilter('sex', 'Male')
+    store.commit()
+    respond('Removed all filters', [])
+    const commit = vi.spyOn(store, 'commit')
+    const { api } = setup()
+
+    expect(await api.submit('remove all filters')).toBe(true)
+
+    expect(store.draftFilters).toEqual([])
+    expect(store.committedFilters).toEqual([])
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(api.state.value.kind).toBe('success')
+  })
+
+  it('leaves draft filters not shown in the form alone', async () => {
+    store.setFilter('dataset_title', 'lung')
+    respond('Male', [aiFilter('sex', 'Male')])
+    const { api } = setup()
+    await api.submit('male')
+    expect(store.draftFilters.map((f) => f.id)).toEqual(['dataset_title', 'sex'])
   })
 
   it('labels ontology concept ids and falls back to the id when not listed', async () => {
@@ -138,6 +221,23 @@ describe('useAIFilterInput', () => {
       label: ['Carcinoma', '111'],
       includeDescendantTerms: true,
     })
+  })
+
+  it('takes labels from the draft for selected concept ids and fetches only for new ones', async () => {
+    store.setFilter('diagnosis', ['68453008'], ['Carcinoma'], true)
+    respond('More', [aiFilter('diagnosis', ['68453008'])])
+    const { api } = setup()
+    await api.submit('same')
+    expect(getFieldValues).not.toHaveBeenCalled()
+    expect(store.draftFilters.find((f) => f.id === 'diagnosis')?.label).toEqual(['Carcinoma'])
+
+    respond('More', [aiFilter('diagnosis', ['68453008', '111'])])
+    await api.submit('add one')
+    expect(getFieldValues).toHaveBeenCalledTimes(1)
+    expect(store.draftFilters.find((f) => f.id === 'diagnosis')?.label).toEqual([
+      'Carcinoma',
+      '111',
+    ])
   })
 
   it('fetches ontology labels before writing anything', async () => {
@@ -164,8 +264,9 @@ describe('useAIFilterInput', () => {
     expect(commit).not.toHaveBeenCalled()
   })
 
-  it('shows not understood and changes nothing for an empty filter list', async () => {
-    respond('That is not a search.', [])
+  it('shows not understood and changes nothing when the text is not answerable', async () => {
+    store.setFilter('sex', 'Male')
+    respond('That is not a search.', [aiFilter('sex', 'Male')], false)
     const commit = vi.spyOn(store, 'commit')
     const { api } = setup()
 
@@ -175,7 +276,7 @@ describe('useAIFilterInput', () => {
       kind: 'not-understood',
       interpretation: 'That is not a search.',
     })
-    expect(store.draftFilters).toEqual([])
+    expect(store.draftFilters).toEqual([{ id: 'sex', value: 'Male', operator: '=' }])
     expect(commit).not.toHaveBeenCalled()
   })
 
@@ -243,6 +344,17 @@ describe('useAIFilterInput', () => {
     expect(store.draftFilters).toEqual([])
     expect(store.datasetType).toBe('all')
     expect(commit).not.toHaveBeenCalled()
+  })
+
+  it('derives the scope over the complete response, including unchanged filters', async () => {
+    store.setFilter('diagnosis', ['68453008'])
+    respond('Add finding', [aiFilter('diagnosis', ['68453008']), aiFilter('finding', ['1'])])
+    const { api } = setup()
+
+    expect(await api.submit('also finding')).toBe(false)
+
+    expect(api.state.value).toEqual({ kind: 'mixed-scope' })
+    expect(store.draftFilters).toEqual([{ id: 'diagnosis', value: ['68453008'], operator: '=' }])
   })
 
   it('reports an error and changes nothing when the request fails', async () => {
@@ -326,7 +438,7 @@ describe('useAIFilterInput', () => {
   })
 
   it('dismisses the message on clear search, also when no filters were set', async () => {
-    respond('Nope', [])
+    respond('Nope', [], false)
     const { api } = setup()
     await api.submit('hello')
     expect(api.state.value.kind).toBe('not-understood')
@@ -335,12 +447,42 @@ describe('useAIFilterInput', () => {
     expect(api.state.value).toEqual({ kind: 'idle' })
   })
 
-  it('keeps the loading state when the form is edited while the request runs', async () => {
-    vi.mocked(interpretFilters).mockReturnValue(new Promise(() => {}))
+  it.each([
+    [
+      'a filter change',
+      (store: ReturnType<typeof useSearchStore>) => store.setFilter('sex', 'Male'),
+    ],
+    [
+      'a tab switch',
+      (store: ReturnType<typeof useSearchStore>) => store.setDatasetType('clinical'),
+    ],
+  ])('aborts silently and applies nothing on %s while loading', async (_name, change) => {
+    let signal!: AbortSignal
+    vi.mocked(interpretFilters).mockImplementation(
+      (_request, s) =>
+        new Promise((_resolve, reject) => {
+          signal = s
+          s.addEventListener('abort', () => reject({ status: 0, title: 'canceled' }))
+        }),
+    )
+    const commit = vi.spyOn(store, 'commit')
     const { api } = setup()
-    void api.submit('x')
+
+    const pending = api.submit('x')
     await flushPromises()
-    store.setFilter('sex', 'Male')
-    expect(api.state.value).toEqual({ kind: 'loading' })
+    change(store)
+
+    expect(await pending).toBe(false)
+    expect(signal.aborted).toBe(true)
+    expect(api.state.value).toEqual({ kind: 'idle' })
+    expect(commit).not.toHaveBeenCalled()
+    expect(store.draftFilters.length).toBeLessThanOrEqual(1)
+  })
+
+  it('does not abort itself with its own writes', async () => {
+    respond('Male', [aiFilter('sex', 'Male')])
+    const { api } = setup()
+    expect(await api.submit('male')).toBe(true)
+    expect(api.state.value.kind).toBe('success')
   })
 })

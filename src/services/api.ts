@@ -138,15 +138,23 @@ export async function pollDatasetOnDemandStatus(accession: string): Promise<DodP
 // The backend sets no run timeout for the LLM agent, so the client enforces one.
 const AI_FILTERS_TIMEOUT_MS = 75_000
 
-// Stateless: the backend receives only the text. `requestedScope` is deliberately not sent,
+// The backend interprets the text together with the current filters and returns the complete
+// set after the instruction. It keeps no history. `requestedScope` is deliberately not sent,
 // so the model sees every field and the caller derives the tab from the fields it returns.
+// Filters are sent as a search would send them, minus the UI-only `label`.
 export async function interpretFilters(
-  query: string,
+  { query, filters }: { query: string; filters: BeaconQueryFilter[] },
   signal: AbortSignal,
 ): Promise<AIInterpretation> {
+  const payload = filters.map(({ id, value, operator, includeDescendantTerms }) => ({
+    id,
+    value,
+    operator,
+    ...(includeDescendantTerms !== undefined ? { includeDescendantTerms } : {}),
+  }))
   const res = await apiClient.post<AIInterpretation>(
     '/ai/filters',
-    { query },
+    { query, filters: payload },
     { signal, timeout: AI_FILTERS_TIMEOUT_MS },
   )
   return res.data
