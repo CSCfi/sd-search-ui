@@ -55,7 +55,7 @@ src/
   directives/       # vControl.ts — v-control directive for c-* form components
   plugins/          # cookieConsent.ts
   router/           # Vue Router + auth guard
-  services/         # api.ts (all API functions) + apiClient.ts (Axios instance)
+  services/         # api.ts (all API functions) + apiClient.ts / dodClient.ts (Axios instances)
   stores/           # Pinia: searchStore, authStore
   types/            # beacon.ts — Beacon V2 + FilteringTerm types
   utils/

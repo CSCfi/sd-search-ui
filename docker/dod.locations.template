@@ -1,0 +1,52 @@
+    # Dataset on Demand (rendered only when DOD_URL is set). The browser never holds the access token: nginx adds it from the
+    # httponly access_token cookie. DOD_URL is the service base (no method); the Connect
+    # method name is appended per location (exact-match locations may carry a URI in
+    # proxy_pass). Any other /dod/ path is a 404.
+    #
+    # Empty cookie -> 401 here, so the client refreshes the session and retries (the browser
+    # drops an expired cookie) and an empty "Bearer " is never sent upstream.
+    # The upstream is a third party: its certificate is verified before the token is sent.
+    # Depth 3: nginx's default (1) rejects chains with two intermediates, e.g. cross-signed
+    # Let's Encrypt roots. The proxy_ssl_* settings are ignored when DOD_URL is http://.
+    location = /dod {
+            limit_except POST { deny all; }
+            if ($cookie_access_token = "") { return 401; }
+            proxy_pass ${DOD_URL}/RequestDatasetCreation;
+            proxy_set_header Host $proxy_host;
+            proxy_set_header Authorization "Bearer $cookie_access_token";
+            proxy_set_header Cookie "";
+            proxy_ssl_server_name on;
+            proxy_ssl_verify on;
+            proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+            proxy_ssl_verify_depth 3;
+            proxy_read_timeout 60s;
+            # Do not leak the user's page URL, origin or IP to the third-party upstream.
+            proxy_set_header Referer "";
+            proxy_set_header Origin "";
+            proxy_set_header X-Real-IP "";
+            proxy_set_header X-Forwarded-For "";
+            proxy_set_header Forwarded "";
+
+    location = /dod/status {
+            limit_except POST { deny all; }
+            if ($cookie_access_token = "") { return 401; }
+            proxy_pass ${DOD_URL}/GetOnDemandDatasetStatus;
+            proxy_set_header Host $proxy_host;
+            proxy_set_header Authorization "Bearer $cookie_access_token";
+            proxy_set_header Cookie "";
+            proxy_ssl_server_name on;
+            proxy_ssl_verify on;
+            proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+            proxy_ssl_verify_depth 3;
+            proxy_read_timeout 60s;
+            # Do not leak the user's page URL, origin or IP to the third-party upstream.
+            proxy_set_header Referer "";
+            proxy_set_header Origin "";
+            proxy_set_header X-Real-IP "";
+            proxy_set_header X-Forwarded-For "";
+            proxy_set_header Forwarded "";
+    }
+
+    location /dod/ {
+        return 404;
+    }

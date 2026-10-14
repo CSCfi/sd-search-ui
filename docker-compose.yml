@@ -8,4 +8,7 @@ services:
     environment:
       # Backend container runs in another network, so use the docker internal hostname to reach it from the frontend container.
       BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8000}
+      # Optional: only for services with the Dataset on Demand flow. Unset = /dod returns 404.
+      # No default: nginx forwards the session's access token to this service.
+      DOD_URL: ${DOD_URL:-}
     restart: unless-stopped
