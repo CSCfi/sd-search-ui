@@ -240,7 +240,7 @@ Example:
 ```bash
 docker run --rm -p 8081:8081 \
   -e BACKEND_URL=http://host.docker.internal:8000 \
-  -e DOD_URL=https://dod-testing.bp.nbis.se/dataset_on_demand.DatasetOnDemandService \
+  -e DOD_URL=<DOD_URL> \
   sd-search-ui
 ```
 
