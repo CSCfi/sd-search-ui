@@ -95,16 +95,14 @@ vi.mock('@/composables/query/useFilteringScopes', () => ({
   }),
 }))
 
-const mockFieldsConfig = vi.hoisted(
-  (): FieldsConfig => ({
-    header: [],
-    hidden: [],
-    hidden_description: [],
-    bordered: ['staining', 'clinical', 'non_clinical'],
-    hidden_scopes: [],
-    complementary: true,
-  }),
-)
+const mockFieldsConfig = vi.hoisted((): FieldsConfig => ({
+  header: [],
+  hidden: [],
+  hidden_description: [],
+  bordered: ['staining', 'clinical', 'non_clinical'],
+  hidden_scopes: [],
+  complementary: true,
+}))
 
 vi.mock('@/services/config', () => ({
   fieldsConfig: mockFieldsConfig,
