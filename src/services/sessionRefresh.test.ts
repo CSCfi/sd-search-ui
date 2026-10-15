@@ -84,39 +84,92 @@ describe('refreshSession', () => {
   })
 })
 
+function stubLocks() {
+  const request = vi.fn<(name: string, fn: () => Promise<unknown>) => Promise<unknown>>(
+    (_name, fn) => fn(),
+  )
+  Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true })
+  return request
+}
+
+function removeLocks() {
+  Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true })
+}
+
 describe('attachRefreshInterceptor', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'location', { value: { href: '/search' }, writable: true })
     sessionStorage.setItem('postLoginRedirect', '/search?sex=Female')
+    removeLocks()
   })
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    removeLocks()
+  })
 
-  it('refreshes and retries the original request once after a 401', async () => {
-    const refresh = mockRefresh('ok')
+  it('runs the recovery under the session-refresh lock', async () => {
+    const locks = stubLocks()
+    mockRefresh('ok')
+    const { client } = makeClient({ '/data': [401, 401] })
+
+    await client.get('/data')
+
+    expect(locks).toHaveBeenCalledTimes(1)
+    expect(locks.mock.calls[0]?.[0]).toBe('session-refresh')
+  })
+
+  it('retries the request before refreshing and skips the refresh when the retry succeeds', async () => {
+    stubLocks()
+    const refresh = mockRefresh()
     const { client, calls } = makeClient({ '/data': [401] })
 
     const res = await client.get('/data')
 
     expect(res.data).toEqual({ ok: true })
     expect(calls).toEqual(['/data', '/data'])
-    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(refresh).not.toHaveBeenCalled()
   })
 
-  it('triggers exactly one refresh for parallel 401s and retries each request', async () => {
+  it('refreshes and retries the original request after two 401s', async () => {
     const refresh = mockRefresh('ok')
-    const { client, calls } = makeClient({ '/a': [401], '/b': [401], '/c': [401] })
+    const { client, calls } = makeClient({ '/data': [401, 401] })
 
-    await Promise.all([client.get('/a'), client.get('/b'), client.get('/c')])
+    const res = await client.get('/data')
 
+    expect(res.data).toEqual({ ok: true })
+    expect(calls).toEqual(['/data', '/data', '/data'])
     expect(refresh).toHaveBeenCalledTimes(1)
-    expect(calls.filter((u) => u === '/a')).toHaveLength(2)
-    expect(calls.filter((u) => u === '/b')).toHaveLength(2)
-    expect(calls.filter((u) => u === '/c')).toHaveLength(2)
   })
 
-  it('redirects to /logout and clears postLoginRedirect when refresh returns 401', async () => {
+  it('triggers exactly one refresh for parallel 401s without Web Locks', async () => {
+    let finishRefresh: (value: unknown) => void = () => {}
+    const refresh = vi
+      .spyOn(axios, 'post')
+      .mockReturnValue(new Promise((resolve) => (finishRefresh = resolve)))
+    const { client } = makeClient({ '/a': [401, 401], '/b': [401, 401], '/c': [401, 401] })
+
+    const all = Promise.all([client.get('/a'), client.get('/b'), client.get('/c')])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    finishRefresh({ status: 204 })
+    await all
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not redirect when the refresh is 401 but the retry succeeds (another tab refreshed)', async () => {
     mockRefresh(401)
-    const { client } = makeClient({ '/data': [401] })
+    const { client } = makeClient({ '/data': [401, 401] })
+
+    const res = await client.get('/data')
+
+    expect(res.data).toEqual({ ok: true })
+    expect(window.location.href).toBe('/search')
+    expect(sessionStorage.getItem('postLoginRedirect')).toBe('/search?sex=Female')
+  })
+
+  it('redirects to /logout and clears postLoginRedirect when refresh and retry are both 401', async () => {
+    mockRefresh(401)
+    const { client } = makeClient({ '/data': [401, 401, 401] })
 
     await expect(client.get('/data')).rejects.toMatchObject({ status: 401 })
 
@@ -124,23 +177,47 @@ describe('attachRefreshInterceptor', () => {
     expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
   })
 
-  it('rejects with ApiError 503 and does not log out when refresh is unavailable', async () => {
-    mockRefresh(503)
-    const { client } = makeClient({ '/data': [401] })
+  it.each([503, 'network'] as const)(
+    'rejects with ApiError 503 and does not log out when refresh is %s',
+    async (outcome) => {
+      mockRefresh(outcome)
+      const { client } = makeClient({ '/data': [401, 401] })
 
-    await expect(client.get('/data')).rejects.toMatchObject({ status: 503 })
+      await expect(client.get('/data')).rejects.toMatchObject({ status: 503 })
 
-    expect(window.location.href).toBe('/search')
-    expect(sessionStorage.getItem('postLoginRedirect')).toBe('/search?sex=Female')
-  })
+      expect(window.location.href).toBe('/search')
+      expect(sessionStorage.getItem('postLoginRedirect')).toBe('/search?sex=Female')
+    },
+  )
 
-  it('does not loop or log out when the retried request gets 401 again', async () => {
+  it('does not loop or log out when the retry after a successful refresh gets 401', async () => {
     const refresh = mockRefresh('ok')
-    const { client, calls } = makeClient({ '/data': [401, 401] })
+    const { client, calls } = makeClient({ '/data': [401, 401, 401] })
 
     await expect(client.get('/data')).rejects.toMatchObject({ status: 401 })
 
-    expect(calls).toEqual(['/data', '/data'])
+    expect(calls).toEqual(['/data', '/data', '/data'])
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe('/search')
+  })
+
+  it('rejects a 401 on /refresh itself without recovering', async () => {
+    const refresh = mockRefresh()
+    const { client, calls } = makeClient({ '/refresh': [401] })
+
+    await expect(client.post('/refresh')).rejects.toMatchObject({ status: 401 })
+
+    expect(calls).toEqual(['/refresh'])
+    expect(refresh).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('/search')
+  })
+
+  it('rejects with the retry error when it is not a 401', async () => {
+    const refresh = mockRefresh('ok')
+    const { client } = makeClient({ '/data': [401, 401, 500] })
+
+    await expect(client.get('/data')).rejects.toBeInstanceOf(AxiosError)
+
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(window.location.href).toBe('/search')
   })

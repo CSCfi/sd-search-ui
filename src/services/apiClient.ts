@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
 
     const apiError: ApiError = {
       status: error.response?.status ?? 0,
-      title: error.response?.data?.title ?? error.response?.statusText ?? 'Unknown error',
+      title: error.response?.data?.title ?? (error.response?.statusText || 'Unknown error'),
       detail,
     }
 

@@ -45,7 +45,7 @@ describe('apiClient — session refresh', () => {
 
   it('retries after a 401 once the session is refreshed and marks the user logged in', async () => {
     mockRefresh('ok')
-    useStatuses(401, 200)
+    useStatuses(401, 401, 200)
 
     const res = await apiClient.get('/status')
 
@@ -56,7 +56,7 @@ describe('apiClient — session refresh', () => {
 
   it('goes to /logout when the refresh is rejected with 401', async () => {
     mockRefresh(401)
-    useStatuses(401)
+    useStatuses(401, 401, 401)
 
     await expect(apiClient.get('/status')).rejects.toMatchObject({ status: 401 })
 
@@ -65,7 +65,7 @@ describe('apiClient — session refresh', () => {
 
   it('keeps the 503 ApiError intact and does not log out when refresh is unavailable', async () => {
     mockRefresh(503)
-    useStatuses(401)
+    useStatuses(401, 401)
 
     await expect(apiClient.get('/status')).rejects.toMatchObject({ status: 503 })
 
@@ -74,7 +74,7 @@ describe('apiClient — session refresh', () => {
 
   it('keeps status 401 when the retried request is rejected again', async () => {
     mockRefresh('ok')
-    useStatuses(401, 401)
+    useStatuses(401, 401, 401)
 
     await expect(apiClient.get('/status')).rejects.toMatchObject({ status: 401 })
 

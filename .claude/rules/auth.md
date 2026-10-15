@@ -32,8 +32,8 @@ so `/api/refresh` would never carry it.
 2. Backend handles AAI OIDC on `/login` and `/callback`, sets a host-only session cookie
 3. Frontend checks login state by making a real API call — never via `document.cookie`
 4. All API calls use `withCredentials: true` — sends the session cookie automatically
-5. Any 401 from `apiClient` → refresh the session once and retry the request once (see Session Refresh).
-   Only a refresh the backend rejects → `sessionStorage.removeItem('postLoginRedirect')` + redirect to `/logout`
+5. Any 401 from `apiClient` → recover the session once (see Session Refresh): retry, refresh, retry.
+   Only a refresh the backend rejects **and** a retry that is still 401 → `sessionStorage.removeItem('postLoginRedirect')` + redirect to `/logout`
 
 ## Session Refresh (`services/sessionRefresh.ts`)
 
@@ -46,19 +46,54 @@ cookie (`refresh_token`, about 1 month, `Path=/refresh`) is only sent to `POST /
 | Backend | Result | Meaning |
 |---|---|---|
 | `204` | `'ok'` | Both cookies replaced |
-| `401` | `'expired'` | Session over, backend cleared cookies |
-| `503` / network error | `'unavailable'` | LS AAI unreachable, cookies unchanged — not a logout |
+| `401` | `'expired'` | This refresh token is no good (missing cookie, or LS AAI rejected it). Cookies are left untouched — the backend does not clear them |
+| `503` / network error | `'unavailable'` | LS AAI unreachable or refusing the API, cookies unchanged — not a logout |
 
-**Only one refresh runs at a time.** Every refresh replaces the refresh token and invalidates the
-old one, so a second parallel refresh presents a spent token, gets `401` and logs the user out.
-`refreshSession()` therefore keeps one module-level in-flight promise that all callers share. Never
-call `POST /refresh` any other way.
+### Why one refresh at a time, across tabs
 
-`attachRefreshInterceptor(instance)` is registered on `apiClient`. On a `401` (not already retried):
-`'ok'` → retry the request once; `'expired'` → clear `postLoginRedirect`, go to `/logout`;
-`'unavailable'` → reject with `ApiError` 503, no logout. A `401` on the retried request rejects as
-`ApiError` 401 — no loop, no logout. The interceptor must stay registered before `apiClient`'s error
-normalizer, which passes an already-shaped `ApiError` through.
+Every refresh replaces the refresh token and invalidates the old one. The cookies are shared by
+every tab of the origin, so two refreshes at once race: the loser presents a spent token and gets
+`401`, although the winner was just given valid cookies. Two guards:
+
+- In one tab, `refreshSession()` keeps one module-level in-flight promise that all callers share.
+- Across tabs, `recoverSession()` runs under the Web Lock `session-refresh`
+  (`navigator.locks.request`). If `navigator.locks` is undefined, it runs directly and the in-tab
+  promise is the only guard. Never call `POST /refresh` any other way.
+
+### `recoverSession(retry)` — shared by the interceptor and `checkSession()`
+
+Returns `{ kind: 'ok', value } | 'expired' | 'unavailable' | { kind: 'failed', error }`. Inside the lock:
+
+1. **Retry first.** Call `retry()`. Another tab, or an earlier 401 in this tab, may already have
+   renewed the cookies. The refresh cookie is `httponly`, so retrying is the only way to find out.
+   Success → `ok`, no refresh. A failure other than 401 → `failed`.
+2. Call `refreshSession()`.
+   - `'unavailable'` → `unavailable`. Never a logout.
+   - `'ok'` → `retry()` once. Success → `ok`. Any failure → `failed` (a 401 here is a downstream
+     rejection, not an expired session).
+   - `'expired'` → **retry before logout**: `retry()` once more, because another tab may have won
+     the race. Success → `ok`. 401 again → `expired` (session over). Other failure → `failed`.
+
+`isUnauthorized(error)` recognises an `AxiosError` with status 401 and an `ApiError` with
+`status === 401` (errors from a retried request through `apiClient`/`dodClient` are already
+normalised).
+
+### Interceptor
+
+`attachRefreshInterceptor(instance)` is registered on `apiClient` and `dodClient`. On a `401`:
+a request already carrying `_retried`, or a `401` on `/refresh` itself, rejects as a plain
+`ApiError` (no loop, no logout). Otherwise it sets `_retried` and calls
+`recoverSession(() => instance.request(config))`:
+
+| Outcome | Result |
+|---|---|
+| `ok` | Resolve with the response |
+| `expired` | Clear `postLoginRedirect`, go to `/logout`, reject with the 401 `ApiError` |
+| `unavailable` | Reject with `ApiError` 503 (`Service unavailable`), no logout |
+| `failed` | Reject with the retry's error |
+
+The interceptor must stay registered before `apiClient`'s and `dodClient`'s error normalizers, which
+pass an already-shaped `ApiError` through.
 
 ## Session Check (`stores/authStore.ts`)
 
@@ -66,22 +101,30 @@ normalizer, which passes an already-shaped `ApiError` through.
 a real API response. The route guard must await `checkSession()` before acting on the value, or a
 fresh page load with a valid session will be incorrectly treated as logged-out.
 
-The check uses a plain `axios` call, **not** the shared `apiClient` instance. `apiClient`'s
-interceptor would refresh and redirect to `/logout`, which would race with the guard's own redirect
-to `/` on this same check. Plain axios avoids the conflict — the guard decides what to do with the
-result.
+The check probes `GET /filtering_terms` with a plain `axios` call, **not** the shared `apiClient`
+instance. `apiClient`'s interceptor would refresh and redirect to `/logout`, which would race with the
+guard's own redirect to `/` on this same check. Plain axios avoids the conflict — the guard decides
+what to do with the result.
 
-On `401` the check calls `refreshSession()` once and repeats the probe. `isLoggedIn` becomes `false`
-only if the refresh returns `'expired'` (or the repeated probe fails). On `'unavailable'`
-`isLoggedIn` is left unchanged. Non-401 probe errors still set `false`.
+| Probe result | `isLoggedIn` |
+|---|---|
+| success | `true` |
+| `401` → `recoverSession(probe)` = `ok` | `true` |
+| `401` → `expired` | `false` |
+| `401` → `unavailable` | unchanged |
+| `401` → `failed`, error is a 401 | `false` |
+| `401` → `failed`, any other error | unchanged |
+| any other error (`503`, network error) | unchanged — never `false` |
 
 Session check is skipped entirely if `VITE_AUTH_BYPASS` is `"true"` (local dev only).
 
-## Route Guard (`router/index.ts`)
+## Route Guard (`router/shared.ts`)
 
 Only routes with `meta: { requiresAuth: true }` are gated. If `isLoggedIn` is still `null` on
-entry, `checkSession()` is awaited first. On failure: save intended URL to `sessionStorage` as
-`postLoginRedirect`, then redirect to `/`.
+entry, `checkSession()` is awaited first. Only `isLoggedIn === false` redirects: save intended URL to
+`sessionStorage` as `postLoginRedirect`, then redirect to `/`. If `isLoggedIn` is still `null` after
+the check (service unavailable: `503` or network error), the navigation goes through, so API calls
+surface the error. Redirecting would loop or log out a valid session.
 
 This is a UX guard only — real enforcement is server-side via 401s.
 
@@ -91,7 +134,7 @@ This is a UX guard only — real enforcement is server-side via 401s.
 
 Response interceptor:
 - Success → calls `authStore.setLoggedIn(true)` if not already set
-- 401 → refresh once and retry once (see Session Refresh); `/logout` only if the refresh is rejected
+- 401 → recover once (see Session Refresh); `/logout` only when the refresh is rejected and the retry is still 401
 - Other errors → rejects with a normalized `ApiError` (`status`, `title`, `detail`)
 
 ## Environment Variables

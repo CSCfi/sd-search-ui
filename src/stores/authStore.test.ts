@@ -52,8 +52,20 @@ describe('authStore — checkSession', () => {
     expect(refresh).not.toHaveBeenCalled()
   })
 
-  it('refreshes once on 401 and stays logged in when the repeated probe succeeds', async () => {
+  it('retries the probe after a 401 and stays logged in without refreshing when it succeeds', async () => {
     const probe = mockProbe(401, 200)
+    const refresh = vi.spyOn(axios, 'post')
+    const store = useAuthStore()
+
+    await store.checkSession()
+
+    expect(store.isLoggedIn).toBe(true)
+    expect(refresh).not.toHaveBeenCalled()
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
+  it('refreshes once and stays logged in when the probe succeeds after the refresh', async () => {
+    const probe = mockProbe(401, 401, 200)
     const refresh = mockRefresh('ok')
     const store = useAuthStore()
 
@@ -61,11 +73,11 @@ describe('authStore — checkSession', () => {
 
     expect(store.isLoggedIn).toBe(true)
     expect(refresh).toHaveBeenCalledTimes(1)
-    expect(probe).toHaveBeenCalledTimes(2)
+    expect(probe).toHaveBeenCalledTimes(3)
   })
 
-  it('reports logged out when the refresh is rejected', async () => {
-    mockProbe(401)
+  it('reports logged out when the refresh is 401 and the probe is still 401', async () => {
+    mockProbe(401, 401, 401)
     mockRefresh(401)
     const store = useAuthStore()
 
@@ -74,8 +86,18 @@ describe('authStore — checkSession', () => {
     expect(store.isLoggedIn).toBe(false)
   })
 
+  it('stays logged in when the refresh is 401 but another tab already refreshed', async () => {
+    mockProbe(401, 401, 200)
+    mockRefresh(401)
+    const store = useAuthStore()
+
+    await store.checkSession()
+
+    expect(store.isLoggedIn).toBe(true)
+  })
+
   it('does not report logged out when the refresh is unavailable', async () => {
-    mockProbe(401)
+    mockProbe(401, 401)
     mockRefresh(503)
     const store = useAuthStore()
     store.setLoggedIn(true)
@@ -86,7 +108,7 @@ describe('authStore — checkSession', () => {
   })
 
   it('leaves isLoggedIn unchecked (null) when the refresh is unavailable on first check', async () => {
-    mockProbe(401)
+    mockProbe(401, 401)
     mockRefresh(503)
     const store = useAuthStore()
 
@@ -96,7 +118,7 @@ describe('authStore — checkSession', () => {
   })
 
   it('reports logged out when the probe is still 401 after a successful refresh, without looping', async () => {
-    const probe = mockProbe(401, 401)
+    const probe = mockProbe(401, 401, 401)
     const refresh = mockRefresh('ok')
     const store = useAuthStore()
 
@@ -104,18 +126,40 @@ describe('authStore — checkSession', () => {
 
     expect(store.isLoggedIn).toBe(false)
     expect(refresh).toHaveBeenCalledTimes(1)
-    expect(probe).toHaveBeenCalledTimes(2)
+    expect(probe).toHaveBeenCalledTimes(3)
   })
 
-  it('reports logged out on a non-401 probe failure, without refreshing', async () => {
-    mockProbe(500)
+  it('leaves isLoggedIn unchanged when the repeated probe fails with 503', async () => {
+    mockProbe(401, 503)
+    const refresh = vi.spyOn(axios, 'post')
+    const store = useAuthStore()
+    store.setLoggedIn(true)
+
+    await store.checkSession()
+
+    expect(store.isLoggedIn).toBe(true)
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('leaves isLoggedIn unchanged on a 503 probe, without refreshing', async () => {
+    mockProbe(503)
     const refresh = vi.spyOn(axios, 'post')
     const store = useAuthStore()
 
     await store.checkSession()
 
-    expect(store.isLoggedIn).toBe(false)
+    expect(store.isLoggedIn).toBeNull()
     expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('leaves isLoggedIn unchanged on a network error probe', async () => {
+    vi.spyOn(axios, 'get').mockRejectedValueOnce(new AxiosError('Network Error', 'ERR_NETWORK'))
+    const store = useAuthStore()
+    store.setLoggedIn(true)
+
+    await store.checkSession()
+
+    expect(store.isLoggedIn).toBe(true)
   })
 
   it('skips the probe entirely when VITE_AUTH_BYPASS is true', async () => {

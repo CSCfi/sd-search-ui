@@ -14,8 +14,8 @@ export function createServiceRouter(routes: RouteRecordRaw[]) {
 
   /**
    * Client-side UX guard only — redirects to homepage when no authenticated
-   * session is known. "Not known" covers both the initial page load (before
-   * the session has been checked) and a confirmed 401.
+   * session is confirmed. Only a confirmed 401 redirects; an unchecked state
+   * (null after a failed check) is let through.
    *
    * This is NOT a security boundary. Real authentication is enforced
    * server-side — all API calls use withCredentials and the backend returns
@@ -37,7 +37,10 @@ export function createServiceRouter(routes: RouteRecordRaw[]) {
       await authStore.checkSession()
     }
 
-    if (!authStore.isLoggedIn) {
+    // Still null after the check means the service was unavailable (503, network error), not
+    // that the session ended. Let the navigation through so API calls surface the error;
+    // redirecting to login would loop or log out a valid session.
+    if (authStore.isLoggedIn === false) {
       sessionStorage.setItem('postLoginRedirect', window.location.pathname + window.location.search)
       window.location.href = '/'
       return false

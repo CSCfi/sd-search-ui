@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
-import { refreshSession } from '@/services/sessionRefresh.ts'
+import { isUnauthorized, recoverSession } from '@/services/sessionRefresh.ts'
 
 export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = ref<boolean | null>(null)
@@ -10,9 +10,9 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn.value = value
   }
 
-  // Use axios directly so apiClient's 401 interceptor does not compete with the
-  // router guard's redirect. A 401 usually means the access token has expired,
-  // so refresh the session once and retry. Keep the current state if LS AAI is unavailable.
+  // Use axios directly so apiClient's 401 interceptor does not compete with the router guard's
+  // redirect. Only a 401 can mean the session ended; it goes through recoverSession (cross-tab
+  // lock, retry, refresh, retry). Any other probe error (503, network) leaves isLoggedIn unchanged.
   async function checkSession() {
     if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
       setLoggedIn(true)
@@ -26,24 +26,22 @@ export const useAuthStore = defineStore('auth', () => {
       setLoggedIn(true)
       return
     } catch (error) {
-      if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+      if (!isUnauthorized(error)) return
+    }
+
+    const outcome = await recoverSession(probe)
+    switch (outcome.kind) {
+      case 'ok':
+        setLoggedIn(true)
+        return
+      case 'expired':
         setLoggedIn(false)
         return
-      }
-    }
-
-    const refreshed = await refreshSession()
-    if (refreshed === 'unavailable') return
-    if (refreshed === 'expired') {
-      setLoggedIn(false)
-      return
-    }
-
-    try {
-      await probe()
-      setLoggedIn(true)
-    } catch {
-      setLoggedIn(false)
+      case 'unavailable':
+        return
+      case 'failed':
+        if (isUnauthorized(outcome.error)) setLoggedIn(false)
+        return
     }
   }
 

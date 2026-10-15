@@ -24,8 +24,7 @@ dodClient.interceptors.response.use(undefined, (error: unknown) => {
     status: error.response?.status ?? 0,
     title:
       (typeof data?.code === 'string' ? data.code : undefined) ??
-      error.response?.statusText ??
-      'Unknown error',
+      (error.response?.statusText || 'Unknown error'),
     detail: typeof data?.message === 'string' ? data.message : undefined,
   } satisfies ApiError)
 })

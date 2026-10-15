@@ -42,7 +42,7 @@ describe('dodClient', () => {
 
   it('retries once after a 401 when the session is refreshed', async () => {
     const refresh = mockRefresh('ok')
-    useStatuses(401, 200)
+    useStatuses(401, 401, 200)
 
     const res = await dodClient.post('', {})
 
@@ -53,7 +53,7 @@ describe('dodClient', () => {
 
   it('keeps status 401 and does not log out when the retried request is rejected again', async () => {
     const refresh = mockRefresh('ok')
-    useStatuses(401, 401)
+    useStatuses(401, 401, 401)
 
     await expect(dodClient.post('', {})).rejects.toMatchObject({ status: 401 })
 
@@ -63,7 +63,7 @@ describe('dodClient', () => {
 
   it('goes to /logout when the refresh is rejected with 401', async () => {
     mockRefresh(401)
-    useStatuses(401)
+    useStatuses(401, 401, 401)
 
     await expect(dodClient.post('', {})).rejects.toMatchObject({ status: 401 })
 
@@ -72,7 +72,7 @@ describe('dodClient', () => {
 
   it('keeps the 503 ApiError intact and does not log out when refresh is unavailable', async () => {
     mockRefresh(503)
-    useStatuses(401)
+    useStatuses(401, 401)
 
     await expect(dodClient.post('', {})).rejects.toMatchObject({ status: 503 })
 
@@ -98,5 +98,21 @@ describe('dodClient', () => {
       title: 'Error',
       detail: undefined,
     })
+  })
+
+  it('maps an HTML error body with an empty status text to an ApiError with a non-empty title', async () => {
+    dodClient.defaults.adapter = (config) => {
+      const response = {
+        data: '<html>Bad Gateway</html>',
+        status: 502,
+        statusText: '',
+        headers: {},
+        config,
+      }
+      return Promise.reject(new AxiosError('failed', 'ERR_BAD_RESPONSE', config, null, response))
+    }
+
+    await expect(dodClient.post('', {})).rejects.toMatchObject({ status: 502 })
+    await expect(dodClient.post('', {})).rejects.toHaveProperty('title', 'Unknown error')
   })
 })
