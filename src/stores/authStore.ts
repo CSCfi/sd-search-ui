@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
+import { isUnauthorized, recoverSession } from '@/services/sessionRefresh.ts'
 
 export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = ref<boolean | null>(null)
@@ -9,24 +10,38 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn.value = value
   }
 
-  // A plain axios call, deliberately not the shared apiClient instance —
-  // apiClient's interceptor redirects to /logout on 401, which would race
-  // with the router guard's own redirect to /login on the same check. This
-  // call just resolves isLoggedIn; the guard decides what to do.
+  // Use axios directly so apiClient's 401 interceptor does not compete with the router guard's
+  // redirect. Only a 401 can mean the session ended; it goes through recoverSession (cross-tab
+  // lock, retry, refresh, retry). Any other probe error (503, network) leaves isLoggedIn unchanged.
   async function checkSession() {
     if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
       setLoggedIn(true)
       return
     }
 
+    const probe = () => axios.get('/filtering_terms', { baseURL: '/api', withCredentials: true })
+
     try {
-      await axios.get('/filtering_terms', {
-        baseURL: '/api',
-        withCredentials: true,
-      })
+      await probe()
       setLoggedIn(true)
-    } catch {
-      setLoggedIn(false)
+      return
+    } catch (error) {
+      if (!isUnauthorized(error)) return
+    }
+
+    const outcome = await recoverSession(probe)
+    switch (outcome.kind) {
+      case 'ok':
+        setLoggedIn(true)
+        return
+      case 'expired':
+        setLoggedIn(false)
+        return
+      case 'unavailable':
+        return
+      case 'failed':
+        if (isUnauthorized(outcome.error)) setLoggedIn(false)
+        return
     }
   }
 

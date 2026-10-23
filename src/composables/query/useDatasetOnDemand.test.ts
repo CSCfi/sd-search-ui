@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
 import { useSearchStore } from '@/stores/searchStore'
 
 const getNonClinicalImageIds = vi.fn<(...args: unknown[]) => Promise<string[]>>()
@@ -69,6 +71,36 @@ describe('useDatasetOnDemand', () => {
     expect(dodStatus.value).toBe('error')
   })
 
+  it('shows an access-denied message when submit is rejected with 401', async () => {
+    getNonClinicalImageIds.mockResolvedValue(['img-1'])
+    submitDatasetOnDemand.mockRejectedValue({ status: 401, title: 'unauthenticated' })
+
+    const { dodStatus, dodError, applyForNonClinicalImages } = useDatasetOnDemand()
+    await applyForNonClinicalImages()
+
+    expect(dodStatus.value).toBe('error')
+    expect(dodError.value).toBe('Your account does not have access to non-clinical images.')
+  })
+
+  it('shows an access-denied message when polling is rejected with 401', async () => {
+    vi.useFakeTimers()
+    getNonClinicalImageIds.mockResolvedValue(['img-1'])
+    submitDatasetOnDemand.mockResolvedValue({
+      status: 'success',
+      onDemandDatasetAccession: 'SDA-abc',
+    })
+    pollDatasetOnDemandStatus.mockRejectedValue({ status: 401, title: 'unauthenticated' })
+
+    const { dodStatus, dodError, applyForNonClinicalImages } = useDatasetOnDemand()
+    const promise = applyForNonClinicalImages()
+    await vi.advanceTimersByTimeAsync(3000)
+    await promise
+
+    expect(dodStatus.value).toBe('error')
+    expect(dodError.value).toBe('Your account does not have access to non-clinical images.')
+    vi.useRealTimers()
+  })
+
   it('goes to error state when getNonClinicalImageIds resolves to empty array', async () => {
     getNonClinicalImageIds.mockResolvedValue([])
 
@@ -110,6 +142,34 @@ describe('useDatasetOnDemand', () => {
     expect(getNonClinicalImageIds).toHaveBeenCalledTimes(2)
     expect(submitDatasetOnDemand).toHaveBeenCalledTimes(2)
     expect(dodStatus.value).toBe('idle')
+  })
+
+  it('ignores a second application while the first application is loading', async () => {
+    vi.useFakeTimers()
+    let resolveImageIds!: (imageIds: string[]) => void
+    getNonClinicalImageIds.mockReturnValueOnce(
+      new Promise<string[]>((resolve) => {
+        resolveImageIds = resolve
+      }),
+    )
+    submitDatasetOnDemand.mockResolvedValue({
+      status: 'success',
+      onDemandDatasetAccession: 'SDA-abc',
+    })
+    pollDatasetOnDemandStatus.mockResolvedValue('STATUS_RELEASED')
+    buildRemsUrl.mockReturnValue('https://rems.example.com/apply-for?resource=SDA-abc')
+
+    const { applyForNonClinicalImages } = useDatasetOnDemand()
+    const firstApplication = applyForNonClinicalImages()
+    const secondApplication = applyForNonClinicalImages()
+
+    expect(getNonClinicalImageIds).toHaveBeenCalledOnce()
+
+    resolveImageIds(['img-1'])
+    await vi.advanceTimersByTimeAsync(3000)
+    await Promise.all([firstApplication, secondApplication])
+
+    expect(submitDatasetOnDemand).toHaveBeenCalledOnce()
   })
 })
 
@@ -231,14 +291,43 @@ describe('useDatasetOnDemand — polling', () => {
     pollDatasetOnDemandStatus.mockReturnValue(new Promise(() => {}))
 
     const { dodStatus, applyForNonClinicalImages } = useDatasetOnDemand()
-    applyForNonClinicalImages()
+    void applyForNonClinicalImages()
 
     // Flush microtasks: getNonClinicalImageIds + submitDatasetOnDemand both resolve.
-    // dodStatus becomes 'polling'; the next await is the 3s setTimeout.
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    // dodStatus becomes 'polling'; the next await is the 3s poll delay.
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(dodStatus.value).toBe('polling')
+  })
+
+  it('stops polling and does not open REMS when its component is unmounted', async () => {
+    getNonClinicalImageIds.mockResolvedValue(['img-1'])
+    submitDatasetOnDemand.mockResolvedValue({
+      status: 'success',
+      onDemandDatasetAccession: 'SDA-abc',
+    })
+    pollDatasetOnDemandStatus.mockResolvedValue('STATUS_RELEASED')
+
+    let applyForNonClinicalImages!: ReturnType<
+      typeof useDatasetOnDemand
+    >['applyForNonClinicalImages']
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          ;({ applyForNonClinicalImages } = useDatasetOnDemand())
+          return () => null
+        },
+      }),
+    )
+
+    const application = applyForNonClinicalImages()
+    await flushPromises()
+    wrapper.unmount()
+
+    await vi.advanceTimersByTimeAsync(3000)
+    await application
+
+    expect(pollDatasetOnDemandStatus).not.toHaveBeenCalled()
+    expect(windowOpenSpy).not.toHaveBeenCalled()
   })
 })

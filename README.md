@@ -29,7 +29,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-The dev server proxies `/api`, `/login`, `/logout`, and `/callback` to `http://localhost:8000`. A running backend is required for the search and auth flows to work. See the [Search API](https://github.com/CSCfi/sd-search-api) repo for backend setup.
+The dev server proxies `/api`, `/login`, `/logout`, `/callback`, and `/refresh` to `http://localhost:8000`. A running backend is required for the search and auth flows to work. See the [Search API](https://github.com/CSCfi/sd-search-api) repo for backend setup.
 
 ## Environment Variables
 
@@ -38,8 +38,8 @@ The dev server proxies `/api`, `/login`, `/logout`, and `/callback` to `http://l
 | `VITE_SERVICE` | yes | Service identity — selects router, views, config, and theme at build time. Default: `bigpicture` |
 | `VITE_AUTH_BYPASS` | no | `"true"` bypasses the route auth guard for local development |
 | `VITE_REMS_URL` | yes | REMS base URL — set per environment (test/prod). Used to build access request links |
-| `VITE_DOD_ENDPOINT_URL` | yes* | Dataset-on-Demand (DoD) submission endpoint URL. Used by `useDatasetOnDemand` to create a virtual dataset from matching non-clinical image IDs, poll for its release, then open REMS. Set per environment; leave empty to disable the DoD flow |
-| `BACKEND_URL` | runtime | nginx proxy target for `/api/`, `/login`, `/callback`, `/logout` — see [Runtime container environment](#runtime-container-environment) |
+| `BACKEND_URL` | runtime | nginx proxy target for `/api/`, `/login`, `/callback`, `/logout`, `/refresh` — see [Runtime container environment](#runtime-container-environment) |
+| `DOD_URL` | runtime, optional | Dataset-on-Demand (DoD) service base that nginx proxies `/dod` and `/dod/status` to. Only for services with the DoD flow — see [Runtime container environment](#runtime-container-environment) |
 
 ## Project Structure
 
@@ -79,6 +79,7 @@ src/
     services/
         api.ts          # All API functions (getFilteringTerms, postQuery, submitDatasetOnDemand, etc.)
         apiClient.ts    # Axios instance with auth interceptor
+        dodClient.ts    # Axios instance for Dataset on Demand (/dod, token added by nginx)
         config.ts       # Typed exports of fields.yaml and groups.yaml via @service/ alias
     stores/             # Pinia: searchStore, authStore
     types/
@@ -181,7 +182,7 @@ Multi-stage build:
 
 `nginx.conf` adds SPA fallback (`try_files … /index.html`), aggressive caching for Vite's content-hashed assets, and no-cache on `index.html`.
 
-API and auth routes (`/api/`, `/login`, `/callback`, `/logout`) are always called on this app's own origin — nginx proxies them to the backend. The backend's OIDC `/callback` sets a host-only session cookie scoped to this origin; cross-origin calls would break auth.
+API and auth routes (`/api/`, `/login`, `/callback`, `/logout`, `/refresh`) are always called on this app's own origin — nginx proxies them to the backend. The backend's OIDC `/callback` sets a host-only session cookie scoped to this origin; cross-origin calls would break auth.
 
 ### Building for deployment
 
@@ -189,7 +190,6 @@ API and auth routes (`/api/`, `/login`, `/callback`, `/logout`) are always calle
 docker build --platform=linux/amd64 \
   --build-arg VITE_SERVICE=bigpicture \
   --build-arg VITE_REMS_URL=https://... \
-  --build-arg VITE_DOD_ENDPOINT_URL=https://... \
   -f docker/Dockerfile \
   -t <image-registry-url>/sd-search-ui-bigpicture:latest .
 
@@ -210,13 +210,13 @@ strategy:
 
 Each service gets its own image tag: `sd-search-ui-<service>:latest` (e.g. `sd-search-ui-bigpicture:latest`). Each Rahti ImageStream must watch its matching tag. When adding a new service, create a new ImageStream for it — do not reuse the existing one.
 
-`VITE_REMS_URL` and `VITE_DOD_ENDPOINT_URL` are passed as build args from repository secrets (`secrets.VITE_REMS_URL`, `secrets.VITE_DOD_ENDPOINT_URL`). Set these in GitHub → Settings → Secrets before the first deploy. The manual build/push steps above are only needed for out-of-band builds.
+`VITE_REMS_URL` is passed as a build arg from a repository secret (`secrets.VITE_REMS_URL`). Set it in GitHub → Settings → Secrets before the first deploy. `DOD_URL` is a runtime variable of the container, not a build arg — set it on the Rahti deployment of services that use DoD. The manual build/push steps above are only needed for out-of-band builds.
 
 ### Running with docker-compose
 
 ```bash
 cp .env.example .env
-# Set BACKEND_URL if the default doesn't reach your backend
+# Set BACKEND_URL if the default doesn't reach your backend; set DOD_URL only for services with Dataset on Demand
 
 docker compose up --build
 ```
@@ -227,17 +227,21 @@ The app is served at `http://localhost:8081`.
 
 | Variable | Required | Description |
 |---|---:|---|
-| `BACKEND_URL` | yes | Base URL the nginx proxy forwards `/api/`, `/login`, `/callback`, `/logout` to. Must be `http(s)://host[:port]` — no path, no trailing slash |
+| `BACKEND_URL` | yes | Base URL the nginx proxy forwards `/api/`, `/login`, `/callback`, `/logout`, `/refresh` to. Must be `http(s)://host[:port]` — no path, no trailing slash |
+| `DOD_URL` | no | Dataset-on-Demand service base, without the method name, e.g. `https://dod-testing.bp.nbis.se/dataset_on_demand.DatasetOnDemandService`. `http(s)://host[:port][/path]` — no trailing slash, query or fragment |
 
-If `BACKEND_URL` is missing or not in that format, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
+If `BACKEND_URL` is missing, or `BACKEND_URL` / a set `DOD_URL` is not in that format, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
 
 Only the `/api/` routes the frontend uses are proxied (`filtering_terms`, `filtering_scopes`, `datasets`, `images`, `status`, and the exact path `/api/ai/filters`); every other `/api/*` path returns 404 from nginx. The AI endpoint has an 80-second nginx read timeout; the frontend request times out after 75 seconds. The backend must have `FEATURE_AI` enabled for the endpoint to be available. See `docker/nginx.conf`.
+
+DoD calls go to `POST /dod` and `POST /dod/status` on this origin. nginx adds `Authorization: Bearer <access_token cookie>` and forwards them to `DOD_URL` (`/RequestDatasetCreation`, `/GetOnDemandDatasetStatus`), verifying the upstream TLS certificate; a missing cookie returns 401. When `DOD_URL` is unset (services without DoD) `/dod` returns 404 and nothing is proxied. **The DoD flow cannot be tested with `pnpm dev`**: the Vite dev server has no `/dod` proxy and cannot read the httponly cookie. Use the container (`docker compose up --build`).
 
 Example:
 
 ```bash
 docker run --rm -p 8081:8081 \
   -e BACKEND_URL=http://host.docker.internal:8000 \
+  -e DOD_URL=<DOD_URL> \
   sd-search-ui
 ```
 

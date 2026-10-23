@@ -13,7 +13,6 @@ COPY . .
 
 ARG VITE_SERVICE
 ARG VITE_REMS_URL
-ARG VITE_DOD_ENDPOINT_URL
 
 RUN pnpm build
 
@@ -32,12 +31,14 @@ RUN apk add --no-cache gettext && \
     chown nginx:root /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d && \
     sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf
 
-# Runtime requirement: BACKEND_URL must be provided.
+# Runtime requirement: BACKEND_URL must be provided. DOD_URL is optional (Dataset on Demand).
 # The official nginx entrypoint renders /etc/nginx/templates/*.template
 # with envsubst before nginx starts.
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 # Plain include, no env substitution — kept outside templates/.
 COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
+# Rendered by the entrypoint into conf.d/dod.locations when DOD_URL is set.
+COPY docker/dod.locations.template /etc/nginx/dod.locations.template
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker/docker-entrypoint-validate.sh /usr/local/bin/docker-entrypoint-validate.sh
 
