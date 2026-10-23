@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
         '/login': 'http://localhost:8000',
         '/logout': 'http://localhost:8000',
         '/callback': 'http://localhost:8000',
+        '/refresh': 'http://localhost:8000',
       },
     },
     plugins: [

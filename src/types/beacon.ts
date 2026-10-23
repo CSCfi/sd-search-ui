@@ -1,12 +1,7 @@
 // Filtering terms
 
 export type BeaconFilteringTermType =
-  | 'text'
-  | 'keyword'
-  | 'controlledValue'
-  | 'ontology'
-  | 'ontologyOrValue'
-  | 'iso8601Range'
+  'text' | 'keyword' | 'controlledValue' | 'ontology' | 'ontologyOrValue' | 'iso8601Range'
 
 export interface BeaconFilteringTerm {
   id: string

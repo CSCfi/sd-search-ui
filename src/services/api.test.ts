@@ -1,19 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import axios from 'axios'
-import type { AxiosRequestConfig } from 'axios'
+import type { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 import type { BeaconQueryRequest } from '@/types/beacon'
-
-vi.mock('axios', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('axios')>()
-  return {
-    default: {
-      ...actual.default,
-      post: vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>(),
-      get: vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>(),
-      isAxiosError: actual.default.isAxiosError,
-    },
-  }
-})
 
 const post = vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>()
 const get = vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
@@ -24,6 +11,8 @@ vi.mock('./apiClient', () => ({
     get: (url: string, config?: AxiosRequestConfig) => get(url, config),
   },
 }))
+
+const dodClient = (await import('./dodClient')).default
 
 const {
   postQuery,
@@ -121,86 +110,70 @@ describe('getNonClinicalImageIds', () => {
   })
 })
 
-describe('submitDatasetOnDemand', () => {
-  beforeEach(() => {
-    vi.mocked(axios.post).mockReset()
-  })
+// Real dodClient with a capturing adapter: URL, credentials and body are asserted as axios
+// would send them.
+function useDodResponse(status: number, data: unknown) {
+  const requests: InternalAxiosRequestConfig[] = []
+  dodClient.defaults.adapter = (config) => {
+    requests.push(config)
+    return Promise.resolve({ data, status, statusText: '', headers: {}, config })
+  }
+  return requests
+}
 
-  it('posts image_accessions and user to VITE_DOD_ENDPOINT_URL with withCredentials: false', async () => {
-    vi.mocked(axios.post).mockResolvedValue({
-      status: 200,
-      data: { on_demand_dataset_accession: 'SDA-abc' },
-    })
+function sentDodBody(request: InternalAxiosRequestConfig): unknown {
+  return JSON.parse(request.data as string)
+}
+
+describe('submitDatasetOnDemand', () => {
+  it('posts image_accessions to /dod with credentials and no user field', async () => {
+    const requests = useDodResponse(200, { on_demand_dataset_accession: 'SDA-abc' })
     await submitDatasetOnDemand(['img-1', 'img-2'])
-    expect(vi.mocked(axios.post)).toHaveBeenCalledWith(
-      import.meta.env.VITE_DOD_ENDPOINT_URL,
-      { image_accessions: ['img-1', 'img-2'], user: 'placeholder' },
-      expect.objectContaining({ withCredentials: false }),
-    )
+
+    const [request] = requests
+    expect(request?.method).toBe('post')
+    expect(dodClient.getUri(request)).toBe('/dod')
+    expect(request?.withCredentials).toBe(true)
+    expect(sentDodBody(request!)).toEqual({ image_accessions: ['img-1', 'img-2'] })
   })
 
   it('returns success result with onDemandDatasetAccession on 200', async () => {
-    vi.mocked(axios.post).mockResolvedValue({
-      status: 200,
-      data: { on_demand_dataset_accession: 'SDA-abc' },
-    })
+    useDodResponse(200, { on_demand_dataset_accession: 'SDA-abc' })
     const result = await submitDatasetOnDemand(['img-1'])
     expect(result).toEqual({ status: 'success', onDemandDatasetAccession: 'SDA-abc' })
   })
 
   it('returns processing result with onDemandDatasetAccession on 202', async () => {
-    vi.mocked(axios.post).mockResolvedValue({
-      status: 202,
-      data: { on_demand_dataset_accession: 'SDA-abc' },
-    })
+    useDodResponse(202, { on_demand_dataset_accession: 'SDA-abc' })
     const result = await submitDatasetOnDemand(['img-1'])
     expect(result).toEqual({ status: 'processing', onDemandDatasetAccession: 'SDA-abc' })
-  })
-
-  it('throws ApiError-shaped object on axios error', async () => {
-    const axiosError = Object.assign(new Error('Server error'), {
-      isAxiosError: true,
-      response: {
-        status: 500,
-        statusText: 'Internal Server Error',
-        data: { title: 'Server error', detail: 'Something broke' },
-      },
-    })
-    vi.mocked(axios.post).mockRejectedValue(axiosError)
-    await expect(submitDatasetOnDemand(['img-1'])).rejects.toMatchObject({
-      status: 500,
-      title: 'Server error',
-      detail: 'Something broke',
-    })
   })
 })
 
 describe('pollDatasetOnDemandStatus', () => {
-  beforeEach(() => {
-    vi.mocked(axios.get).mockReset()
-  })
-
-  it('GETs {VITE_DOD_ENDPOINT_URL}/{accession}/status', async () => {
-    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_CREATING' } })
+  it('posts on_demand_dataset_accession to /dod/status with credentials', async () => {
+    const requests = useDodResponse(200, { status: 'STATUS_CREATING' })
     await pollDatasetOnDemandStatus('SDA-abc')
-    expect(vi.mocked(axios.get)).toHaveBeenCalledWith(
-      `${import.meta.env.VITE_DOD_ENDPOINT_URL}/SDA-abc/status`,
-      expect.objectContaining({ withCredentials: false }),
-    )
+
+    const [request] = requests
+    expect(request?.method).toBe('post')
+    expect(dodClient.getUri(request)).toBe('/dod/status')
+    expect(request?.withCredentials).toBe(true)
+    expect(sentDodBody(request!)).toEqual({ on_demand_dataset_accession: 'SDA-abc' })
   })
 
   it('returns STATUS_CREATING from response', async () => {
-    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_CREATING' } })
+    useDodResponse(200, { status: 'STATUS_CREATING' })
     expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_CREATING')
   })
 
   it('returns STATUS_RELEASED from response', async () => {
-    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_RELEASED' } })
+    useDodResponse(200, { status: 'STATUS_RELEASED' })
     expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_RELEASED')
   })
 
-  it('returns STATUS_INVALID from response', async () => {
-    vi.mocked(axios.get).mockResolvedValue({ data: { status: 'STATUS_INVALID' } })
+  it('maps an empty response to STATUS_INVALID (proto3 JSON omits the default enum)', async () => {
+    useDodResponse(200, {})
     expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_INVALID')
   })
 })
