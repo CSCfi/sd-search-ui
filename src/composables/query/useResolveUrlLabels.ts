@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { getFieldValues, getFilteringTerms } from '@/services/api'
 import { useSearchStore } from '@/stores/searchStore'
-import type { BeaconFilteringTermsResponse, BeaconQueryFilter, FieldValue } from '@/types/beacon'
+import { resolveConceptLabels } from '@/utils/conceptLabels'
+import type { BeaconFilteringTermsResponse, BeaconQueryFilter } from '@/types/beacon'
 
 const ONTOLOGY_TYPES = new Set(['ontology', 'ontologyOrValue'])
 
@@ -41,13 +42,8 @@ export function useResolveUrlLabels() {
             staleTime: 4 * 60 * 60 * 1000,
           })
 
-          const valueByConceptId = new Map<string, FieldValue>()
-          for (const fv of values) {
-            if (fv.concept_id !== null) valueByConceptId.set(fv.concept_id, fv)
-          }
-
           const filterValues = Array.isArray(filter.value) ? filter.value : [filter.value]
-          const labels = filterValues.map((id) => valueByConceptId.get(id)?.value ?? id)
+          const labels = resolveConceptLabels(filterValues, values)
 
           // Only persist resolved labels when at least one raw ID was replaced by a human label.
           // If every label still equals its raw ID, nothing resolved — skip the store write.
