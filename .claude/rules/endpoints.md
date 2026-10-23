@@ -12,10 +12,11 @@ proxies it to the real backend (`BACKEND_URL`) server-side. See `auth.md` for wh
 same-origin rather than pointing at the backend's own hostname directly.
 
 The proxy is an **allowlist**: only `filtering_terms`, `filtering_scopes`, `datasets`, `images`,
-`status` and `ai/filters` (exact path, own location with `proxy_read_timeout 80s`) are forwarded; every other `/api/*` path returns 404 from nginx. A new endpoint
-called by the frontend must also be added to the regex location in `docker/nginx.conf`, or it
-404s in the container build (the Vite dev proxy is not restricted). `BACKEND_URL` must be
-scheme + host (+ port) only, with no path or trailing slash, or nginx refuses to start.
+`status` and the exact path `/api/ai/filters` are forwarded; every other `/api/*` path returns
+404 from nginx. The AI endpoint has its own nginx location with an 80-second read timeout. A new
+endpoint called by the frontend must also be added to `docker/nginx.conf`, or it 404s in the
+container build (the Vite dev proxy is not restricted). `BACKEND_URL` must be scheme + host
+(+ port) only, with no path or trailing slash, or nginx refuses to start.
 
 Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxied through this app.
 
@@ -30,8 +31,22 @@ Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxie
 | POST | `/datasets` | Beacon V2 search — dataset-level (clinical, record granularity) | per query key |
 | POST | `/images` | Beacon V2 search — image-level (non-clinical, count granularity) | per query key |
 | GET | `/status` | Deployment/indexing status — document counts per scope | `staleTime: 5min`, `refetchInterval: 5min` |
-| POST | `/ai/filters` | `{query, filters}` (current draft filters, `label` stripped) → `{interpretation, answerable, filters}`: the complete filter set after the instruction; no search run. Only when `ai_search: true`; 404 if backend `FEATURE_AI` is off. Client timeout 75 s | none (mutation) |
+| POST | `/ai/filters` | AI-assisted filter interpretation; request contains `{ query, filters }`, response contains `{ interpretation, answerable, filters }` | none (mutation); 75 s client timeout |
 | GET | `/health` | Health check — backend only, not reachable through the nginx proxy | — |
+
+### POST /ai/filters — AI-assisted filter input
+
+Enabled in the UI by `ai_search: true` in `config/<service>/fields.yaml`; the backend must also
+have `FEATURE_AI` enabled, otherwise the endpoint returns 404. nginx exposes this exact path with
+an 80 s read timeout; the client request timeout is 75 s.
+
+The request contains the user's text and the current draft filters. UI-only `label` values and
+`requestedScope` are not sent. The backend response contains the complete interpreted filter set;
+it is not a patch. When answerable, the UI validates and maps returned fields, replaces the
+visible draft filters, commits them, and starts the corresponding search immediately. Hidden
+fields are not applied. Scope-specific results switch to the required clinical/non-clinical tab;
+a response combining fields exclusive to both scopes is rejected without applying it. An
+unanswerable response leaves the draft unchanged.
 
 ## Filter Field Types → UI Components
 

@@ -133,6 +133,7 @@ Controls which fields and groups are visible in the search form. Bundled at buil
 | `hidden_scopes` | `string[]` | Scope ids to hide entirely. The scope's tab and all its fields are removed from the UI. When only one scope remains visible, the "All data" tab is also hidden and searches are automatically scoped. When all scopes are hidden, the entire tab group (including the observation type selector) is hidden |
 | `show_concept_id` | `string[]` | Field ids for which the ontology concept ID is shown in parentheses next to the term label in the dropdown. Only applies when a non-null `concept_id` is returned by the backend |
 | `bordered` | `string[]` | Group and scope ids to render with a bordered box |
+| `ai_search` | `boolean` | Enables the natural-language search input when `true`. The backend must also have `FEATURE_AI` enabled; otherwise `/api/ai/filters` returns 404 |
 
 ### `config/groups.yaml` (and optional `config/<service>/groups.yaml`)
 
@@ -230,7 +231,7 @@ The app is served at `http://localhost:8081`.
 
 If `BACKEND_URL` is missing or not in that format, the container fails fast at startup (`docker/docker-entrypoint-validate.sh`) rather than starting with a broken config.
 
-Only the `/api/` routes the frontend uses are proxied (`filtering_terms`, `filtering_scopes`, `datasets`, `images`, `status`); every other `/api/*` path returns 404 from nginx. See `docker/nginx.conf`.
+Only the `/api/` routes the frontend uses are proxied (`filtering_terms`, `filtering_scopes`, `datasets`, `images`, `status`, and the exact path `/api/ai/filters`); every other `/api/*` path returns 404 from nginx. The AI endpoint has an 80-second nginx read timeout; the frontend request times out after 75 seconds. The backend must have `FEATURE_AI` enabled for the endpoint to be available. See `docker/nginx.conf`.
 
 Example:
 
