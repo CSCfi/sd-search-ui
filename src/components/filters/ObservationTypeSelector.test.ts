@@ -10,7 +10,7 @@ const FIELD: BeaconFilteringTerm = {
   label: 'Observation type',
   description: 'How the finding or diagnosis is linked to the image.',
   scopes: ['clinical', 'non_clinical'],
-  controlledValues: ['confirmed', 'candidate'],
+  controlledValues: ['distinct', 'summary'],
 }
 
 let pinia: ReturnType<typeof createPinia>
@@ -36,21 +36,21 @@ describe('ObservationTypeSelector', () => {
     expect(toggleInput(wrapper).element.checked).toBe(false)
   })
 
-  it('renders toggle checked when selected is confirmed', () => {
-    const wrapper = mountSelector('confirmed')
+  it('renders toggle checked when selected is distinct', () => {
+    const wrapper = mountSelector('distinct')
     expect(toggleInput(wrapper).element.checked).toBe(true)
   })
 
-  it('emits change with confirmed when toggling on', async () => {
+  it('emits change with distinct when toggling on', async () => {
     const wrapper = mountSelector()
     const input = toggleInput(wrapper)
     input.element.checked = true
     await input.trigger('change')
-    expect(wrapper.emitted('change')).toEqual([['observation_type', 'confirmed']])
+    expect(wrapper.emitted('change')).toEqual([['observation_type', 'distinct']])
   })
 
   it('emits change with all when toggling off', async () => {
-    const wrapper = mountSelector('confirmed')
+    const wrapper = mountSelector('distinct')
     const input = toggleInput(wrapper)
     input.element.checked = false
     await input.trigger('change')

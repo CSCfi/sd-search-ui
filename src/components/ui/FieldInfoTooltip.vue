@@ -6,6 +6,8 @@ import { Info } from '@lucide/vue'
 const props = defineProps<{
   fieldId: string
   description: string
+  // Render description as HTML (trusted, backend-supplied).
+  html?: boolean
 }>()
 
 const containerRef = useTemplateRef<HTMLElement>('container')
@@ -56,7 +58,8 @@ onKeyStroke('Escape', () => {
       role="tooltip"
       :aria-hidden="!isVisible"
     >
-      {{ description }}
+      <span v-if="html" v-html="description" />
+      <template v-else>{{ description }}</template>
     </div>
   </div>
 </template>
