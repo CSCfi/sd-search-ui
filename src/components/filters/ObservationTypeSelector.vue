@@ -40,7 +40,7 @@ function toggle(checked: boolean) {
           :aria-labelledby="`obs-label-${field.id}`"
           @update:model-value="toggle"
         />
-        <span class="side-label" :class="{ 'side-label--dim': !isDistinct }">Distinct</span>
+        <span class="side-label" :class="{ 'side-label--dim': !isDistinct }">Distinct only</span>
       </div>
     </div>
     <p class="qualifier-hint">Applies to diagnosis and finding filters.</p>
