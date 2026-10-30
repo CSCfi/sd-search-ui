@@ -30,7 +30,6 @@ function toggle(checked: boolean) {
           v-if="field.description"
           :field-id="`obs-${field.id}`"
           :description="field.description"
-          html
         />
       </div>
       <div class="toggle-with-labels">
