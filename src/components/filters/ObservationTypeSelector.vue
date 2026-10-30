@@ -11,10 +11,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{ change: [qualifierId: string, value: string] }>()
 
-const isConfirmed = computed(() => props.selected === 'confirmed')
+// ´Summary (default) = no filter (all).
+const isDistinct = computed(() => props.selected === 'distinct')
 
 function toggle(checked: boolean) {
-  emit('change', props.field.id, checked ? 'confirmed' : 'all')
+  emit('change', props.field.id, checked ? 'distinct' : 'all')
 }
 </script>
 
@@ -32,13 +33,14 @@ function toggle(checked: boolean) {
         />
       </div>
       <div class="toggle-with-labels">
+        <span class="side-label" :class="{ 'side-label--dim': isDistinct }">Summary</span>
         <ToggleSwitch
           :input-id="`obs-toggle-${field.id}`"
-          :model-value="isConfirmed"
+          :model-value="isDistinct"
           :aria-labelledby="`obs-label-${field.id}`"
           @update:model-value="toggle"
         />
-        <span class="side-label" :class="{ 'side-label--dim': !isConfirmed }">Confirmed</span>
+        <span class="side-label" :class="{ 'side-label--dim': !isDistinct }">Distinct only</span>
       </div>
     </div>
     <p class="qualifier-hint">Applies to diagnosis and finding filters.</p>
