@@ -1,4 +1,5 @@
 import type {
+  AIInterpretation,
   BeaconCountResponse,
   BeaconFilteringTermsResponse,
   BeaconQueryFilter,
@@ -110,6 +111,31 @@ export async function pollDatasetOnDemandStatus(accession: string): Promise<DodP
   })
   // proto3 JSON omits default enum values, so STATUS_INVALID (0) arrives as `{}`.
   return res.data.status ?? 'STATUS_INVALID'
+}
+
+// The backend sets no run timeout for the LLM agent, so the client enforces one.
+const AI_FILTERS_TIMEOUT_MS = 75_000
+
+// The backend interprets the text together with the current filters and returns the complete
+// set after the instruction. It keeps no history. `requestedScope` is deliberately not sent,
+// so the model sees every field and the caller derives the tab from the fields it returns.
+// Filters are sent as a search would send them, minus the UI-only `label`.
+export async function interpretFilters(
+  { query, filters }: { query: string; filters: BeaconQueryFilter[] },
+  signal: AbortSignal,
+): Promise<AIInterpretation> {
+  const payload = filters.map(({ id, value, operator, includeDescendantTerms }) => ({
+    id,
+    value,
+    operator,
+    ...(includeDescendantTerms !== undefined ? { includeDescendantTerms } : {}),
+  }))
+  const res = await apiClient.post<AIInterpretation>(
+    '/ai/filters',
+    { query, filters: payload },
+    { signal, timeout: AI_FILTERS_TIMEOUT_MS },
+  )
+  return res.data
 }
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {

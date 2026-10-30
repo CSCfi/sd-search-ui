@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 import type { BeaconQueryRequest } from '@/types/beacon'
 
-const post = vi.fn<(url: string, body: BeaconQueryRequest) => Promise<{ data: unknown }>>()
+const post =
+  vi.fn<(url: string, body: unknown, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
 const get = vi.fn<(url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>>()
 
 vi.mock('./apiClient', () => ({
   default: {
-    post: (url: string, body: BeaconQueryRequest) => post(url, body),
+    post: (url: string, body: unknown, config?: AxiosRequestConfig) => post(url, body, config),
     get: (url: string, config?: AxiosRequestConfig) => get(url, config),
   },
 }))
@@ -18,6 +19,7 @@ const {
   postQuery,
   postNonClinicalQuery,
   getNonClinicalImageIds,
+  interpretFilters,
   submitDatasetOnDemand,
   pollDatasetOnDemandStatus,
 } = await import('./api')
@@ -124,6 +126,68 @@ function useDodResponse(status: number, data: unknown) {
 function sentDodBody(request: InternalAxiosRequestConfig): unknown {
   return JSON.parse(request.data as string)
 }
+
+describe('interpretFilters', () => {
+  const response = { interpretation: 'Male', answerable: true, filters: [] }
+
+  beforeEach(() => {
+    post.mockReset()
+    post.mockResolvedValue({ data: response })
+  })
+
+  it('posts the query and the current filters to /ai/filters, without requestedScope', async () => {
+    await interpretFilters(
+      { query: 'male', filters: [{ id: 'sex', value: 'Male', operator: '=' }] },
+      new AbortController().signal,
+    )
+    expect(post.mock.calls[0]?.[0]).toBe('/ai/filters')
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      query: 'male',
+      filters: [{ id: 'sex', value: 'Male', operator: '=' }],
+    })
+  })
+
+  it('sends an empty filter list when the form has no filters', async () => {
+    await interpretFilters({ query: 'male', filters: [] }, new AbortController().signal)
+    expect(post.mock.calls[0]?.[1]).toEqual({ query: 'male', filters: [] })
+  })
+
+  it('keeps includeDescendantTerms and drops the UI-only label', async () => {
+    await interpretFilters(
+      {
+        query: 'x',
+        filters: [
+          {
+            id: 'animal_species',
+            value: ['337915000'],
+            operator: '=',
+            includeDescendantTerms: true,
+            label: ['Human'],
+          },
+        ],
+      },
+      new AbortController().signal,
+    )
+    expect(post.mock.calls[0]?.[1]).toEqual({
+      query: 'x',
+      filters: [
+        { id: 'animal_species', value: ['337915000'], operator: '=', includeDescendantTerms: true },
+      ],
+    })
+  })
+
+  it('passes the abort signal and a 75 second timeout', async () => {
+    const { signal } = new AbortController()
+    await interpretFilters({ query: 'male', filters: [] }, signal)
+    expect(post.mock.calls[0]?.[2]).toEqual({ signal, timeout: 75_000 })
+  })
+
+  it('returns the response body', async () => {
+    await expect(
+      interpretFilters({ query: 'male', filters: [] }, new AbortController().signal),
+    ).resolves.toEqual(response)
+  })
+})
 
 describe('submitDatasetOnDemand', () => {
   it('posts image_accessions to /dod with credentials and no user field', async () => {

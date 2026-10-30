@@ -51,6 +51,22 @@ export interface BeaconQueryFilter {
   label?: string[]
 }
 
+// AI filter interpretation
+
+export interface AIFilter {
+  id: string
+  value: string | string[]
+  operator: '='
+  includeDescendantTerms?: boolean
+}
+
+export interface AIInterpretation {
+  interpretation: string
+  // false: the text cannot be expressed as filters; `filters` are then the current ones unchanged.
+  answerable: boolean
+  filters: AIFilter[]
+}
+
 // Results
 
 export interface BeaconResultSet<T = unknown> {

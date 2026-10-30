@@ -147,6 +147,58 @@ describe('searchStore — datasetType scope', () => {
   })
 })
 
+describe('searchStore — switchScope', () => {
+  const fieldScopes = new Map([
+    ['sex', ['clinical', 'non_clinical']],
+    ['diagnosis', ['clinical']],
+    ['finding', ['non_clinical']],
+  ])
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('sets the draft tab and returns the dropped field ids', () => {
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setFilter('diagnosis', ['1'])
+    const dropped = store.switchScope('non_clinical', fieldScopes)
+    expect(store.datasetType).toBe('non_clinical')
+    expect(dropped).toEqual(['diagnosis'])
+    expect(store.draftFilters.map((f) => f.id)).toEqual(['sex'])
+  })
+
+  it('keeps filters for ids that are not in the field-scope map', () => {
+    const store = useSearchStore()
+    store.setFilter('observation_type', 'confirmed')
+    expect(store.switchScope('clinical', fieldScopes)).toEqual([])
+    expect(store.draftFilters).toHaveLength(1)
+  })
+
+  it('drops nothing when switching to all', () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['1'])
+    expect(store.switchScope('all', fieldScopes)).toEqual([])
+    expect(store.draftFilters).toHaveLength(1)
+  })
+
+  it('drops nothing when the field-scope map is not loaded yet', () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['1'])
+    expect(store.switchScope('non_clinical')).toEqual([])
+    expect(store.datasetType).toBe('non_clinical')
+  })
+
+  it('does not touch committed filters or the committed tab', () => {
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['1'])
+    store.commit()
+    store.switchScope('non_clinical', fieldScopes)
+    expect(store.committedFilters.map((f) => f.id)).toEqual(['diagnosis'])
+    expect(store.committedDatasetType).toBe('all')
+  })
+})
+
 describe('searchStore — removeFilters', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

@@ -10,6 +10,7 @@ export interface FieldsConfig {
   hidden_scopes: string[]
   show_concept_id?: string[]
   complementary?: boolean
+  ai_search?: boolean
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig
