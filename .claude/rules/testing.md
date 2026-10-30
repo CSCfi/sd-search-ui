@@ -199,7 +199,7 @@ Run before every PR that touches the search form or results view.
 - [ ] Invalid `?tab=` URL value is reset silently
 
 ### Observation type
-- [ ] Selecting Confirmed / Candidate updates results
+- [ ] Selecting Distinct / Summary updates results
 - [ ] Selecting All removes the observation_type filter
 
 ### Edge cases

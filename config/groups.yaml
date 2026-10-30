@@ -15,14 +15,14 @@
     - observation_type
 
 - id: subject
-  label: "Subject & specimen"
+  label: "Biological being"
   fields:
     - anatomical_site
     - sex
     - age_at_extraction
 
 - id: sample
-  label: "Sample & block"
+  label: "Sample preparation"
   fields:
     - block_preparation
     - specimen_type

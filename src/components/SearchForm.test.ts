@@ -208,7 +208,7 @@ describe('SearchForm — copy filter URL', () => {
   it('includes observation_type filter when selected', async () => {
     const store = useSearchStore()
     store.setFilter('diagnosis', ['64033007'])
-    store.setFilter('observation_type', 'confirmed')
+    store.setFilter('observation_type', 'distinct')
 
     const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
@@ -219,7 +219,7 @@ describe('SearchForm — copy filter URL', () => {
 
     const url = new URL(writeText.mock.calls[0]?.[0] as string)
     expect(url.searchParams.get('diagnosis')).toBe('64033007')
-    expect(url.searchParams.get('observation_type')).toBe('confirmed')
+    expect(url.searchParams.get('observation_type')).toBe('distinct')
   })
 
   it('includes complementary=true when the toggle is on', async () => {
