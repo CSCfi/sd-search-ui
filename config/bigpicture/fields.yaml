@@ -8,6 +8,10 @@ header:
 # Omitted or false = feature off for this service.
 complementary: false
 
+# Enables the AI-assisted "Describe your search" text input at the top of the
+# search form. Omitted or false = input not rendered for this service.
+ai_search: true
+
 # Field ids to hide in the search UI.
 # All fields returned by /filtering_terms are shown by default.
 # Add a field id here to hide it. If all fields in a group are hidden,

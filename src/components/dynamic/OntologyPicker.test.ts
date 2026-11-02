@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { type Ref, nextTick } from 'vue'
 import OntologyPicker from './OntologyPicker.vue'
+import Badge from '@/components/ui/Badge.vue'
 import type { FieldValue } from '@/types/beacon'
 
 const MOCK_SUGGESTIONS = vi.hoisted((): FieldValue[] => [
@@ -123,6 +124,30 @@ describe('OntologyPicker', () => {
     await nextTick()
     expect(w.find('.selected-first').text()).toBe('Breast structure')
     expect(w.find('.placeholder').exists()).toBe(false)
+  })
+
+  it('shows the pre-filled value from modelValue on mount', () => {
+    const w = mountComponent({ modelValue: ['80248007'] })
+    expect(w.find('.selected-first').text()).toBe('Breast structure')
+  })
+
+  it('replaces the shown selection when modelValue is changed from outside', async () => {
+    const w = mountComponent({ modelValue: ['80248007'] })
+    await w.setProps({ modelValue: ['39607008'] })
+    expect(w.find('.selected-first').text()).toBe('Lung structure')
+    expect(w.findComponent(Badge).exists()).toBe(false)
+  })
+
+  it('does not rebuild the selection when modelValue only echoes the picker own emit', async () => {
+    const w = mountComponent()
+    await openDropdown(w)
+    await typeSearch(w, 'br')
+    await w
+      .findAll('[role="option"]')
+      .find((o) => o.text().includes('Breast'))!
+      .trigger('click')
+    await w.setProps({ modelValue: ['80248007'] })
+    expect(w.find('.selected-first').text()).toBe('Breast structure')
   })
 
   it('shows +N badge when multiple selected', async () => {

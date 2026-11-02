@@ -54,6 +54,25 @@ export const useSearchStore = defineStore('search', () => {
     datasetType.value = type
   }
 
+  // Switch the draft tab and drop draft filters whose field is outside the new scope.
+  // Ids absent from `fieldScopes` are kept. Committed filters are left alone, so the visible
+  // results keep matching the search that produced them. Returns the dropped field ids.
+  const switchScope = (type: DatasetType, fieldScopes?: Map<string, string[]>): string[] => {
+    const dropped =
+      type === 'all'
+        ? []
+        : draftFilters.value
+            .filter((f) => {
+              const fieldScope = fieldScopes?.get(f.id)
+              return fieldScope !== undefined && !fieldScope.includes(type)
+            })
+            .map((f) => f.id)
+
+    datasetType.value = type
+    if (dropped.length > 0) removeFilters(dropped)
+    return dropped
+  }
+
   const setIncludeComplementary = (value: boolean) => {
     if (value && !isComplementaryEnabled()) return
     includeComplementary.value = value
@@ -135,6 +154,7 @@ export const useSearchStore = defineStore('search', () => {
     setFilter,
     removeFilters,
     setDatasetType,
+    switchScope,
     setIncludeComplementary,
     resetScope,
     clearFilters,
