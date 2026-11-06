@@ -100,8 +100,7 @@ pass an already-shaped `ApiError` through.
 
 ## Logout (`logoutSession()`, `revokeSession()` in `services/sessionRefresh.ts`)
 
-Deleting cookies in the browser does not end the refresh token: it stays valid at LS AAI (about a
-month), so anyone who copied it could keep minting access tokens. `GET /logout` cannot revoke it,
+Logout ends the refresh token at LS AAI, not only the browser cookies. `GET /logout` cannot do this,
 because the refresh cookie is `Path=/refresh` and never reaches `/logout`. The backend route for
 this is `DELETE /refresh`: it revokes the refresh token at LS AAI (RFC 7009), clears both cookies,
 and always answers `204` (also with no cookie). A failed revocation is only logged server-side.
