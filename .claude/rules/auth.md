@@ -181,8 +181,8 @@ Response interceptor:
 
 DoD is a separate third-party service (Connect-style JSON over POST) that needs a bearer token.
 The access token cookie is `httponly`, so the frontend cannot attach it. nginx does it:
-`POST /dod` and `POST /dod/status` on this origin are proxied to `DOD_URL` (`/RequestDatasetCreation`,
-`/GetOnDemandDatasetStatus`) with `Authorization: Bearer $cookie_access_token`. The `Cookie` header is
+`POST /dod` on this origin is proxied to `DOD_URL` (`/RequestDatasetCreation`) with
+`Authorization: Bearer $cookie_access_token`. The `Cookie` header is
 stripped, the upstream certificate is verified (`proxy_ssl_verify on`, depth 3), only `POST` is allowed
 and every other `/dod/` path is 404.
 

@@ -23,17 +23,16 @@ scheme + host (+ port) only, with no path or trailing slash, or nginx refuses to
 called only through `revokeSession()` / `logoutSession()` in the same file. nginx allows only `POST`
 and `DELETE` on `/refresh` — see `auth.md`.
 
-`/dod` and `/dod/status` are also served by nginx on this origin, outside `/api`: they proxy to the
+`/dod` is also served by nginx on this origin, outside `/api`: it proxies to the
 Dataset-on-Demand service (`DOD_URL`), not to the backend, and nginx adds the bearer token from the
 cookie. Called only through `dodClient` (`services/dodClient.ts`) — see `auth.md`.
 
 | Method | Path | Upstream | Body -> response |
 |---|---|---|---|
-| POST | `/dod` | `{DOD_URL}/RequestDatasetCreation` | `{ image_accessions: string[] }` -> `{ on_demand_dataset_accession: string }` |
-| POST | `/dod/status` | `{DOD_URL}/GetOnDemandDatasetStatus` | `{ on_demand_dataset_accession }` -> `{ status?: "STATUS_CREATING" \| "STATUS_RELEASED" }` |
+| POST | `/dod` | `{DOD_URL}/RequestDatasetCreation` | `{ image_accessions: string[] }` -> 200 on accepted request (body ignored) |
 
-proto3 JSON omits the default enum value, so `STATUS_INVALID` arrives as `{}`; `pollDatasetOnDemandStatus`
-maps a missing `status` to `STATUS_INVALID`. Errors are Connect `{ code, message }`.
+Fire-and-forget: the UI does not poll for completion; the user is told an email follows. Errors are Connect
+`{ code, message }`.
 
 Swagger UI on the backend itself: `http://localhost:8000/docs` (dev), not proxied through this app.
 

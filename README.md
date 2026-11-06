@@ -39,7 +39,7 @@ The dev server proxies `/api`, `/login`, `/logout`, `/callback`, and `/refresh` 
 | `VITE_AUTH_BYPASS` | no | `"true"` bypasses the route auth guard for local development |
 | `VITE_REMS_URL` | yes | REMS base URL — set per environment (test/prod). Used to build access request links |
 | `BACKEND_URL` | runtime | nginx proxy target for `/api/`, `/login`, `/callback`, `/logout`, `/refresh` — see [Runtime container environment](#runtime-container-environment) |
-| `DOD_URL` | runtime, optional | Dataset-on-Demand (DoD) service base that nginx proxies `/dod` and `/dod/status` to. Only for services with the DoD flow — see [Runtime container environment](#runtime-container-environment) |
+| `DOD_URL` | runtime, optional | Dataset-on-Demand (DoD) service base that nginx proxies `/dod` to. Only for services with the DoD flow — see [Runtime container environment](#runtime-container-environment) |
 
 ## Project Structure
 
@@ -233,7 +233,7 @@ If `BACKEND_URL` is missing, or `BACKEND_URL` / a set `DOD_URL` is not in that f
 
 Only the `/api/` routes the frontend uses are proxied (`filtering_terms`, `filtering_scopes`, `datasets`, `images`, `status`); every other `/api/*` path returns 404 from nginx. See `docker/nginx.conf`.
 
-DoD calls go to `POST /dod` and `POST /dod/status` on this origin. nginx adds `Authorization: Bearer <access_token cookie>` and forwards them to `DOD_URL` (`/RequestDatasetCreation`, `/GetOnDemandDatasetStatus`), verifying the upstream TLS certificate; a missing cookie returns 401. When `DOD_URL` is unset (services without DoD) `/dod` returns 404 and nothing is proxied. **The DoD flow cannot be tested with `pnpm dev`**: the Vite dev server has no `/dod` proxy and cannot read the httponly cookie. Use the container (`docker compose up --build`).
+DoD calls go to `POST /dod` on this origin. nginx adds `Authorization: Bearer <access_token cookie>` and forwards it to `DOD_URL` (`/RequestDatasetCreation`), verifying the upstream TLS certificate; a missing cookie returns 401. When `DOD_URL` is unset (services without DoD) `/dod` returns 404 and nothing is proxied. **The DoD flow cannot be tested with `pnpm dev`**: the Vite dev server has no `/dod` proxy and cannot read the httponly cookie. Use the container (`docker compose up --build`).
 
 Example:
 
