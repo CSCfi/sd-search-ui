@@ -1,21 +1,14 @@
-import { computed, getCurrentScope, onScopeDispose, ref } from 'vue'
+import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import {
-  getNonClinicalImageIds,
-  submitDatasetOnDemand,
-  pollDatasetOnDemandStatus,
-} from '@/services/api'
-import { buildRemsUrl } from '@/utils/rems'
+import { getNonClinicalImageIds, submitDatasetOnDemand } from '@/services/api'
 import type { ApiError } from '@/services/apiClient'
 import { useSearchStore } from '@/stores/searchStore'
 
-export type DodStatus = 'idle' | 'loading' | 'polling' | 'error'
+export type DodStatus = 'idle' | 'loading' | 'sent' | 'error'
 
 const GENERIC_ERROR_MESSAGE = 'Something went wrong while creating the dataset. Please try again.'
 // A 401 that survives the session refresh + retry means the DoD service rejected the token.
 const ACCESS_DENIED_MESSAGE = 'Your account does not have access to non-clinical images.'
-const POLL_INTERVAL_MS = 3000
-const POLL_MAX_ATTEMPTS = 20 // ~60s total
 
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -30,35 +23,27 @@ export function useDatasetOnDemand() {
   const dodStatus = ref<DodStatus>('idle')
   const dodError = ref<string | null>(null)
   let isDisposed = false
-  let pollTimeout: ReturnType<typeof setTimeout> | undefined
-  let resolvePollDelay: (() => void) | undefined
 
-  const isDodBusy = computed(() => dodStatus.value === 'loading' || dodStatus.value === 'polling')
-
-  function waitForNextPoll(): Promise<void> {
-    return new Promise((resolve) => {
-      resolvePollDelay = () => {
-        resolvePollDelay = undefined
-        resolve()
-      }
-      pollTimeout = setTimeout(() => {
-        pollTimeout = undefined
-        resolvePollDelay?.()
-      }, POLL_INTERVAL_MS)
-    })
-  }
+  const isDodBusy = computed(() => dodStatus.value === 'loading')
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
       isDisposed = true
-      if (pollTimeout !== undefined) clearTimeout(pollTimeout)
-      resolvePollDelay?.()
     })
   }
 
-  async function applyForNonClinicalImages(): Promise<void> {
-    if (isDodBusy.value || isDisposed) return
+  // commit() assigns a new array even for identical filters, so compare values, not references.
+  // An identical re-commit must keep `sent`, otherwise the same request could be submitted twice.
+  watch(committedFilters, (next, prev) => {
+    if (dodStatus.value === 'sent' && JSON.stringify(next) !== JSON.stringify(prev)) {
+      dodStatus.value = 'idle'
+    }
+  })
 
+  async function applyForNonClinicalImages(): Promise<void> {
+    if (isDodBusy.value || dodStatus.value === 'sent' || isDisposed) return
+
+    const requestedFilters = JSON.stringify(committedFilters.value)
     dodStatus.value = 'loading'
     dodError.value = null
 
@@ -73,36 +58,13 @@ export function useDatasetOnDemand() {
         throw new Error(GENERIC_ERROR_MESSAGE)
       }
 
-      const result = await submitDatasetOnDemand(imageIds)
+      await submitDatasetOnDemand(imageIds)
       if (isDisposed) return
-      const accession = result.onDemandDatasetAccession
 
-      // SDA may need time to compose the dataset regardless of status code.
-      // Poll until released or until max attempts are exhausted.
-      dodStatus.value = 'polling'
-
-      for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
-        await waitForNextPoll()
-        if (isDisposed) return
-
-        const pollingStatus = await pollDatasetOnDemandStatus(accession)
-        if (isDisposed) return
-
-        if (pollingStatus === 'STATUS_RELEASED') {
-          dodStatus.value = 'idle'
-          window.open(buildRemsUrl(accession), '_blank', 'noopener')
-          return
-        }
-
-        if (pollingStatus === 'STATUS_INVALID') {
-          throw new Error(GENERIC_ERROR_MESSAGE)
-        }
-      }
-
-      // Max attempts reached without STATUS_RELEASED
-      throw new Error(
-        'This is taking longer than expected. You will receive an email when your dataset is ready.',
-      )
+      // Filters changed while the request was in flight: `sent` would describe a search the
+      // user is no longer looking at.
+      dodStatus.value =
+        JSON.stringify(committedFilters.value) === requestedFilters ? 'sent' : 'idle'
     } catch (error) {
       if (isDisposed) return
       dodStatus.value = 'error'

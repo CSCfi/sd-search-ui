@@ -147,8 +147,8 @@ Response interceptor:
 
 DoD is a separate third-party service (Connect-style JSON over POST) that needs a bearer token.
 The access token cookie is `httponly`, so the frontend cannot attach it. nginx does it:
-`POST /dod` and `POST /dod/status` on this origin are proxied to `DOD_URL` (`/RequestDatasetCreation`,
-`/GetOnDemandDatasetStatus`) with `Authorization: Bearer $cookie_access_token`. The `Cookie` header is
+`POST /dod` on this origin is proxied to `DOD_URL` (`/RequestDatasetCreation`) with
+`Authorization: Bearer $cookie_access_token`. The `Cookie` header is
 stripped, the upstream certificate is verified (`proxy_ssl_verify on`, depth 3), only `POST` is allowed
 and every other `/dod/` path is 404.
 
@@ -162,8 +162,7 @@ and every other `/dod/` path is 404.
 - A `401` after refresh + retry means the DoD service rejected the token. `useDatasetOnDemand` shows an
   access-denied message; there is no logout.
 - The dev server has no `/dod` proxy and cannot read the cookie: DoD does not work with `pnpm dev`.
-- Open: whether the DoD service accepts the LS AAI access token (audience is the sd-search-api client).
-  `TODO(auth)` in `submitDatasetOnDemand`.
+- The DoD service accepts the LS AAI access token that nginx sends as bearer.
 
 ## What Is Not Implemented Yet
 

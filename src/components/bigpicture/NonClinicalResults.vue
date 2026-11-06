@@ -81,19 +81,24 @@ function onApplyClick() {
                 Matching non-clinical images : <span class="nc-count">{{ imageCount }}</span>
               </p>
             </div>
-            <c-button class="btn-apply-non-clinical" :disabled="isDodBusy" @click="onApplyClick">
+            <c-button
+              class="btn-apply-non-clinical"
+              :disabled="isDodBusy || dodStatus === 'sent'"
+              @click="onApplyClick"
+            >
               <Key :size="16" aria-hidden="true" />
               Apply for the non-clinical images
             </c-button>
 
-            <div
-              v-if="dodStatus === 'loading' || dodStatus === 'polling'"
-              class="dod-progress"
-              aria-live="polite"
-            >
+            <div v-if="dodStatus === 'loading'" class="dod-progress" aria-live="polite">
               <LoadingSpinner :size="18" />
               <span>Processing the request to create a dataset..</span>
             </div>
+
+            <p v-else-if="dodStatus === 'sent'" class="dod-sent" aria-live="polite">
+              The request for the non-clinical dataset has been sent. You will receive later an
+              email with the link to apply for the access.
+            </p>
 
             <ErrorBanner
               v-else-if="dodStatus === 'error' && !dodErrorDismissed"
@@ -229,7 +234,8 @@ function onApplyClick() {
   line-height: 1.5;
 }
 
-.dod-progress {
+.dod-progress,
+.dod-sent {
   display: flex;
   align-items: center;
   gap: 0.5rem;

@@ -8,7 +8,7 @@ import type {
   DeploymentStatus,
   FieldValue,
 } from '@/types/beacon'
-import type { BigPictureImageResultSetsResponse, DatasetOnDemandResult } from '@/types/bigpicture'
+import type { BigPictureImageResultSetsResponse } from '@/types/bigpicture'
 import apiClient from './apiClient'
 import dodClient from './dodClient'
 
@@ -87,29 +87,9 @@ export async function getNonClinicalImageIds(filters: BeaconQueryFilter[]): Prom
 
 // Submits image IDs for a Dataset on Demand (DoD) request via `dodClient` (`POST /dod`).
 // Errors arrive as ApiError, mapped by dodClient.
-export async function submitDatasetOnDemand(imageIds: string[]): Promise<DatasetOnDemandResult> {
+export async function submitDatasetOnDemand(imageIds: string[]): Promise<void> {
   // '' keeps the URL at `/dod`; '/' would give `/dod/`, which nginx's exact-match location misses.
-  const res = await dodClient.post<{ on_demand_dataset_accession: string }>('', {
-    image_accessions: imageIds,
-  })
-
-  const accession = res.data.on_demand_dataset_accession
-
-  if (res.status === 202) {
-    return { status: 'processing', onDemandDatasetAccession: accession }
-  }
-
-  return { status: 'success', onDemandDatasetAccession: accession }
-}
-
-export type DodPollingStatus = 'STATUS_CREATING' | 'STATUS_RELEASED' | 'STATUS_INVALID'
-
-export async function pollDatasetOnDemandStatus(accession: string): Promise<DodPollingStatus> {
-  const res = await dodClient.post<{ status?: DodPollingStatus }>('/status', {
-    on_demand_dataset_accession: accession,
-  })
-  // proto3 JSON omits default enum values, so STATUS_INVALID (0) arrives as `{}`.
-  return res.data.status ?? 'STATUS_INVALID'
+  await dodClient.post('', { image_accessions: imageIds })
 }
 
 export async function getFilteringScopes(): Promise<BeaconFilteringScope[]> {
