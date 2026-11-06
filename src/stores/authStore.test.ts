@@ -79,11 +79,14 @@ describe('authStore — checkSession', () => {
   it('reports logged out when the refresh is 401 and the probe is still 401', async () => {
     mockProbe(401, 401, 401)
     mockRefresh(401)
+    const revoke = vi.spyOn(axios, 'delete').mockResolvedValue({ status: 204 })
     const store = useAuthStore()
 
     await store.checkSession()
 
     expect(store.isLoggedIn).toBe(false)
+    expect(revoke).toHaveBeenCalledTimes(1)
+    expect(revoke).toHaveBeenCalledWith('/refresh', { withCredentials: true, timeout: 5000 })
   })
 
   it('stays logged in when the refresh is 401 but another tab already refreshed', async () => {

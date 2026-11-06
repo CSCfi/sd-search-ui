@@ -35,6 +35,8 @@ export const useAuthStore = defineStore('auth', () => {
         setLoggedIn(true)
         return
       case 'expired':
+        // recoverSession already revoked the refresh token; DELETE /refresh also cleared the
+        // cookies, so nothing stale is left in the browser.
         setLoggedIn(false)
         return
       case 'unavailable':

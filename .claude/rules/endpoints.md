@@ -19,7 +19,9 @@ scheme + host (+ port) only, with no path or trailing slash, or nginx refuses to
 
 `/login`, `/callback`, `/logout` and `/refresh` are also proxied by nginx, at the origin root (not under
 `/api`). `POST /refresh` renews the session cookies and is called only through `refreshSession()`
-(`services/sessionRefresh.ts`) — see `auth.md`.
+(`services/sessionRefresh.ts`). `DELETE /refresh` revokes the refresh token and clears the cookies,
+called only through `revokeSession()` / `logoutSession()` in the same file. nginx allows only `POST`
+and `DELETE` on `/refresh` — see `auth.md`.
 
 `/dod` and `/dod/status` are also served by nginx on this origin, outside `/api`: they proxy to the
 Dataset-on-Demand service (`DOD_URL`), not to the backend, and nginx adds the bearer token from the
