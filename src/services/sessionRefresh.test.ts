@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { AxiosError } from 'axios'
 import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios'
-import { attachRefreshInterceptor, refreshSession } from './sessionRefresh'
+import {
+  attachRefreshInterceptor,
+  logoutSession,
+  recoverSession,
+  refreshSession,
+  revokeSession,
+} from './sessionRefresh'
 
 function httpError(status: number, config: InternalAxiosRequestConfig) {
   return new AxiosError('failed', 'ERR_BAD_REQUEST', config, null, {
@@ -50,6 +56,25 @@ function mockRefresh(...outcomes: ('ok' | 401 | 503 | 'network')[]) {
   return spy
 }
 
+function mockRevoke(outcome: 204 | 503 | 'network' | 'timeout' = 204) {
+  const spy = vi.spyOn(axios, 'delete')
+  if (outcome === 204) return spy.mockResolvedValue({ status: 204 })
+  if (outcome === 'network')
+    return spy.mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK'))
+  if (outcome === 'timeout') {
+    return spy.mockRejectedValue(new AxiosError('timeout of 5000ms exceeded', 'ECONNABORTED'))
+  }
+  return spy.mockRejectedValue(
+    new AxiosError('failed', 'ERR_BAD_RESPONSE', undefined, null, {
+      status: outcome,
+      statusText: '',
+      data: {},
+      headers: {},
+      config: {} as InternalAxiosRequestConfig,
+    }),
+  )
+}
+
 describe('refreshSession', () => {
   afterEach(() => vi.restoreAllMocks())
 
@@ -84,10 +109,20 @@ describe('refreshSession', () => {
   })
 })
 
+type LockOptions = { signal?: AbortSignal }
+type LockCallback = () => Promise<unknown>
+
 function stubLocks() {
-  const request = vi.fn<(name: string, fn: () => Promise<unknown>) => Promise<unknown>>(
-    (_name, fn) => fn(),
-  )
+  const request = vi.fn<
+    (
+      name: string,
+      optionsOrFn: LockOptions | LockCallback,
+      maybeFn?: LockCallback,
+    ) => Promise<unknown>
+  >((_name: string, optionsOrFn: LockOptions | LockCallback, maybeFn?: LockCallback) => {
+    const fn = typeof optionsOrFn === 'function' ? optionsOrFn : maybeFn!
+    return fn()
+  })
   Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true })
   return request
 }
@@ -169,6 +204,7 @@ describe('attachRefreshInterceptor', () => {
 
   it('redirects to /logout and clears postLoginRedirect when refresh and retry are both 401', async () => {
     mockRefresh(401)
+    mockRevoke()
     const { client } = makeClient({ '/data': [401, 401, 401] })
 
     await expect(client.get('/data')).rejects.toMatchObject({ status: 401 })
@@ -229,5 +265,205 @@ describe('attachRefreshInterceptor', () => {
     await expect(client.get('/data')).rejects.toBeInstanceOf(AxiosError)
 
     expect(refresh).not.toHaveBeenCalled()
+  })
+})
+
+describe('revokeSession', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('sends DELETE /refresh at the origin root with credentials and a 5 s timeout', async () => {
+    const spy = mockRevoke()
+    await revokeSession()
+    expect(spy).toHaveBeenCalledWith('/refresh', { withCredentials: true, timeout: 5000 })
+  })
+
+  it.each([503, 'network', 'timeout'] as const)(
+    'resolves when the DELETE fails (%s)',
+    async (o) => {
+      mockRevoke(o)
+      await expect(revokeSession()).resolves.toBeUndefined()
+    },
+  )
+})
+
+describe('logoutSession', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', { value: { href: '/search' }, writable: true })
+    sessionStorage.setItem('postLoginRedirect', '/search?sex=Female')
+    removeLocks()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    removeLocks()
+  })
+
+  it('revokes under the session-refresh lock, clears postLoginRedirect, then navigates', async () => {
+    const order: string[] = []
+    const locks = stubLocks()
+    locks.mockImplementation(async (_name, _options, fn) => {
+      order.push('lock acquired')
+      const result = await (fn as LockCallback)()
+      order.push('lock released')
+      return result
+    })
+    const revoke = mockRevoke()
+    revoke.mockImplementation(() => {
+      order.push('DELETE')
+      return Promise.resolve({ status: 204 })
+    })
+
+    await logoutSession()
+
+    expect(locks).toHaveBeenCalledTimes(1)
+    expect(locks.mock.calls[0]?.[0]).toBe('session-refresh')
+    expect(order).toEqual(['lock acquired', 'DELETE', 'lock released'])
+    expect(revoke).toHaveBeenCalledWith('/refresh', { withCredentials: true, timeout: 5000 })
+    expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+    expect(window.location.href).toBe('/logout')
+  })
+
+  it('caps the lock wait with an abort signal', async () => {
+    const locks = stubLocks()
+    mockRevoke()
+
+    await logoutSession()
+
+    const options = locks.mock.calls[0]?.[1] as LockOptions
+    expect(options.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it.each([503, 'network', 'timeout'] as const)(
+    'still navigates to /logout when the DELETE fails (%s)',
+    async (outcome) => {
+      stubLocks()
+      mockRevoke(outcome)
+
+      await logoutSession()
+
+      expect(window.location.href).toBe('/logout')
+      expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+    },
+  )
+
+  it('revokes directly and navigates when Web Locks is unavailable', async () => {
+    const revoke = mockRevoke()
+
+    await logoutSession()
+
+    expect(revoke).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe('/logout')
+  })
+
+  it('revokes without the lock and navigates when the lock wait is aborted', async () => {
+    const locks = stubLocks()
+    locks.mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'))
+    const revoke = mockRevoke()
+
+    await logoutSession()
+
+    expect(locks).toHaveBeenCalledTimes(1)
+    expect(revoke).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe('/logout')
+    expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+  })
+})
+
+describe('recoverSession — revoke on a dead session', () => {
+  const unauthorized = () =>
+    new AxiosError('failed', 'ERR_BAD_REQUEST', undefined, null, {
+      status: 401,
+      statusText: '',
+      data: {},
+      headers: {},
+      config: {} as InternalAxiosRequestConfig,
+    })
+
+  beforeEach(() => removeLocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    removeLocks()
+  })
+
+  it('calls DELETE /refresh exactly once when the outcome is expired', async () => {
+    mockRefresh(401)
+    const revoke = mockRevoke()
+    const retry = vi.fn<() => Promise<string>>().mockRejectedValue(unauthorized())
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome).toEqual({ kind: 'expired' })
+    expect(revoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('requests the lock once on expired (no deadlock)', async () => {
+    const locks = stubLocks()
+    mockRefresh(401)
+    mockRevoke()
+    const retry = vi.fn<() => Promise<string>>().mockRejectedValue(unauthorized())
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome).toEqual({ kind: 'expired' })
+    expect(locks).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not revoke when the first retry succeeds (ok)', async () => {
+    mockRefresh()
+    const revoke = mockRevoke()
+
+    const outcome = await recoverSession(() => Promise.resolve('data'))
+
+    expect(outcome).toEqual({ kind: 'ok', value: 'data' })
+    expect(revoke).not.toHaveBeenCalled()
+  })
+
+  it('does not revoke when another tab already refreshed (refresh 401, retry ok)', async () => {
+    mockRefresh(401)
+    const revoke = mockRevoke()
+    const retry = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(unauthorized())
+      .mockResolvedValueOnce('data')
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome).toEqual({ kind: 'ok', value: 'data' })
+    expect(revoke).not.toHaveBeenCalled()
+  })
+
+  it('does not revoke when the refresh is unavailable', async () => {
+    mockRefresh(503)
+    const revoke = mockRevoke()
+    const retry = vi.fn<() => Promise<string>>().mockRejectedValue(unauthorized())
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome).toEqual({ kind: 'unavailable' })
+    expect(revoke).not.toHaveBeenCalled()
+  })
+
+  it('does not revoke when the retry fails with a non-401 (failed)', async () => {
+    mockRefresh(401)
+    const revoke = mockRevoke()
+    const retry = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(unauthorized())
+      .mockRejectedValueOnce(new Error('boom'))
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome.kind).toBe('failed')
+    expect(revoke).not.toHaveBeenCalled()
+  })
+
+  it('does not revoke when the retry after a successful refresh is still 401 (failed)', async () => {
+    mockRefresh('ok')
+    const revoke = mockRevoke()
+    const retry = vi.fn<() => Promise<string>>().mockRejectedValue(unauthorized())
+
+    const outcome = await recoverSession(retry)
+
+    expect(outcome.kind).toBe('failed')
+    expect(revoke).not.toHaveBeenCalled()
   })
 })

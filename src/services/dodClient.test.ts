@@ -63,10 +63,12 @@ describe('dodClient', () => {
 
   it('goes to /logout when the refresh is rejected with 401', async () => {
     mockRefresh(401)
+    const revoke = vi.spyOn(axios, 'delete').mockResolvedValue({ status: 204 })
     useStatuses(401, 401, 401)
 
     await expect(dodClient.post('', {})).rejects.toMatchObject({ status: 401 })
 
+    expect(revoke).toHaveBeenCalledTimes(1)
     expect(window.location.href).toBe('/logout')
   })
 
