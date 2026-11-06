@@ -24,15 +24,6 @@ export interface BigPictureImageResultSetsResponse {
   }
 }
 
-// Dataset on Demand (DoD)
-export interface DatasetOnDemandCreated {
-  onDemandDatasetAccession: string
-}
-
-export type DatasetOnDemandResult =
-  | ({ status: 'success' } & DatasetOnDemandCreated)
-  | { status: 'processing'; onDemandDatasetAccession: string }
-
 // Complementary datasets
 export interface RelatedDataset {
   datasetId: string

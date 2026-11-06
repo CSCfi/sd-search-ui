@@ -14,13 +14,8 @@ vi.mock('./apiClient', () => ({
 
 const dodClient = (await import('./dodClient')).default
 
-const {
-  postQuery,
-  postNonClinicalQuery,
-  getNonClinicalImageIds,
-  submitDatasetOnDemand,
-  pollDatasetOnDemandStatus,
-} = await import('./api')
+const { postQuery, postNonClinicalQuery, getNonClinicalImageIds, submitDatasetOnDemand } =
+  await import('./api')
 
 function sentBody(): BeaconQueryRequest {
   return post.mock.calls[0]?.[1] as BeaconQueryRequest
@@ -127,7 +122,7 @@ function sentDodBody(request: InternalAxiosRequestConfig): unknown {
 
 describe('submitDatasetOnDemand', () => {
   it('posts image_accessions to /dod with credentials and no user field', async () => {
-    const requests = useDodResponse(200, { on_demand_dataset_accession: 'SDA-abc' })
+    const requests = useDodResponse(200, {})
     await submitDatasetOnDemand(['img-1', 'img-2'])
 
     const [request] = requests
@@ -137,43 +132,8 @@ describe('submitDatasetOnDemand', () => {
     expect(sentDodBody(request!)).toEqual({ image_accessions: ['img-1', 'img-2'] })
   })
 
-  it('returns success result with onDemandDatasetAccession on 200', async () => {
-    useDodResponse(200, { on_demand_dataset_accession: 'SDA-abc' })
-    const result = await submitDatasetOnDemand(['img-1'])
-    expect(result).toEqual({ status: 'success', onDemandDatasetAccession: 'SDA-abc' })
-  })
-
-  it('returns processing result with onDemandDatasetAccession on 202', async () => {
-    useDodResponse(202, { on_demand_dataset_accession: 'SDA-abc' })
-    const result = await submitDatasetOnDemand(['img-1'])
-    expect(result).toEqual({ status: 'processing', onDemandDatasetAccession: 'SDA-abc' })
-  })
-})
-
-describe('pollDatasetOnDemandStatus', () => {
-  it('posts on_demand_dataset_accession to /dod/status with credentials', async () => {
-    const requests = useDodResponse(200, { status: 'STATUS_CREATING' })
-    await pollDatasetOnDemandStatus('SDA-abc')
-
-    const [request] = requests
-    expect(request?.method).toBe('post')
-    expect(dodClient.getUri(request)).toBe('/dod/status')
-    expect(request?.withCredentials).toBe(true)
-    expect(sentDodBody(request!)).toEqual({ on_demand_dataset_accession: 'SDA-abc' })
-  })
-
-  it('returns STATUS_CREATING from response', async () => {
-    useDodResponse(200, { status: 'STATUS_CREATING' })
-    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_CREATING')
-  })
-
-  it('returns STATUS_RELEASED from response', async () => {
-    useDodResponse(200, { status: 'STATUS_RELEASED' })
-    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_RELEASED')
-  })
-
-  it('maps an empty response to STATUS_INVALID (proto3 JSON omits the default enum)', async () => {
+  it('resolves with undefined on 200', async () => {
     useDodResponse(200, {})
-    expect(await pollDatasetOnDemandStatus('SDA-abc')).toBe('STATUS_INVALID')
+    await expect(submitDatasetOnDemand(['img-1'])).resolves.toBeUndefined()
   })
 })
