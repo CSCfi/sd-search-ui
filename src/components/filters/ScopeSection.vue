@@ -43,23 +43,12 @@ const fieldLabel = (id: string) => filteringTerms.value?.find((f) => f.id === id
 const activeTab = computed<DatasetType>({
   get: () => store.datasetType,
   set: (type) => {
-    // Filters for fields outside the new scope are dropped from the draft. Committed filters
-    // are left alone, so the visible results keep matching the search that produced them.
-    const dropped =
-      type === 'all'
-        ? []
-        : store.draftFilters.filter((f) => {
-            const fieldScope = fieldScopes.value?.get(f.id)
-            return fieldScope !== undefined && !fieldScope.includes(type)
-          })
-
-    store.setDatasetType(type)
+    const dropped = store.switchScope(type, fieldScopes.value)
 
     if (dropped.length > 0) {
-      store.removeFilters(dropped.map((f) => f.id))
       announcement.value = `${dropped.length} filter${
         dropped.length === 1 ? '' : 's'
-      } removed, not available in this dataset type: ${dropped.map((f) => fieldLabel(f.id)).join(', ')}`
+      } removed, not available in this dataset type: ${dropped.map((id) => fieldLabel(id)).join(', ')}`
     } else {
       announcement.value = ''
     }
