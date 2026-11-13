@@ -4,14 +4,18 @@ import { CircleHelp } from '@lucide/vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useContentConfig } from '@/composables/ui/useContentConfig'
 import HelpSidebar from '@/components/HelpSidebar.vue'
+import { logoutSession } from '@/services/sessionRefresh'
 
 const auth = useAuthStore()
 const { navLogo } = useContentConfig()
 const helpOpen = ref(false)
+const loggingOut = ref(false)
 
-function logout() {
-  sessionStorage.removeItem('postLoginRedirect')
-  window.location.href = '/logout'
+// Revokes the refresh token, then navigates to /logout. The page unloads, so the flag is not reset.
+async function logout() {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  await logoutSession()
 }
 </script>
 
@@ -38,9 +42,7 @@ function logout() {
       <a v-if="!auth.isLoggedIn" href="/login">
         <c-button>Login</c-button>
       </a>
-      <a v-else href="/logout" @click.prevent="logout">
-        <c-button outlined>Logout</c-button>
-      </a>
+      <c-button v-else outlined :disabled="loggingOut" @click="logout">Logout</c-button>
     </nav>
     <HelpSidebar :open="helpOpen" @close="helpOpen = false" />
   </header>

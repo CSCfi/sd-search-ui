@@ -33,7 +33,8 @@ so `/api/refresh` would never carry it.
 3. Frontend checks login state by making a real API call — never via `document.cookie`
 4. All API calls use `withCredentials: true` — sends the session cookie automatically
 5. Any 401 from `apiClient` → recover the session once (see Session Refresh): retry, refresh, retry.
-   Only a refresh the backend rejects **and** a retry that is still 401 → `sessionStorage.removeItem('postLoginRedirect')` + redirect to `/logout`
+   Only a refresh the backend rejects **and** a retry that is still 401 → revoke the refresh token (`DELETE /refresh`, inside `recoverSession`), `sessionStorage.removeItem('postLoginRedirect')` + redirect to `/logout`
+6. User clicks Logout → `logoutSession()`: revoke the refresh token under the `session-refresh` lock, then redirect to `/logout` (see Logout)
 
 ## Session Refresh (`services/sessionRefresh.ts`)
 
@@ -72,7 +73,9 @@ Returns `{ kind: 'ok', value } | 'expired' | 'unavailable' | { kind: 'failed', e
    - `'ok'` → `retry()` once. Success → `ok`. Any failure → `failed` (a 401 here is a downstream
      rejection, not an expired session).
    - `'expired'` → **retry before logout**: `retry()` once more, because another tab may have won
-     the race. Success → `ok`. 401 again → `expired` (session over). Other failure → `failed`.
+     the race. Success → `ok`. 401 again → `revokeSession()` (`DELETE /refresh`, see Logout), then
+     `expired` (session over). Other failure → `failed`. `unavailable` and `failed` never revoke:
+     the session is not proven dead.
 
 `isUnauthorized(error)` recognises an `AxiosError` with status 401 and an `ApiError` with
 `status === 401` (errors from a retried request through `apiClient`/`dodClient` are already
@@ -88,12 +91,43 @@ a request already carrying `_retried`, or a `401` on `/refresh` itself, rejects 
 | Outcome | Result |
 |---|---|
 | `ok` | Resolve with the response |
-| `expired` | Clear `postLoginRedirect`, go to `/logout`, reject with the 401 `ApiError` |
+| `expired` | Clear `postLoginRedirect`, go to `/logout`, reject with the 401 `ApiError`. The revoke already happened inside `recoverSession` |
 | `unavailable` | Reject with `ApiError` 503 (`Service unavailable`), no logout |
 | `failed` | Reject with the retry's error |
 
 The interceptor must stay registered before `apiClient`'s and `dodClient`'s error normalizers, which
 pass an already-shaped `ApiError` through.
+
+## Logout (`logoutSession()`, `revokeSession()` in `services/sessionRefresh.ts`)
+
+Logout ends the refresh token at LS AAI, not only the browser cookies. `GET /logout` cannot do this,
+because the refresh cookie is `Path=/refresh` and never reaches `/logout`. The backend route for
+this is `DELETE /refresh`: it revokes the refresh token at LS AAI (RFC 7009), clears both cookies,
+and always answers `204` (also with no cookie). A failed revocation is only logged server-side.
+
+Rule: **before every navigation to `/logout`, call `DELETE /refresh`**, then navigate whatever it
+answers. Two paths do this:
+
+| Path | Where | How |
+|---|---|---|
+| User clicks Logout | `AppNavbar.vue` → `logoutSession()` | Clears `postLoginRedirect`, then runs `revokeSession()` inside `navigator.locks.request('session-refresh', { signal: AbortSignal.timeout(8000) }, ...)`, then `window.location.href = '/logout'` |
+| Session proven dead | `recover()` `expired` branch | Calls `revokeSession()` directly (already inside the lock), then returns `expired`; the interceptor or guard navigates |
+
+- `revokeSession()` uses plain `axios.delete('/refresh', { withCredentials: true, timeout: 5000 })`
+  (not `apiClient`, whose `baseURL` is `/api`), swallows every error and always resolves. Logging
+  out never depends on the revoke succeeding.
+- Hold the `session-refresh` lock while revoking. Without it, another tab's `POST /refresh` could
+  finish after the revoke and set a fresh, unrevoked refresh token.
+- **Never call `logoutSession()` from code that already holds the lock** (`recover()` and anything
+  it calls). Web Locks are not re-entrant: it would deadlock. Call `revokeSession()` there.
+- The lock wait is capped at 8 s. If it is aborted (another tab is stuck holding the lock),
+  `logoutSession()` revokes without the lock and navigates. A slow logout is worse than the small
+  race. Without `navigator.locks` it revokes directly.
+- Worst case with a stuck lock holder is the 8 s wait plus the 5 s revoke timeout. When only the
+  `DELETE` hangs, logout completes in about 5 s.
+- Revocation closes only the refresh token. The access token stays valid until it expires (at most
+  1 hour) because the API validates it locally.
+- nginx allows only `POST` and `DELETE` on `/refresh` (`limit_except`).
 
 ## Session Check (`stores/authStore.ts`)
 
@@ -110,7 +144,7 @@ what to do with the result.
 |---|---|
 | success | `true` |
 | `401` → `recoverSession(probe)` = `ok` | `true` |
-| `401` → `expired` | `false` |
+| `401` → `expired` (refresh token revoked, cookies cleared) | `false` |
 | `401` → `unavailable` | unchanged |
 | `401` → `failed`, error is a 401 | `false` |
 | `401` → `failed`, any other error | unchanged |
@@ -162,8 +196,3 @@ and every other `/dod/` path is 404.
 - A `401` after refresh + retry means the DoD service rejected the token. `useDatasetOnDemand` shows an
   access-denied message; there is no logout.
 - The dev server has no `/dod` proxy and cannot read the cookie: DoD does not work with `pnpm dev`.
-- The DoD service accepts the LS AAI access token that nginx sends as bearer.
-
-## What Is Not Implemented Yet
-
-- Haka federation SSO (planned as future extension)
