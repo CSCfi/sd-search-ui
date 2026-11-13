@@ -26,7 +26,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="home-layout">
+  <main class="home-layout" :aria-busy="authStore.isChecking">
     <div class="home-hero">
       <div class="text-container">
         <h1 class="header">Discover digital pathology sets</h1>
@@ -35,7 +35,7 @@ onMounted(async () => {
           Regulation-compliant, quality-controlled and community-based platform, in which both
           large-scale data and Artificial Intelligence (AI) algorithms will coexist.
         </p>
-        <a href="/login" class="login-button">
+        <a href="/login" class="login-button" :class="{ 'is-checking': authStore.isChecking }">
           <img :src="loginButton" alt="Login with LifeScience AAI" />
         </a>
       </div>
@@ -94,6 +94,10 @@ onMounted(async () => {
   .login-button {
     display: inline-block;
     margin-top: 1.25rem;
+
+    &.is-checking {
+      visibility: hidden;
+    }
 
     img {
       display: block;

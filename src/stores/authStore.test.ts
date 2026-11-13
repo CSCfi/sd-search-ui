@@ -175,4 +175,40 @@ describe('authStore — checkSession', () => {
     expect(store.isLoggedIn).toBe(true)
     expect(probe).not.toHaveBeenCalled()
   })
+
+  it('probes /filtering_scopes', async () => {
+    const probe = mockProbe(200)
+    await useAuthStore().checkSession()
+
+    expect(probe).toHaveBeenCalledWith('/filtering_scopes', expect.anything())
+  })
+
+  it('sets isChecking while the probe is pending and clears it afterwards', async () => {
+    let resolveProbe: (value: unknown) => void = () => {}
+    vi.spyOn(axios, 'get').mockReturnValueOnce(new Promise((resolve) => (resolveProbe = resolve)))
+    const store = useAuthStore()
+
+    const check = store.checkSession()
+    expect(store.isChecking).toBe(true)
+
+    resolveProbe({ status: 200 })
+    await check
+    expect(store.isChecking).toBe(false)
+  })
+
+  it('clears isChecking after the fallback delay even when the probe hangs', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.spyOn(axios, 'get').mockReturnValueOnce(new Promise(() => {}))
+      const store = useAuthStore()
+
+      void store.checkSession()
+      expect(store.isChecking).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(store.isChecking).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

@@ -3,8 +3,14 @@ import { ref } from 'vue'
 import axios from 'axios'
 import { isUnauthorized, recoverSession } from '@/services/sessionRefresh.ts'
 
+const CHECK_FALLBACK_MS = 3000
+
 export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = ref<boolean | null>(null)
+  // True while checkSession() runs, so the UI can hide login buttons from a user who may still
+  // have a valid session. Cleared after CHECK_FALLBACK_MS at the latest, so a hung backend never
+  // leaves the user without a login button.
+  const isChecking = ref(false)
 
   function setLoggedIn(value: boolean) {
     isLoggedIn.value = value
@@ -19,7 +25,21 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
-    const probe = () => axios.get('/filtering_terms', { baseURL: '/api', withCredentials: true })
+    isChecking.value = true
+    const fallback = setTimeout(() => {
+      isChecking.value = false
+    }, CHECK_FALLBACK_MS)
+
+    try {
+      await runSessionCheck()
+    } finally {
+      clearTimeout(fallback)
+      isChecking.value = false
+    }
+  }
+
+  async function runSessionCheck() {
+    const probe = () => axios.get('/filtering_scopes', { baseURL: '/api', withCredentials: true })
 
     try {
       await probe()
@@ -45,5 +65,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { isLoggedIn, setLoggedIn, checkSession }
+  return { isLoggedIn, isChecking, setLoggedIn, checkSession }
 })

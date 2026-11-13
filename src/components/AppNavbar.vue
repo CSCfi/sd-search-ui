@@ -39,7 +39,7 @@ async function logout() {
         <CircleHelp :size="22" aria-hidden="true" />
         Help
       </button>
-      <a v-if="!auth.isLoggedIn" href="/login">
+      <a v-if="!auth.isLoggedIn" href="/login" :class="{ 'is-checking': auth.isChecking }">
         <c-button>Login</c-button>
       </a>
       <c-button v-else outlined :disabled="loggingOut" @click="logout">Logout</c-button>
@@ -77,6 +77,10 @@ async function logout() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.is-checking {
+  visibility: hidden;
 }
 
 .btn-help {
