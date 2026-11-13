@@ -135,7 +135,7 @@ answers. Two paths do this:
 a real API response. The route guard must await `checkSession()` before acting on the value, or a
 fresh page load with a valid session will be incorrectly treated as logged-out.
 
-The check probes `GET /filtering_terms` with a plain `axios` call, **not** the shared `apiClient`
+The check probes `GET /filtering_scopes` (small static response, behind the backend auth middleware) with a plain `axios` call, **not** the shared `apiClient`
 instance. `apiClient`'s interceptor would refresh and redirect to `/logout`, which would race with the
 guard's own redirect to `/` on this same check. Plain axios avoids the conflict — the guard decides
 what to do with the result.
@@ -149,6 +149,11 @@ what to do with the result.
 | `401` → `failed`, error is a 401 | `false` |
 | `401` → `failed`, any other error | unchanged |
 | any other error (`503`, network error) | unchanged — never `false` |
+
+`isChecking` is true while `checkSession()` runs, for at most 3 s. `AppNavbar` and `HomePage` hide
+their Login buttons with `visibility: hidden` while it is true, so a returning user with an expired
+access token cannot click Login during the refresh. After 3 s the buttons show again, so a hung
+backend never leaves the user without one.
 
 Session check is skipped entirely if `VITE_AUTH_BYPASS` is `"true"` (local dev only).
 

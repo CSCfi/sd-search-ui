@@ -44,3 +44,22 @@ describe('AppNavbar — logout', () => {
     expect(button.attributes('disabled')).toBe('true')
   })
 })
+
+describe('AppNavbar — login button while the session is checked', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('hides the login link while the session check is running', () => {
+    useAuthStore().isChecking = true
+    const wrapper = mountNavbar()
+
+    expect(wrapper.get('a[href="/login"]').classes()).toContain('is-checking')
+  })
+
+  it('shows the login link when no check is running and the user is not logged in', () => {
+    const wrapper = mountNavbar()
+
+    expect(wrapper.get('a[href="/login"]').classes()).not.toContain('is-checking')
+  })
+})
