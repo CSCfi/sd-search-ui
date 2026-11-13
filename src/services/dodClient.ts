@@ -2,7 +2,7 @@ import axios from 'axios'
 import { attachRefreshInterceptor } from '@/services/sessionRefresh.ts'
 import type { ApiError } from '@/services/apiClient.ts'
 
-// Dataset on Demand calls go through this app's own origin. nginx (`/dod`, `/dod/status`) adds
+// Dataset on Demand calls go through this app's own origin. nginx (`/dod`) adds
 // `Authorization: Bearer` from the httponly access_token cookie, so the frontend never holds a
 // token. See auth.md.
 const dodClient = axios.create({
