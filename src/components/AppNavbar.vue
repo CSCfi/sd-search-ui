@@ -42,9 +42,7 @@ async function logout() {
       <a v-if="!auth.isLoggedIn" href="/login">
         <c-button>Login</c-button>
       </a>
-      <a v-else href="/logout" :aria-disabled="loggingOut" @click.prevent="logout">
-        <c-button outlined>Logout</c-button>
-      </a>
+      <c-button v-else outlined :disabled="loggingOut" @click="logout">Logout</c-button>
     </nav>
     <HelpSidebar :open="helpOpen" @close="helpOpen = false" />
   </header>

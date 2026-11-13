@@ -26,21 +26,21 @@ describe('AppNavbar — logout', () => {
     vi.mocked(logoutSession).mockResolvedValue()
     const wrapper = mountNavbar()
 
-    await wrapper.get('a[href="/logout"]').trigger('click')
+    await wrapper.get('c-button').trigger('click')
 
     expect(logoutSession).toHaveBeenCalledTimes(1)
   })
 
-  it('ignores a second click while the logout is pending and marks the link aria-disabled', async () => {
+  it('ignores a second click while the logout is pending and disables the button', async () => {
     vi.mocked(logoutSession).mockReturnValue(new Promise(() => {}))
     const wrapper = mountNavbar()
-    const link = wrapper.get('a[href="/logout"]')
-    expect(link.attributes('aria-disabled')).toBe('false')
+    const button = wrapper.get('c-button')
+    expect(button.attributes('disabled')).toBe('false')
 
-    await link.trigger('click')
-    await link.trigger('click')
+    await button.trigger('click')
+    await button.trigger('click')
 
     expect(logoutSession).toHaveBeenCalledTimes(1)
-    expect(link.attributes('aria-disabled')).toBe('true')
+    expect(button.attributes('disabled')).toBe('true')
   })
 })

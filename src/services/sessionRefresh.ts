@@ -109,6 +109,18 @@ export async function revokeSession(): Promise<void> {
 
 const LOCK_WAIT_MS = 8000
 
+// Some browsers have navigator.locks but not AbortSignal.timeout (for example Safari 15.4 to 15.6).
+// Without this fallback they would skip the lock when logging out.
+// cancel() clears the fallback timer once the lock request has finished.
+function lockWaitSignal(): { signal: AbortSignal; cancel: () => void } {
+  if (typeof AbortSignal.timeout === 'function') {
+    return { signal: AbortSignal.timeout(LOCK_WAIT_MS), cancel: () => {} }
+  }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), LOCK_WAIT_MS)
+  return { signal: controller.signal, cancel: () => clearTimeout(timer) }
+}
+
 // Revokes the refresh token, then goes to /logout even if the revoke failed.
 // The revoke holds the session-refresh lock so that another tab cannot refresh at the same time.
 // Otherwise that tab could receive a new refresh token that stays valid after we log out.
@@ -118,14 +130,15 @@ export async function logoutSession(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.locks) {
     await revokeSession()
   } else {
+    const { signal, cancel } = lockWaitSignal()
     try {
-      await navigator.locks.request(LOCK_NAME, { signal: AbortSignal.timeout(LOCK_WAIT_MS) }, () =>
-        revokeSession(),
-      )
+      await navigator.locks.request(LOCK_NAME, { signal }, () => revokeSession())
     } catch {
       // Waiting for the lock timed out, because another tab holds it for too long.
       // Revoke without the lock. A slow logout is worse than the small risk of a race.
       await revokeSession()
+    } finally {
+      cancel()
     }
   }
 

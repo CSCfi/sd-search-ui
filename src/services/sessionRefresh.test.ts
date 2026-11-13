@@ -332,6 +332,25 @@ describe('logoutSession', () => {
     expect(options.signal).toBeInstanceOf(AbortSignal)
   })
 
+  it('passes an initially un-aborted signal to the logout lock when AbortSignal.timeout is missing', async () => {
+    const original = AbortSignal.timeout
+    Object.defineProperty(AbortSignal, 'timeout', { value: undefined, configurable: true })
+    try {
+      const locks = stubLocks()
+      const revoke = mockRevoke()
+
+      await logoutSession()
+
+      const options = locks.mock.calls[0]?.[1] as LockOptions
+      expect(options.signal).toBeInstanceOf(AbortSignal)
+      expect(options.signal?.aborted).toBe(false)
+      expect(revoke).toHaveBeenCalledTimes(1)
+      expect(window.location.href).toBe('/logout')
+    } finally {
+      Object.defineProperty(AbortSignal, 'timeout', { value: original, configurable: true })
+    }
+  })
+
   it.each([503, 'network', 'timeout'] as const)(
     'still navigates to /logout when the DELETE fails (%s)',
     async (outcome) => {
