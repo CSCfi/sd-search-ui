@@ -19,8 +19,8 @@ export const contentConfig = {
   },
   footer: {
     links: [
-      { label: 'About', href: 'https://discovery.bigpicture.eu/' },
-      { label: 'Datasets', href: 'https://datasets.bp.nbis.se/index.html' },
+      { label: 'About', href: 'https://discovery.bigpicture.eu' },
+      { label: 'Datasets', href: 'https://datasets.bigpicture.eu' },
       {
         label: 'Privacy policy',
         href: 'https://bigpicture.eu/bigpicture-privacy-notice',
