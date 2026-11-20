@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -125,7 +125,8 @@ vi.mock('@/services/config', () => ({
     hidden: [],
     hidden_description: [],
     bordered: ['staining', 'clinical', 'non_clinical', 'finding_details'],
-    hidden_scopes: [],
+    hidden_scopes: [] as string[],
+    scope_tabs: true as boolean | undefined,
   },
 }))
 
@@ -135,6 +136,7 @@ const DynamicFieldStub = defineComponent({
 })
 
 const ScopeSection = (await import('@/components/filters/ScopeSection.vue')).default
+const { fieldsConfig } = await import('@/services/config')
 
 // Use one Pinia instance so the test and mounted component share the same store.
 let pinia: ReturnType<typeof createPinia>
@@ -355,5 +357,85 @@ describe('ScopeSection — pruning filters on tab switch', () => {
     const announcement = wrapper.find('[role="status"]').text()
     expect(announcement).toContain('1 filter removed')
     expect(announcement).toContain('Finding')
+  })
+})
+
+describe('ScopeSection — exclusive scopes (scope_tabs off)', () => {
+  beforeEach(() => {
+    fieldsConfig.scope_tabs = false
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  afterEach(() => {
+    fieldsConfig.scope_tabs = true
+  })
+
+  const statusText = (wrapper: Wrapper) => wrapper.find('.scope-status').text()
+  const isInert = (wrapper: Wrapper, scope: string) =>
+    panel(wrapper, scope).find('[inert]').exists()
+
+  it('renders no tab strip and no tabpanel, but both scope panels', () => {
+    const wrapper = mountSection()
+    expect(wrapper.find('[role="tablist"]').exists()).toBe(false)
+    expect(wrapper.find('[role="tabpanel"]').exists()).toBe(false)
+    expect(panelFieldIds(wrapper, 'clinical')).toContain('diagnosis')
+    expect(panelFieldIds(wrapper, 'non_clinical')).toContain('finding')
+  })
+
+  it('states that both scopes are searched when no scope-only filter is set', () => {
+    const wrapper = mountSection()
+    expect(statusText(wrapper)).toBe('Search both clinical and non-clinical images.')
+    expect(isInert(wrapper, 'clinical')).toBe(false)
+    expect(isInert(wrapper, 'non_clinical')).toBe(false)
+  })
+
+  it('locks the non-clinical panel and names the filter once a clinical-only filter is set', async () => {
+    const wrapper = mountSection()
+    useSearchStore().setFilter('diagnosis', ['1'])
+    await wrapper.vm.$nextTick()
+
+    expect(statusText(wrapper)).toBe('Search clinical images only.')
+    expect(isInert(wrapper, 'non_clinical')).toBe(true)
+    expect(isInert(wrapper, 'clinical')).toBe(false)
+
+    const message = panel(wrapper, 'non_clinical').find('.lock-message')
+    expect(message.text()).toContain('Diagnosis')
+    // The message must stay outside the inert region, or screen readers would skip it.
+    expect(panel(wrapper, 'non_clinical').find('[inert] .lock-message').exists()).toBe(false)
+  })
+
+  it('locks the clinical panel when a non-clinical-only filter is set', async () => {
+    const wrapper = mountSection()
+    useSearchStore().setFilter('animal_species', ['2'])
+    await wrapper.vm.$nextTick()
+
+    expect(statusText(wrapper)).toBe('Search non-clinical images only.')
+    expect(isInert(wrapper, 'clinical')).toBe(true)
+    expect(panel(wrapper, 'clinical').find('.lock-message').text()).toContain('Biological species')
+  })
+
+  it('unlocks the panel when the causing filter is removed', async () => {
+    const wrapper = mountSection()
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['1'])
+    await wrapper.vm.$nextTick()
+    store.removeFilters(['diagnosis'])
+    await wrapper.vm.$nextTick()
+
+    expect(isInert(wrapper, 'non_clinical')).toBe(false)
+    expect(statusText(wrapper)).toBe('Search both clinical and non-clinical images.')
+  })
+
+  it('keeps filters when scope-only filters of both kinds are present, and locks nothing', async () => {
+    const wrapper = mountSection()
+    const store = useSearchStore()
+    store.setFilter('diagnosis', ['1'])
+    store.setFilter('finding', ['2'])
+    await wrapper.vm.$nextTick()
+
+    expect(store.draftFilters).toHaveLength(2)
+    expect(isInert(wrapper, 'clinical')).toBe(false)
+    expect(isInert(wrapper, 'non_clinical')).toBe(false)
   })
 })

@@ -38,3 +38,21 @@ describe('FilterTabGroup — header slot', () => {
     expect(headerIndex).toBeLessThan(stripIndex)
   })
 })
+
+describe('FilterTabGroup — showTabs', () => {
+  it('renders the tab strip and a tabpanel by default', () => {
+    const wrapper = mountGroup({ default: '<div class="panel-content" />' })
+    expect(wrapper.find('[role="tablist"]').exists()).toBe(true)
+    expect(wrapper.find('[role="tabpanel"]').exists()).toBe(true)
+  })
+
+  it('renders neither tab strip nor tabpanel when showTabs is false, but keeps the body', () => {
+    const wrapper = mount(FilterTabGroup, {
+      props: { modelValue: 'all', scopes: SCOPES, showTabs: false },
+      slots: { default: '<div class="panel-content" />' },
+    })
+    expect(wrapper.find('[role="tablist"]').exists()).toBe(false)
+    expect(wrapper.find('[role="tabpanel"]').exists()).toBe(false)
+    expect(wrapper.find('.tab-body .panel-content').exists()).toBe(true)
+  })
+})

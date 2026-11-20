@@ -8,6 +8,8 @@ import { useFilteringTerms } from '@/composables/query/useFilteringTerms'
 import { useResolvedGroups } from '@/composables/query/useResolvedGroups'
 import type { ResolvedGroup } from '@/types/config'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
+import { useActiveScope } from '@/composables/ui/useActiveScope'
+import { useContentConfig } from '@/composables/ui/useContentConfig'
 import { useFieldScopes } from '@/composables/ui/useFieldScopes'
 import { fieldsConfig } from '@/services/config'
 import { useSearchStore, type DatasetType } from '@/stores/searchStore'
@@ -18,6 +20,11 @@ const { groups } = useResolvedGroups()
 const { data: filteringScopes } = useFilteringScopes()
 const { data: fieldScopes } = useFieldScopes()
 const store = useSearchStore()
+const { draftScope } = useActiveScope()
+const { search: searchContent } = useContentConfig()
+
+// With tabs off, the scope follows from the chosen filters and the other scope's panel locks.
+const scopeTabs = fieldsConfig.scope_tabs === true
 
 const announcement = ref('')
 
@@ -41,7 +48,8 @@ const isShared = (field: BeaconFilteringTerm) =>
 const fieldLabel = (id: string) => filteringTerms.value?.find((f) => f.id === id)?.label ?? id
 
 const activeTab = computed<DatasetType>({
-  get: () => store.datasetType,
+  // Without tabs both panels always render, as on the All tab.
+  get: () => (scopeTabs ? store.datasetType : 'all'),
   set: (type) => {
     const dropped = store.switchScope(type, fieldScopes.value)
 
@@ -59,6 +67,7 @@ const activeTab = computed<DatasetType>({
 watch(
   scopeIds,
   (ids) => {
+    if (!scopeTabs) return
     if (ids.length > 0 && store.datasetType !== 'all' && !ids.includes(store.datasetType)) {
       store.resetScope()
     }
@@ -71,12 +80,42 @@ watch(
 watch(
   scopes,
   (visible) => {
-    if (visible.length === 1 && store.datasetType === 'all') {
+    if (scopeTabs && visible.length === 1 && store.datasetType === 'all') {
       store.setDatasetType(visible[0]!.id as DatasetType)
     }
   },
   { immediate: true },
 )
+
+const scopeStatusText = computed(() => {
+  // A single visible scope needs no explanation of which scope is searched.
+  if (scopeTabs || scopes.value.length < 2) return ''
+  const scope = draftScope.value
+  if (scope === 'all' || scope === 'clinical' || scope === 'non_clinical') {
+    return searchContent.scopeStatus[scope]
+  }
+  return ''
+})
+
+// Labels of the draft filters that exist only outside `scopeId`. They are why that panel is locked.
+const lockingFilterLabels = (scopeId: string) =>
+  store.draftFilters
+    .filter((f) => {
+      const fieldScope = fieldScopes.value?.get(f.id)
+      return fieldScope !== undefined && !fieldScope.includes(scopeId)
+    })
+    .map((f) => fieldLabel(f.id))
+
+const isLocked = (scopeId: string) =>
+  !scopeTabs &&
+  (draftScope.value === 'clinical' || draftScope.value === 'non_clinical') &&
+  draftScope.value !== scopeId
+
+const lockedReason = (scopeId: string) => {
+  if (!isLocked(scopeId)) return undefined
+  const template = searchContent.scopeLocked[scopeId as 'clinical' | 'non_clinical']
+  return template?.replace('{fields}', lockingFilterLabels(scopeId).join(', '))
+}
 
 // Fields listed in fieldsConfig.header are rendered in the #header slot above the tabs
 // instead of the regular filter grid.
@@ -146,6 +185,11 @@ const scopePanelSections = computed(() =>
   scopes.value.map((scope) => ({ scope, sections: scopedSections(scope.id) })),
 )
 
+// One panel spans the full row: a picked tab, or a single visible scope.
+const isFullWidth = computed(() =>
+  scopeTabs ? activeTab.value !== 'all' : scopes.value.length === 1,
+)
+
 const scopeGroupHasBorder = (scope: string) => fieldsConfig.bordered.includes(scope)
 
 const subgroupClass = (group: ResolvedGroup) => ({
@@ -161,6 +205,7 @@ const subgroupClass = (group: ResolvedGroup) => ({
     v-model="activeTab"
     :scopes="scopes"
     :show-all-tab="showAllTab"
+    :show-tabs="scopeTabs"
   >
     <template v-if="headerFields.length > 0" #header>
       <ObservationTypeSelector
@@ -170,7 +215,8 @@ const subgroupClass = (group: ResolvedGroup) => ({
         @change="onObservationTypeChange"
       />
     </template>
-    <div class="tab-columns" :class="{ 'tab-columns--full': activeTab !== 'all' }">
+    <p v-if="scopeStatusText" class="scope-status" role="status">{{ scopeStatusText }}</p>
+    <div class="tab-columns" :class="{ 'tab-columns--full': isFullWidth }">
       <FilterTabPanel
         v-for="{ scope, sections } in scopePanelSections"
         :key="scope.id"
@@ -178,6 +224,8 @@ const subgroupClass = (group: ResolvedGroup) => ({
         :label="scope.label"
         :active-tab="activeTab"
         :bordered="scopeGroupHasBorder(scope.id)"
+        :locked="isLocked(scope.id)"
+        :locked-reason="lockedReason(scope.id)"
       >
         <template
           v-for="(section, i) in sections"
@@ -206,6 +254,12 @@ const subgroupClass = (group: ResolvedGroup) => ({
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+.scope-status {
+  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
 }
 
 .tab-columns {

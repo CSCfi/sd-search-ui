@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveScope, normalizeAge, toStoreFilter } from './aiFilters'
+import { deriveScope, normalizeAge, scopeOfFilters, toStoreFilter } from './aiFilters'
 
 describe('normalizeAge', () => {
   it.each([
@@ -81,6 +81,40 @@ describe('deriveScope', () => {
 
   it('keeps the tab when no returned field has known scopes', () => {
     expect(deriveScope(['unknown'], fieldScopes, all, 'clinical')).toEqual({ kind: 'keep' })
+  })
+})
+
+describe('scopeOfFilters', () => {
+  const fieldScopes = new Map([
+    ['sex', ['clinical', 'non_clinical']],
+    ['diagnosis', ['clinical']],
+    ['finding', ['non_clinical']],
+  ])
+  const all = ['clinical', 'non_clinical']
+
+  it('returns all when no filter is set', () => {
+    expect(scopeOfFilters([], fieldScopes, all)).toBe('all')
+  })
+
+  it('returns all when only shared fields are set', () => {
+    expect(scopeOfFilters(['sex'], fieldScopes, all)).toBe('all')
+  })
+
+  it('returns clinical when a clinical-only field is set', () => {
+    expect(scopeOfFilters(['sex', 'diagnosis'], fieldScopes, all)).toBe('clinical')
+  })
+
+  it('returns non_clinical when a non-clinical-only field is set', () => {
+    expect(scopeOfFilters(['finding'], fieldScopes, all)).toBe('non_clinical')
+  })
+
+  it('returns mixed when both scope-only kinds are set', () => {
+    expect(scopeOfFilters(['diagnosis', 'finding'], fieldScopes, all)).toBe('mixed')
+  })
+
+  it('ignores ids without known scopes', () => {
+    expect(scopeOfFilters(['unknown'], fieldScopes, all)).toBe('all')
+    expect(scopeOfFilters(['unknown', 'diagnosis'], fieldScopes, all)).toBe('clinical')
   })
 })
 

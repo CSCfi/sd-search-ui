@@ -64,10 +64,10 @@ src/
         DescriptionModal.vue # Modal for expanded dataset descriptions
         HelpSidebar.vue     # Help sidebar (content via useContentConfig)
         ResultsBanner.vue   # Banner shown above search results
-        SearchForm.vue      # Shared search form — scope tabs + filter grid
+        SearchForm.vue      # Shared search form — scope tabs (when `scope_tabs`) + filter grid
         <service>/          # Service-specific components (e.g. bigpicture/ResultsTable.vue)
         dynamic/            # Schema-driven field components (DynamicField + one per FilteringTerm.type)
-        filters/            # Scope tabs, observation type selector, scope badge
+        filters/            # Scope tabs or exclusive-scope panels, observation type selector, scope badge
         ui/                 # Generic shared components (Badge, ErrorBanner, LoadingSpinner, etc.)
     composables/
         query/          # TanStack Query composables (search, field values, suggestions, status, groups)
@@ -135,6 +135,7 @@ Controls which fields and groups are visible in the search form. Bundled at buil
 | `show_concept_id` | `string[]` | Field ids for which the ontology concept ID is shown in parentheses next to the term label in the dropdown. Only applies when a non-null `concept_id` is returned by the backend |
 | `bordered` | `string[]` | Group and scope ids to render with a bordered box |
 | `ai_search` | `boolean` | Enables the natural-language search input when `true`. The backend must also have `FEATURE_AI` enabled; otherwise `/api/ai/filters` returns 404 |
+| `scope_tabs` | `boolean` | `true` shows the scope tabs (All data / Clinical / Non-clinical) and the user picks the scope. `false` or omitted: the scope follows from the chosen filters, and the other scope's filters are locked. The `?tab=` URL param is read and written only when `true` |
 
 ### `config/groups.yaml` (and optional `config/<service>/groups.yaml`)
 

@@ -10,7 +10,7 @@ alwaysApply: false
 | Data | Owner | Reason |
 |---|---|---|
 | Selected filters | Pinia | UI state — survives component unmount |
-| Active tab / dataset type | Pinia | UI state — survives component unmount |
+| Active tab / dataset type (only with `scope_tabs: true`) | Pinia | UI state — survives component unmount. With tabs off the scope is derived from filters, see `useActiveScope` |
 | Loading / error states | TanStack Query | Never duplicate in Pinia |
 | Server data (results, options) | TanStack Query | Caching, deduplication, refetch |
 | Auth status | Pinia | Synchronous, no server fetch |
@@ -24,11 +24,21 @@ alwaysApply: false
 |---|---|---|---|
 | `['filteringTerms']` | Infinity | always | Fields listed in `fields.yaml` `hidden` are filtered out via `select` in `useFilteringTerms`. `useFieldScopes` shares this key but uses its own `select` that intentionally includes hidden fields — see note below |
 | `['filteringScopes']` | Infinity | always | |
-| `['values', fieldId, datasetType]` | 4h | always | |
-| `['suggestions', fieldId, term, datasetType]` | 5min | `term.length > 1` | |
+| `['values', fieldId, queryScopeFor(fieldId)]` | 4h | always | Scope from `useActiveScope().queryScopeFor`: the tab with `scope_tabs: true`, otherwise derived from the draft filters. A field outside that scope (locked panel) uses `'all'`, because the backend returns 4xx for `/values?scope=` with a scope the field is not in |
+| `['suggestions', fieldId, term, draftQueryScope]` | 5min | `term.length > 1` | Same scope source as `values` |
 | `['deploymentStatus']` | 5min | always | `refetchInterval: 5min` too — polls while mounted. Uses `getStatus` |
-| `['search', 'clinical', committedFilters]` | — | `hasCommittedFilters && tab is 'all' or 'clinical'` | Uses `postQuery` |
-| `['search', 'non_clinical', committedFilters]` | — | `hasCommittedFilters && tab is 'all' or 'non_clinical'` | Uses `postNonClinicalQuery` — always count granularity |
+| `['search', 'clinical', committedFilters]` | — | `hasCommittedFilters && committedScope is 'all' or 'clinical'` | Uses `postQuery` |
+| `['search', 'non_clinical', committedFilters]` | — | `hasCommittedFilters && committedScope is 'all' or 'non_clinical'` | Uses `postNonClinicalQuery` — always count granularity |
+
+### `useActiveScope` — scope of the search
+
+`useActiveScope` (`composables/ui/useActiveScope.ts`) returns `draftScope` and `committedScope`:
+`'all' | 'clinical' | 'non_clinical' | 'mixed' | null`.
+
+- `scope_tabs: true` (fields.yaml): the stored tab (`datasetType` / `committedDatasetType`).
+- `scope_tabs` false or omitted: derived from the filters via `scopeOfFilters` (`utils/aiFilters.ts`). Only shared fields means `'all'`. A single visible scope (`hidden_scopes`) always wins.
+- `null` while `/filtering_terms` or `/filtering_scopes` load. Search queries stay disabled for `null` and `'mixed'`.
+- With tabs off, `ScopeSection` locks the panel of the other scope (`inert`, with a visible message). `'mixed'` can only come from a hand-edited URL.
 
 ### `useFieldScopes` — hidden fields are intentionally included
 
@@ -72,7 +82,7 @@ alwaysApply: false
 
 `commit()` serializes state to `?`-query params:
 - Each filter → `?{id}={value}` (array values joined with `,`)
-- `tab` omitted when `'all'`
+- `tab` written only when `scope_tabs: true` and not `'all'`. Without scope tabs `?tab=` is ignored on load
 
 `initFromUrl()` restores state on page load. `observation_type` is an ordinary filter in `draftFilters` — URL-restored via the normal filter path, no special handling.
 

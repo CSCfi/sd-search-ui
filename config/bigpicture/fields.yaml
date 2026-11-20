@@ -12,6 +12,11 @@ complementary: false
 # search form.
 ai_search: false
 
+# true = scope tabs (All data / Clinical / Non-clinical) are shown and the user picks the scope.
+# false or omitted = the scope follows from the chosen filters, and the filters of the
+# other scope are locked.
+scope_tabs: false
+
 # Field ids to hide in the search UI.
 # All fields returned by /filtering_terms are shown by default.
 # Add a field id here to hide it. If all fields in a group are hidden,

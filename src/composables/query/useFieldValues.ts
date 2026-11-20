@@ -1,15 +1,14 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
-import { storeToRefs } from 'pinia'
 import { getFieldValues } from '@/services/api'
-import { useSearchStore } from '@/stores/searchStore'
+import { useActiveScope } from '@/composables/ui/useActiveScope'
 
 export function useFieldValues(fieldId: string) {
-  const { datasetType } = storeToRefs(useSearchStore())
+  const { queryScopeFor } = useActiveScope()
 
   return useQuery({
-    queryKey: computed(() => ['values', fieldId, datasetType.value] as const),
-    queryFn: () => getFieldValues(fieldId, datasetType.value),
+    queryKey: computed(() => ['values', fieldId, queryScopeFor(fieldId)] as const),
+    queryFn: () => getFieldValues(fieldId, queryScopeFor(fieldId)),
     staleTime: 4 * 60 * 60 * 1000,
   })
 }

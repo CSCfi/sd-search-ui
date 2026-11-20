@@ -3,11 +3,17 @@ import { computed, useTemplateRef } from 'vue'
 import type { DatasetType } from '@/stores/searchStore'
 import type { BeaconFilteringScope } from '@/types/beacon'
 
-const props = defineProps<{
-  modelValue: DatasetType
-  scopes: BeaconFilteringScope[]
-  showAllTab?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: DatasetType
+    scopes: BeaconFilteringScope[]
+    showAllTab?: boolean
+    // false renders no tab strip. The body is then a plain div, because a tabpanel
+    // without a tab pointing at it is invalid ARIA.
+    showTabs?: boolean
+  }>(),
+  { showTabs: true },
+)
 const emit = defineEmits<{ 'update:modelValue': [DatasetType] }>()
 
 const tabs = computed<{ id: DatasetType; label: string }[]>(() => [
@@ -47,7 +53,7 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
       <slot name="header" />
     </div>
     <div
-      v-if="tabs.length > 1"
+      v-if="showTabs && tabs.length > 1"
       ref="strip"
       class="tab-strip"
       role="tablist"
@@ -71,12 +77,16 @@ function onTabKeydown(event: KeyboardEvent, index: number) {
       </button>
     </div>
     <div
+      v-if="showTabs"
       :id="PANEL_ID"
       role="tabpanel"
       :aria-labelledby="`tab-btn-${modelValue}`"
       tabindex="0"
       class="tab-body"
     >
+      <slot />
+    </div>
+    <div v-else class="tab-body">
       <slot />
     </div>
   </div>

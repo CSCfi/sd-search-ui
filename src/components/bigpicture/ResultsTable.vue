@@ -5,6 +5,7 @@ import { ChevronDown, Key, Search } from '@lucide/vue'
 import { useSearchStore } from '@/stores/searchStore'
 import { useClinicalSearch } from '@/composables/query/useClinicalSearch'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
+import { useActiveScope } from '@/composables/ui/useActiveScope'
 import { pluralize } from '@/utils/pluralize'
 import { buildRemsUrl } from '@/utils/rems'
 import { complementaryContentLabels } from '@/utils/complementaryContent'
@@ -13,12 +14,9 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 import DescriptionModal from '@/components/DescriptionModal.vue'
 
-const {
-  hasCommittedFilters,
-  committedFilters,
-  committedDatasetType,
-  committedIncludeComplementary,
-} = storeToRefs(useSearchStore())
+const { hasCommittedFilters, committedFilters, committedIncludeComplementary } =
+  storeToRefs(useSearchStore())
+const { committedScope } = useActiveScope()
 const { data, isLoading, isError } = useClinicalSearch()
 const { data: filteringScopes } = useFilteringScopes()
 
@@ -27,7 +25,7 @@ const clinicalLabel = computed(
 )
 
 const isActiveTab = computed(
-  () => committedDatasetType.value === 'all' || committedDatasetType.value === 'clinical',
+  () => committedScope.value === 'all' || committedScope.value === 'clinical',
 )
 
 const clinicalCount = computed(() => data.value?.responseSummary.numTotalResults)

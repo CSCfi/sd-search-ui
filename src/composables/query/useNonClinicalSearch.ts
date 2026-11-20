@@ -4,10 +4,12 @@ import type { BeaconCountResponse } from '@/types/beacon.ts'
 import { postNonClinicalQuery } from '@/services/api'
 import { useSearchStore } from '@/stores/searchStore.ts'
 import { storeToRefs } from 'pinia'
+import { useActiveScope } from '@/composables/ui/useActiveScope'
 
 export function useNonClinicalSearch() {
   const store = useSearchStore()
-  const { committedFilters, committedDatasetType } = storeToRefs(store)
+  const { committedFilters } = storeToRefs(store)
+  const { committedScope } = useActiveScope()
 
   return useQuery<BeaconCountResponse>({
     queryKey: ['search', 'non_clinical', committedFilters],
@@ -15,7 +17,7 @@ export function useNonClinicalSearch() {
     enabled: computed(
       () =>
         store.hasCommittedFilters &&
-        (committedDatasetType.value === 'all' || committedDatasetType.value === 'non_clinical'),
+        (committedScope.value === 'all' || committedScope.value === 'non_clinical'),
     ),
   })
 }

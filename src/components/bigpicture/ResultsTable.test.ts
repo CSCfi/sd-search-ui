@@ -13,6 +13,7 @@ const getFilteringScopes = vi.fn<(...args: unknown[]) => Promise<unknown>>().moc
 const buildRemsUrl = vi.fn<(ids: string | string[]) => string>()
 
 vi.mock('@/services/api', () => ({
+  getFilteringTerms: () => Promise.resolve({ response: { filteringTerms: [] } }),
   postQuery: (...args: unknown[]) => postQuery(...args),
   getFilteringScopes: (...args: unknown[]) => getFilteringScopes(...args),
 }))
