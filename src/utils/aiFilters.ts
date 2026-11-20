@@ -105,6 +105,21 @@ export function deriveScope(
   return { kind: 'switch', scope: intersection[0] as DatasetType }
 }
 
+/**
+ * Scope implied by a set of filter ids alone, with no tab involved.
+ * `'all'` means only shared fields (or none), `'mixed'` means clinical-only and
+ * non-clinical-only fields are combined. Ids missing from `fieldScopes` are ignored.
+ */
+export function scopeOfFilters(
+  ids: string[],
+  fieldScopes: Map<string, string[]>,
+  allScopeIds: string[],
+): DatasetType | 'mixed' {
+  const decision = deriveScope(ids, fieldScopes, allScopeIds, 'all')
+  if (decision.kind === 'mixed') return 'mixed'
+  return decision.kind === 'switch' ? decision.scope : 'all'
+}
+
 export interface StoreFilter {
   id: string
   value: string | string[]

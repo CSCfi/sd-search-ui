@@ -30,7 +30,7 @@ Biomedical researchers at universities and research institutions who:
 ## User Journey
 
 1. Researcher logs in via their institutional account (LifeScience AAI)
-2. Researcher selects a scope tab (All data / Clinical / Non-clinical) and optionally an observation type (Distinct / Summary)
+2. Researcher optionally selects an observation type (Distinct / Summary). The scope (clinical / non-clinical) is not picked: it follows from the filters chosen in step 3. A clinical-only filter (e.g. Diagnosis) locks the non-clinical filters, and a non-clinical-only filter (e.g. Finding, Biological species) locks the clinical ones. Services can switch scope tabs back on with `scope_tabs: true` in `fields.yaml`
 3. Researcher fills in search filters describing their criteria
    (e.g. human tissue, lung, specific staining method, age range)
 4. Researcher submits the search and sees matching datasets with image counts

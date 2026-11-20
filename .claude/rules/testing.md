@@ -33,7 +33,7 @@ Best for:
 - Dynamic field rendering — does `type: "ontology"` render OntologyPicker?
 - OntologyPicker internal state (selection, tag removal, suggestion triggering)
 - RangePicker validation (from > to, missing unit)
-- SearchForm scope tab rendering and observation type selector behavior
+- ScopeSection exclusive-scope layout (status line, panel lock) and, with `scope_tabs: true`, tab rendering; observation type selector behavior
 - NonClinicalResults display states (loading, error, empty, count)
 
 ### E2E tests (Playwright — future)
@@ -191,7 +191,16 @@ Run before every PR that touches the search form or results view.
 - [ ] Adding Sex=Male to Sex field broadens results (OR within same field)
 - [ ] Removing a filter updates results correctly
 
-### Tabs and scope
+### Scope (`scope_tabs: false`, default)
+- [ ] No tab strip. Status line reads "Search both clinical and non-clinical images." with no scope-only filter
+- [ ] Choosing Diagnosis: status line says clinical only, non-clinical panel is dimmed, cannot be focused, and shows a message naming Diagnosis
+- [ ] Choosing Finding or Biological species: clinical panel locks the same way
+- [ ] Removing the causing filter unlocks the panel and restores the "both" status line
+- [ ] Only the clinical results section shows for a clinical scope, only the image count for non-clinical, both for shared filters only
+- [ ] Screen reader (VoiceOver / NVDA) reads the status line change and the lock message
+- [ ] `?tab=` in the URL is ignored and never written
+
+### Tabs and scope (`scope_tabs: true`)
 - [ ] All data tab shows both clinical and non-clinical results
 - [ ] Clinical tab shows only clinical results
 - [ ] Non-clinical tab shows only the image count, no dataset details

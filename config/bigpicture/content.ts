@@ -53,6 +53,17 @@ export const contentConfig = {
   search: {
     filterHintHtml:
       'The fields display available values and the number of matching images. Selecting multiple values within the same field uses OR logic, while selections across different fields use AND logic. For more information, click the <strong>?</strong> Help icon in the top-right corner.',
+    scopeStatus: {
+      all: 'Search both clinical and non-clinical images.',
+      clinical: 'Search clinical images only.',
+      non_clinical: 'Search non-clinical images only.',
+    },
+    scopeLocked: {
+      clinical:
+        'Not available while searching non-clinical images only. Remove {fields} to use these filters.',
+      non_clinical:
+        'Not available while searching clinical images only. Remove {fields} to use these filters.',
+    },
   },
   aiSearch: {
     label: 'Describe your search',

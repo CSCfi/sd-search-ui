@@ -11,6 +11,7 @@ import {
 } from '@/services/api'
 import { useAIFilterInput } from '@/composables/query/useAIFilterInput'
 import { useSearchStore } from '@/stores/searchStore'
+import { fieldsConfig } from '@/services/config'
 import type {
   AIInterpretation,
   BeaconFilteringScope,
@@ -303,26 +304,56 @@ describe('useAIFilterInput', () => {
     expect(store.draftFilters).toEqual([])
   })
 
+  it('does not touch the tab when scope tabs are off, and still replaces the draft', async () => {
+    const original = fieldsConfig.scope_tabs
+    fieldsConfig.scope_tabs = false
+    try {
+      store.setFilter('diagnosis', ['68453008'])
+      respond('Finding', [aiFilter('finding', ['68453008'])])
+      const switchScope = vi.spyOn(store, 'switchScope')
+      const { api } = setup()
+
+      await api.submit('finding')
+
+      expect(switchScope).not.toHaveBeenCalled()
+      expect(store.datasetType).toBe('all')
+      expect(store.draftFilters.map((f) => f.id)).toEqual(['finding'])
+      expect(api.state.value).toEqual({
+        kind: 'success',
+        interpretation: 'Finding',
+        removed: [],
+      })
+    } finally {
+      fieldsConfig.scope_tabs = original
+    }
+  })
+
   it('switches to the single scope of the returned fields before writing filters', async () => {
-    store.setFilter('diagnosis', ['68453008'])
-    respond('Finding', [aiFilter('finding', ['68453008'])])
-    const switchScope = vi.spyOn(store, 'switchScope')
-    const setFilter = vi.spyOn(store, 'setFilter')
-    const { api } = setup()
+    const original = fieldsConfig.scope_tabs
+    fieldsConfig.scope_tabs = true
+    try {
+      store.setFilter('diagnosis', ['68453008'])
+      respond('Finding', [aiFilter('finding', ['68453008'])])
+      const switchScope = vi.spyOn(store, 'switchScope')
+      const setFilter = vi.spyOn(store, 'setFilter')
+      const { api } = setup()
 
-    await api.submit('finding')
+      await api.submit('finding')
 
-    expect(store.datasetType).toBe('non_clinical')
-    expect(switchScope.mock.invocationCallOrder[0]).toBeLessThan(
-      setFilter.mock.invocationCallOrder.at(-1)!,
-    )
-    expect(api.state.value).toEqual({
-      kind: 'success',
-      interpretation: 'Finding',
-      switchedTo: 'Non-clinical',
-      removed: ['Diagnosis'],
-    })
-    expect(store.committedDatasetType).toBe('non_clinical')
+      expect(store.datasetType).toBe('non_clinical')
+      expect(switchScope.mock.invocationCallOrder[0]).toBeLessThan(
+        setFilter.mock.invocationCallOrder.at(-1)!,
+      )
+      expect(api.state.value).toEqual({
+        kind: 'success',
+        interpretation: 'Finding',
+        switchedTo: 'Non-clinical',
+        removed: ['Diagnosis'],
+      })
+      expect(store.committedDatasetType).toBe('non_clinical')
+    } finally {
+      fieldsConfig.scope_tabs = original
+    }
   })
 
   it('keeps the active tab when only shared fields are returned', async () => {

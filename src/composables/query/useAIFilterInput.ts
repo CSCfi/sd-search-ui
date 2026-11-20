@@ -206,7 +206,8 @@ export function useAIFilterInput() {
     applying = true
     try {
       // Tab first, so the fields exist in the form before their values are written.
-      if (decision.kind === 'switch') {
+      // Without scope tabs the scope follows from the filters, so there is no tab to switch.
+      if (decision.kind === 'switch' && fieldsConfig.scope_tabs === true) {
         removed = store
           .switchScope(decision.scope, fieldScopes)
           .map((id) => terms.get(id)?.label ?? id)

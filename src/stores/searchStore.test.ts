@@ -367,3 +367,36 @@ describe('searchStore — complementary disabled by service config', () => {
     expect(store.includeComplementary).toBe(false)
   })
 })
+
+describe('searchStore — tab URL param follows scope_tabs', () => {
+  const original = fieldsConfig.scope_tabs
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    fieldsConfig.scope_tabs = original
+    vi.restoreAllMocks()
+  })
+
+  it('writes tab to the URL when scope_tabs is true', () => {
+    fieldsConfig.scope_tabs = true
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setDatasetType('clinical')
+    store.commit()
+    expect(replace).toHaveBeenCalledWith({ query: { sex: 'Female', tab: 'clinical' } })
+  })
+
+  it('omits tab from the URL when scope_tabs is false', () => {
+    fieldsConfig.scope_tabs = false
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const store = useSearchStore()
+    store.setFilter('sex', 'Female')
+    store.setDatasetType('clinical')
+    store.commit()
+    expect(replace).toHaveBeenCalledWith({ query: { sex: 'Female' } })
+  })
+})

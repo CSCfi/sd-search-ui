@@ -7,6 +7,7 @@ import { fieldsConfig } from '@/services/config'
 export type DatasetType = 'all' | 'clinical' | 'non_clinical'
 
 const isComplementaryEnabled = () => fieldsConfig.complementary === true
+const isScopeTabsEnabled = () => fieldsConfig.scope_tabs === true
 
 export const useSearchStore = defineStore('search', () => {
   const draftFilters = ref<BeaconQueryFilter[]>([])
@@ -111,7 +112,7 @@ export const useSearchStore = defineStore('search', () => {
     router.replace({
       query: {
         ...filterEntries,
-        ...(datasetType.value !== 'all' ? { tab: datasetType.value } : {}),
+        ...(isScopeTabsEnabled() && datasetType.value !== 'all' ? { tab: datasetType.value } : {}),
         ...(includeComplementary.value ? { complementary: 'true' } : {}),
       },
     })

@@ -11,6 +11,7 @@ export interface FieldsConfig {
   show_concept_id?: string[]
   complementary?: boolean
   ai_search?: boolean
+  scope_tabs?: boolean
 }
 
 export const fieldsConfig: FieldsConfig = fieldsConfigRaw as unknown as FieldsConfig

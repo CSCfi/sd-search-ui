@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { useSearchStore } from '@/stores/searchStore'
+import { fieldsConfig } from '@/services/config'
 
 const postNonClinicalQuery = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const getFilteringScopes = vi.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([
@@ -13,6 +14,7 @@ const getNonClinicalImageIds = vi.fn<(...args: unknown[]) => Promise<string[]>>(
 const submitDatasetOnDemand = vi.fn<(...args: unknown[]) => Promise<void>>()
 
 vi.mock('@/services/api', () => ({
+  getFilteringTerms: () => Promise.resolve({ response: { filteringTerms: [] } }),
   postNonClinicalQuery: (...args: unknown[]) => postNonClinicalQuery(...args),
   getFilteringScopes: (...args: unknown[]) => getFilteringScopes(...args),
   getNonClinicalImageIds: (...args: unknown[]) => getNonClinicalImageIds(...args),
@@ -23,8 +25,15 @@ const { default: NonClinicalResults } = await import('./NonClinicalResults.vue')
 
 describe('NonClinicalResults', () => {
   let pinia: ReturnType<typeof createPinia>
+  const originalScopeTabs = fieldsConfig.scope_tabs
+
+  afterEach(() => {
+    fieldsConfig.scope_tabs = originalScopeTabs
+  })
 
   beforeEach(() => {
+    // These cases pick the scope with setDatasetType, which only counts with scope tabs on.
+    fieldsConfig.scope_tabs = true
     pinia = createPinia()
     setActivePinia(pinia)
     postNonClinicalQuery.mockReset()

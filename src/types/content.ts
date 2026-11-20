@@ -37,6 +37,13 @@ export interface ContentConfig {
   }
   search: {
     filterHintHtml: string
+    /** Status line above the filters, keyed by the scope the search currently targets. */
+    scopeStatus: { all: string; clinical: string; non_clinical: string }
+    /**
+     * Message on a locked panel, keyed by the scope id of the LOCKED panel.
+     * `{fields}` is replaced by the labels of the filters that cause the lock.
+     */
+    scopeLocked: { clinical: string; non_clinical: string }
   }
   /** Plain text only. `{tab}` and `{fields}` are replaced in the two note strings. */
   aiSearch: {

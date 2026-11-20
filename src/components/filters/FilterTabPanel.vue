@@ -8,6 +8,10 @@ const props = defineProps<{
   label: string
   activeTab: DatasetType
   bordered?: boolean
+  // Locked panels keep their fields visible but dimmed and unusable.
+  locked?: boolean
+  // Visible text explaining the lock. Rendered outside the inert region so screen readers read it.
+  lockedReason?: string
 }>()
 
 const show = computed(() => props.activeTab === 'all' || props.activeTab === props.tab)
@@ -23,7 +27,11 @@ const show = computed(() => props.activeTab === 'all' || props.activeTab === pro
       <h2 class="panel-title" :class="`panel-title--${tab}`">{{ label }}</h2>
       <ScopeBadge :scope-id="tab" />
     </div>
-    <slot />
+    <p v-if="locked && lockedReason" class="lock-message">{{ lockedReason }}</p>
+    <!-- Inert removes the fields from focus order and the accessibility tree. -->
+    <div :inert="locked ? true : undefined" :class="{ 'panel-body--locked': locked }">
+      <slot />
+    </div>
   </div>
 </template>
 
@@ -40,6 +48,18 @@ const show = computed(() => props.activeTab === 'all' || props.activeTab === pro
   &.filter-tab-panel--non_clinical {
     border-color: rgb(var(--color-scope-non-clinical-rgb) / 0.55);
   }
+}
+
+.lock-message {
+  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+}
+
+.panel-body--locked {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
 }
 
 .panel-header {

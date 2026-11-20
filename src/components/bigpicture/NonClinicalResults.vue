@@ -6,10 +6,12 @@ import { useSearchStore } from '@/stores/searchStore'
 import { useDatasetOnDemand } from '@/composables/query/useDatasetOnDemand'
 import { useNonClinicalSearch } from '@/composables/query/useNonClinicalSearch'
 import { useFilteringScopes } from '@/composables/query/useFilteringScopes'
+import { useActiveScope } from '@/composables/ui/useActiveScope'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
-const { committedDatasetType, hasCommittedFilters } = storeToRefs(useSearchStore())
+const { hasCommittedFilters } = storeToRefs(useSearchStore())
+const { committedScope } = useActiveScope()
 const { data, isLoading, isError } = useNonClinicalSearch()
 const { data: filteringScopes } = useFilteringScopes()
 const { dodStatus, dodError, isDodBusy, applyForNonClinicalImages } = useDatasetOnDemand()
@@ -22,13 +24,13 @@ const errorDismissed = ref(false)
 const dodErrorDismissed = ref(false)
 
 const isActiveTab = computed(
-  () => committedDatasetType.value === 'all' || committedDatasetType.value === 'non_clinical',
+  () => committedScope.value === 'all' || committedScope.value === 'non_clinical',
 )
 
 // On the 'all' tab, ResultsTable already renders the shared "no filters" prompt —
 // only render it here when non_clinical is the sole active scope, to avoid a duplicate.
 const showNoFiltersPrompt = computed(
-  () => !hasCommittedFilters.value && committedDatasetType.value === 'non_clinical',
+  () => !hasCommittedFilters.value && committedScope.value === 'non_clinical',
 )
 
 const imageCount = computed(() => data.value?.responseSummary.numTotalResults ?? 0)

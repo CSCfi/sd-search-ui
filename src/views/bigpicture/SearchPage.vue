@@ -35,8 +35,12 @@ for (const [id, raw] of entries) {
 }
 
 // Unvalidated external string — an id that matches no backend scope is reset to 'all' by
-// SearchForm once /filtering_scopes resolves.
-const tabParam = typeof route.query.tab === 'string' ? (route.query.tab as DatasetType) : undefined
+// SearchForm once /filtering_scopes resolves. Ignored without scope tabs, because the scope
+// then follows from the filters.
+const tabParam =
+  fieldsConfig.scope_tabs === true && typeof route.query.tab === 'string'
+    ? (route.query.tab as DatasetType)
+    : undefined
 const complementaryParam = route.query.complementary === 'true'
 
 if (parsed.length > 0) {
