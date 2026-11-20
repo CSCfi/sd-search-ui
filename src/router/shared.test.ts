@@ -61,3 +61,89 @@ describe('router guard — requiresAuth', () => {
     expect(check).not.toHaveBeenCalled()
   })
 })
+
+describe('router guard — postLoginRedirect', () => {
+  function makeRouterWithDeepLink() {
+    return createServiceRouter([
+      { path: '/', component: Stub },
+      { path: '/search', component: Stub, meta: { requiresAuth: true } },
+      { path: '/deep', component: Stub, meta: { requiresAuth: true } },
+    ])
+  }
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubEnv('VITE_AUTH_BYPASS', 'false')
+    Object.defineProperty(window, 'location', {
+      value: { href: 'http://localhost/', pathname: '/search', search: '' },
+      writable: true,
+    })
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
+
+  it('navigates to the saved deep link and removes it when entering /search while logged in', async () => {
+    useAuthStore().setLoggedIn(true)
+    sessionStorage.setItem('postLoginRedirect', '/deep')
+    const router = makeRouterWithDeepLink()
+
+    await router.push('/search')
+
+    expect(router.currentRoute.value.path).toBe('/deep')
+    expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+  })
+
+  it('keeps the saved value when isLoggedIn is null', async () => {
+    const store = useAuthStore()
+    vi.spyOn(store, 'checkSession').mockResolvedValue()
+    sessionStorage.setItem('postLoginRedirect', '/deep')
+    const router = makeRouterWithDeepLink()
+
+    await router.push('/search')
+
+    expect(router.currentRoute.value.path).toBe('/search')
+    expect(sessionStorage.getItem('postLoginRedirect')).toBe('/deep')
+  })
+
+  it('does not consume the saved value when isLoggedIn is false', async () => {
+    const store = useAuthStore()
+    vi.spyOn(store, 'checkSession').mockImplementation(async () => store.setLoggedIn(false))
+    sessionStorage.setItem('postLoginRedirect', '/deep')
+    const router = makeRouterWithDeepLink()
+
+    await router.push('/search')
+
+    // The existing logged-out branch overwrites the value with the current location.
+    expect(sessionStorage.getItem('postLoginRedirect')).toBe('/search')
+    expect(router.currentRoute.value.path).not.toBe('/deep')
+    expect(window.location.href).toBe('/')
+  })
+
+  it('removes a value equal to the target route without redirecting again', async () => {
+    useAuthStore().setLoggedIn(true)
+    sessionStorage.setItem('postLoginRedirect', '/search')
+    const router = makeRouterWithDeepLink()
+
+    await router.push('/search')
+
+    expect(router.currentRoute.value.fullPath).toBe('/search')
+    expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+  })
+
+  it.each(['//evil.example/path', 'https://evil.example', 'search'])(
+    'discards the unsafe value %s',
+    async (value) => {
+      useAuthStore().setLoggedIn(true)
+      sessionStorage.setItem('postLoginRedirect', value)
+      const router = makeRouterWithDeepLink()
+
+      await router.push('/search')
+
+      expect(router.currentRoute.value.path).toBe('/search')
+      expect(sessionStorage.getItem('postLoginRedirect')).toBeNull()
+    },
+  )
+})
