@@ -23,8 +23,7 @@ session cookie as host-only (no `Domain` attribute), scoped to whichever origin 
 when it hit `/callback`. If `/callback` were reached directly on the backend's hostname, the cookie
 would never be visible to this app's own `/api/` calls. nginx (`docker/nginx.conf`) proxies all five
 paths to `BACKEND_URL` for exactly this reason. Never build an absolute, cross-origin URL for any of
-these five paths. `/refresh` is at the origin root, not under `/api` — its cookie is `Path=/refresh`,
-so `/api/refresh` would never carry it.
+these five paths. `/refresh` is at the origin root, not under `/api`.
 
 ## Flow
 
@@ -39,8 +38,16 @@ so `/api/refresh` would never carry it.
 ## Session Refresh (`services/sessionRefresh.ts`)
 
 The backend's access token cookie (`access_token`, LS AAI access token) lives 1 hour. The refresh
-cookie (`refresh_token`, about 1 month, `Path=/refresh`) is only sent to `POST /refresh`. Both are
-`httponly` — the frontend never sees a token.
+cookie (`refresh_token`) lives about 1 month and is `Path=/`, `httponly`, `SameSite=Strict`, so the
+browser sends it on every request to the origin. Both cookies are `httponly` — the frontend never
+sees a token.
+
+The backend normally refreshes inline: when the first API request carries a missing or expired
+`access_token` and a valid `refresh_token`, it renews the session, answers the request with 200 and
+sets both new cookies on that response. `POST /refresh` is now the fallback, used for a legacy cookie
+still at `Path=/refresh` (the browser never sends it to `/api`), for a rejected inline refresh, and
+for `/dod`. A 503 from an API call can now mean the identity provider is unreachable during inline
+refresh. It is never treated as a logout.
 
 `refreshSession()` calls `POST /refresh` (plain axios, origin root, `withCredentials`) and returns:
 
@@ -100,9 +107,8 @@ pass an already-shaped `ApiError` through.
 
 ## Logout (`logoutSession()`, `revokeSession()` in `services/sessionRefresh.ts`)
 
-Logout ends the refresh token at LS AAI, not only the browser cookies. `GET /logout` cannot do this,
-because the refresh cookie is `Path=/refresh` and never reaches `/logout`. The backend route for
-this is `DELETE /refresh`: it revokes the refresh token at LS AAI (RFC 7009), clears both cookies,
+Logout ends the refresh token at LS AAI, not only the browser cookies. `GET /logout` only clears
+both session cookies. The backend route that revokes the token is `DELETE /refresh`: it revokes the refresh token at LS AAI (RFC 7009), clears both cookies,
 and always answers `204` (also with no cookie). A failed revocation is only logged server-side.
 
 Rule: **before every navigation to `/logout`, call `DELETE /refresh`**, then navigate whatever it
@@ -137,7 +143,8 @@ fresh page load with a valid session will be incorrectly treated as logged-out.
 
 The check probes `GET /filtering_scopes` (small static response, behind the backend auth middleware) with a plain `axios` call, **not** the shared `apiClient`
 instance. `apiClient`'s interceptor would refresh and redirect to `/logout`, which would race with the
-guard's own redirect to `/` on this same check. Plain axios avoids the conflict — the guard decides
+guard's own redirect to `/` on this same check. Because the backend refreshes inline, the probe
+normally succeeds on the first request. `recoverSession` runs only for a real 401. Plain axios avoids the conflict — the guard decides
 what to do with the result.
 
 | Probe result | `isLoggedIn` |
@@ -195,6 +202,9 @@ and every other `/dod/` path is 404.
   instead of the proxy locations (`docker/dod.locations.template`, included by `nginx.conf`). Set = validated and rendered.
 - No `access_token` cookie -> nginx answers `401` itself. The browser drops an expired cookie, so this
   is the normal "token expired" signal and triggers the same refresh + retry as any other 401.
+- `/dod` is handled by nginx, not the backend middleware, so inline refresh does not apply. An empty
+  or missing `access_token` cookie still returns 401 from nginx, and the interceptor fallback renews
+  the session.
 - `dodClient` (`services/dodClient.ts`) has `baseURL: '/dod'`, `withCredentials: true` and
   `attachRefreshInterceptor` (see Session Refresh). Its error mapper converts Connect `{ code, message }`
   bodies to `ApiError` (`title` = code, `detail` = message).
