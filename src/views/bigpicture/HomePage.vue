@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import loginButton from '@/assets/images/button-login.svg'
 import { useAuthStore } from '@/stores/authStore'
+import { consumePostLoginRedirect } from '@/services/sessionRefresh'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -12,15 +13,9 @@ onMounted(async () => {
     await authStore.checkSession()
   }
 
-  const redirect = sessionStorage.getItem('postLoginRedirect')
-  if (redirect && authStore.isLoggedIn) {
-    sessionStorage.removeItem('postLoginRedirect')
-    router.replace(redirect)
-    return
-  }
-
+  // The helper removes the saved value, so a logged-out user must not reach it.
   if (authStore.isLoggedIn) {
-    router.replace('/search')
+    router.replace(consumePostLoginRedirect() ?? '/search')
   }
 })
 </script>

@@ -172,6 +172,20 @@ entry, `checkSession()` is awaited first. Only `isLoggedIn === false` redirects:
 the check (service unavailable: `503` or network error), the navigation goes through, so API calls
 surface the error. Redirecting would loop or log out a valid session.
 
+When `isLoggedIn === true`, the guard calls `consumePostLoginRedirect()` (`services/sessionRefresh.ts`)
+and navigates to the saved path if it differs from the target. `HomePage.vue` uses the same helper.
+The helper returns only same-origin paths (one leading `/`, not `//`) and removes the stored value.
+
+### nginx redirect for returning users
+
+nginx redirects `GET /` to `/search` (302, relative `Location`) when a `refresh_token` cookie is
+present (`location = /` in `docker/nginx.conf`). The front page is then never served to them, so
+`HomePage` may not mount after login. That is why the guard consumes `postLoginRedirect`.
+The redirect must never loop on a dead session: every path that ends in `isLoggedIn = false` has to
+clear the cookies first. `runSessionCheck()` calls `revokeSession()` before `setLoggedIn(false)` for a
+`failed` outcome with a 401, and `recover()` already does so for `expired`. Logout depends on
+`GET /logout` clearing both cookies, because `logoutSession()` ignores a failed `DELETE /refresh`.
+
 This is a UX guard only — real enforcement is server-side via 401s.
 
 ## API Client (`services/apiClient.ts`)

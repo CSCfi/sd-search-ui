@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
-import { isUnauthorized, recoverSession } from '@/services/sessionRefresh.ts'
+import { isUnauthorized, recoverSession, revokeSession } from '@/services/sessionRefresh.ts'
 
 const CHECK_FALLBACK_MS = 3000
 
@@ -60,7 +60,12 @@ export const useAuthStore = defineStore('auth', () => {
       case 'unavailable':
         return
       case 'failed':
-        if (isUnauthorized(outcome.error)) setLoggedIn(false)
+        if (isUnauthorized(outcome.error)) {
+          // Clear the cookies. Otherwise nginx keeps redirecting / to /search while the guard
+          // sends /search back to /, which loops. revokeSession() never throws.
+          await revokeSession()
+          setLoggedIn(false)
+        }
         return
     }
   }

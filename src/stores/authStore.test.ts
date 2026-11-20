@@ -102,12 +102,14 @@ describe('authStore — checkSession', () => {
   it('does not report logged out when the refresh is unavailable', async () => {
     mockProbe(401, 401)
     mockRefresh(503)
+    const revoke = vi.spyOn(axios, 'delete')
     const store = useAuthStore()
     store.setLoggedIn(true)
 
     await store.checkSession()
 
     expect(store.isLoggedIn).toBe(true)
+    expect(revoke).not.toHaveBeenCalled()
   })
 
   it('leaves isLoggedIn unchecked (null) when the refresh is unavailable on first check', async () => {
@@ -120,9 +122,10 @@ describe('authStore — checkSession', () => {
     expect(store.isLoggedIn).toBeNull()
   })
 
-  it('reports logged out when the probe is still 401 after a successful refresh, without looping', async () => {
+  it('reports logged out and revokes when the probe is still 401 after a successful refresh, without looping', async () => {
     const probe = mockProbe(401, 401, 401)
     const refresh = mockRefresh('ok')
+    const revoke = vi.spyOn(axios, 'delete').mockResolvedValue({ status: 204 })
     const store = useAuthStore()
 
     await store.checkSession()
@@ -130,11 +133,25 @@ describe('authStore — checkSession', () => {
     expect(store.isLoggedIn).toBe(false)
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(probe).toHaveBeenCalledTimes(3)
+    expect(revoke).toHaveBeenCalledTimes(1)
+    expect(revoke).toHaveBeenCalledWith('/refresh', { withCredentials: true, timeout: 5000 })
   })
 
-  it('leaves isLoggedIn unchanged when the repeated probe fails with 503', async () => {
+  it('still reports logged out when the revoke request fails', async () => {
+    mockProbe(401, 401, 401)
+    mockRefresh('ok')
+    vi.spyOn(axios, 'delete').mockRejectedValue(httpError(503))
+    const store = useAuthStore()
+
+    await store.checkSession()
+
+    expect(store.isLoggedIn).toBe(false)
+  })
+
+  it('leaves isLoggedIn unchanged and does not revoke when the repeated probe fails with 503', async () => {
     mockProbe(401, 503)
     const refresh = vi.spyOn(axios, 'post')
+    const revoke = vi.spyOn(axios, 'delete')
     const store = useAuthStore()
     store.setLoggedIn(true)
 
@@ -142,6 +159,7 @@ describe('authStore — checkSession', () => {
 
     expect(store.isLoggedIn).toBe(true)
     expect(refresh).not.toHaveBeenCalled()
+    expect(revoke).not.toHaveBeenCalled()
   })
 
   it('leaves isLoggedIn unchanged on a 503 probe, without refreshing', async () => {
