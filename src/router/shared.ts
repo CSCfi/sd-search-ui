@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore.ts'
+import { consumePostLoginRedirect } from '@/services/sessionRefresh.ts'
 
 /**
  * Creates a router with the shared auth guard applied.
@@ -44,6 +45,13 @@ export function createServiceRouter(routes: RouteRecordRaw[]) {
       sessionStorage.setItem('postLoginRedirect', window.location.pathname + window.location.search)
       window.location.href = '/'
       return false
+    }
+
+    // nginx redirects / to /search for returning users, so HomePage may never mount to open the
+    // deep link saved before login. The guard must open it instead.
+    if (authStore.isLoggedIn === true) {
+      const redirect = consumePostLoginRedirect()
+      if (redirect && redirect !== to.fullPath) return redirect
     }
 
     return true

@@ -107,6 +107,15 @@ export async function revokeSession(): Promise<void> {
   }
 }
 
+// Reads and removes the deep link saved before the login redirect.
+// Only a same-origin path is returned. A value like "//host" would send the user to another site.
+export function consumePostLoginRedirect(): string | null {
+  const value = sessionStorage.getItem('postLoginRedirect')
+  if (value === null) return null
+  sessionStorage.removeItem('postLoginRedirect')
+  return value.startsWith('/') && !value.startsWith('//') ? value : null
+}
+
 const LOCK_WAIT_MS = 8000
 
 // Some browsers have navigator.locks but not AbortSignal.timeout (for example Safari 15.4 to 15.6).
