@@ -18,6 +18,7 @@ const props = defineProps<{
   allowFreeText: boolean
   description?: string
   showConceptId?: boolean
+  selectedLabels?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -77,7 +78,18 @@ const filteredSuggestions = computed(() => {
   return rawItems.value
 })
 
-const itemCount = computed(() => filteredSuggestions.value.length)
+// A selected value can be missing from the scoped list (the scope follows the chosen filters).
+// Without a row the user could not deselect it. Pinned only while the full list is shown, so a
+// search stays a pure result list. Uses debouncedTerm because rawItems does.
+const pinnedItems = computed<FieldValue[]>(() => {
+  if (debouncedTerm.value.length >= 2) return []
+  const listedKeys = new Set(filteredSuggestions.value.map((i) => i.concept_id ?? i.value))
+  return selectedItems.value.filter((s) => !listedKeys.has(s.concept_id ?? s.value))
+})
+
+const displayedItems = computed(() => [...pinnedItems.value, ...filteredSuggestions.value])
+
+const itemCount = computed(() => displayedItems.value.length)
 
 const additionalCount = computed(() =>
   selectedItems.value.length > 1 ? selectedItems.value.length - 1 : 0,
@@ -91,6 +103,8 @@ function isSelected(item: FieldValue): boolean {
 function toggleItem(item: FieldValue) {
   const key = item.concept_id ?? item.value
   const exists = selectedItems.value.some((s) => (s.concept_id ?? s.value) === key)
+
+  const wasPinned = pinnedItems.value.some((p) => (p.concept_id ?? p.value) === key)
 
   if (exists) {
     selectedItems.value = selectedItems.value.filter((s) => (s.concept_id ?? s.value) !== key)
@@ -107,6 +121,12 @@ function toggleItem(item: FieldValue) {
     'update:modelValue',
     selectedItems.value.map((s) => s.concept_id ?? s.value),
   )
+
+  // A removed pinned row leaves the list, and its <li> takes the focus with it.
+  if (wasPinned) {
+    resetActiveIndex()
+    searchRef.value?.focus()
+  }
 }
 
 const {
@@ -126,7 +146,7 @@ const {
 function onOptionKeydown(event: KeyboardEvent, index: number) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    const item = filteredSuggestions.value[index]
+    const item = displayedItems.value[index]
     if (item) toggleItem(item)
     return
   }
@@ -140,8 +160,8 @@ watch(searchTerm, resetActiveIndex)
 // what the picker already shows. The picker's own emits echo back as an equal modelValue,
 // so toggleItem stays the owner of in-picker updates.
 watch(
-  [() => props.modelValue, valuesData],
-  ([values]) => {
+  [() => props.modelValue, () => props.selectedLabels, valuesData],
+  ([values, labels]) => {
     if (values.length === 0) {
       selectedItems.value = []
       return
@@ -152,15 +172,34 @@ watch(
       selectedKeys.length === values.length &&
       selectedKeys.every((key, i) => key === values[i])
     ) {
+      // URL labels resolve after mount. Replace a raw concept id with its label once known.
+      const upgraded = selectedItems.value.map((s, i) => {
+        const label = labels?.[i]
+        if (label === undefined || label === s.value || s.count !== 0 || s.value !== values[i]) {
+          return s
+        }
+        return { value: label, count: 0, concept_id: values[i]! }
+      })
+      if (upgraded.some((item, i) => item !== selectedItems.value[i])) {
+        selectedItems.value = upgraded
+      }
       return
     }
 
     const data = valuesData.value
     if (!data) return
 
-    selectedItems.value = values.map((v) => {
+    selectedItems.value = values.map((v, i) => {
       const match = data.find((d) => (d.concept_id ?? d.value) === v)
-      return match ?? { value: v, count: 0, concept_id: null }
+      if (match) return match
+      // A label that differs from the raw value means the raw value is a concept id.
+      // Keeping it as concept_id keeps the item key, and the emitted value, equal to the id.
+      const label = labels?.[i]
+      return {
+        value: label ?? v,
+        count: 0,
+        concept_id: label !== undefined && label !== v ? v : null,
+      }
     })
   },
   { immediate: true },
@@ -226,7 +265,7 @@ watch(
         class="options-list"
       >
         <li
-          v-for="(item, index) in filteredSuggestions"
+          v-for="(item, index) in displayedItems"
           :key="item.concept_id ?? item.value"
           :id="`${fieldId}-option-${index}`"
           role="option"
