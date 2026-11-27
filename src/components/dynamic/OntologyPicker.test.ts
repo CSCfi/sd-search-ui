@@ -81,6 +81,7 @@ describe('OntologyPicker', () => {
       fieldId: string
       modelValue: string[]
       allowFreeText: boolean
+      selectedLabels: string[]
     }> = {},
   ) {
     return mount(OntologyPicker, {
@@ -291,5 +292,102 @@ describe('OntologyPicker', () => {
     expect(reRendered.attributes('aria-selected')).toBe('true')
     const lungOption = w.findAll('[role="option"]').find((o) => o.text().includes('Lung'))!
     expect(lungOption.attributes('aria-selected')).toBe('false')
+  })
+
+  describe('selected value missing from the values list', () => {
+    const MISSING_ID = '254837009'
+
+    function optionTexts(w: ReturnType<typeof mountComponent>) {
+      return w.findAll('[role="option"]').map((o) => o.text())
+    }
+
+    it.each([false, true])(
+      'pins a restored value as a selected first row and deselects it on click (allowFreeText=%s)',
+      async (allowFreeText) => {
+        const w = mountComponent({ modelValue: [MISSING_ID], allowFreeText })
+        await openDropdown(w)
+
+        const options = w.findAll('[role="option"]')
+        expect(options).toHaveLength(MOCK_VALUES.length + 1)
+        expect(options[0]!.text()).toBe(MISSING_ID)
+        expect(options[0]!.attributes('aria-selected')).toBe('true')
+
+        await options[0]!.trigger('click')
+        const emitted = w.emitted('update:modelValue')!
+        expect(emitted[emitted.length - 1]).toEqual([[]])
+        expect(optionTexts(w)).toHaveLength(MOCK_VALUES.length)
+      },
+    )
+
+    it('keeps other selected values when one pinned row is removed', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID, '80248007'] })
+      await openDropdown(w)
+      await w.findAll('[role="option"]')[0]!.trigger('click')
+      const emitted = w.emitted('update:modelValue')!
+      expect(emitted[emitted.length - 1]).toEqual([['80248007']])
+    })
+
+    it('does not pin a selected value that is present in the values list', async () => {
+      const w = mountComponent({ modelValue: ['80248007'] })
+      await openDropdown(w)
+      expect(w.findAll('[role="option"]')).toHaveLength(MOCK_VALUES.length)
+    })
+
+    it('does not pin rows when the search term has 2 or more characters', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID], allowFreeText: true })
+      await openDropdown(w)
+      await typeSearch(w, 'br')
+      expect(optionTexts(w).some((t) => t.includes(MISSING_ID))).toBe(false)
+      expect(w.findAll('[role="option"]')).toHaveLength(MOCK_SUGGESTIONS.length)
+    })
+
+    it('counts pinned rows in keyboard navigation and removes a pinned row with Enter', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID] })
+      await openDropdown(w)
+      const listbox = () => w.find('[role="listbox"]')
+
+      await w.find('.search-input').trigger('keydown', { key: 'ArrowDown' })
+      expect(listbox().attributes('aria-activedescendant')).toBe('anatomical_site-option-0')
+
+      await w.findAll('[role="option"]')[0]!.trigger('keydown', { key: 'ArrowDown' })
+      await w.findAll('[role="option"]')[1]!.trigger('keydown', { key: 'ArrowDown' })
+      // Index 2 exists only because the pinned row is counted.
+      expect(listbox().attributes('aria-activedescendant')).toBe('anatomical_site-option-2')
+
+      await w.findAll('[role="option"]')[0]!.trigger('keydown', { key: 'Enter' })
+      const emitted = w.emitted('update:modelValue')!
+      expect(emitted[emitted.length - 1]).toEqual([[]])
+      expect(listbox().attributes('aria-activedescendant')).toBeUndefined()
+    })
+
+    it('shows the label for a pinned row when selectedLabels is given', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID], selectedLabels: ['Fibrosis'] })
+      await openDropdown(w)
+      expect(w.findAll('[role="option"]')[0]!.text()).toBe('Fibrosis')
+      expect(w.find('.selected-first').text()).toBe('Fibrosis')
+
+      await w.findAll('[role="option"]')[0]!.trigger('click')
+      const emitted = w.emitted('update:modelValue')!
+      expect(emitted[emitted.length - 1]).toEqual([[]])
+    })
+
+    it('shows the concept id for a pinned row when no label is given', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID] })
+      await openDropdown(w)
+      expect(w.findAll('[role="option"]')[0]!.text()).toBe(MISSING_ID)
+    })
+
+    it('replaces the raw concept id with the label when the label arrives after mount', async () => {
+      const w = mountComponent({ modelValue: [MISSING_ID] })
+      await openDropdown(w)
+      expect(w.findAll('[role="option"]')[0]!.text()).toBe(MISSING_ID)
+
+      await w.setProps({ selectedLabels: ['Fibrosis'] })
+      expect(w.findAll('[role="option"]')[0]!.text()).toBe('Fibrosis')
+
+      await w.findAll('[role="option"]')[0]!.trigger('click')
+      const emitted = w.emitted('update:modelValue')!
+      expect(emitted[emitted.length - 1]).toEqual([[]])
+    })
   })
 })

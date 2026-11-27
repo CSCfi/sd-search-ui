@@ -140,4 +140,16 @@ describe('DynamicField', () => {
       '64033007',
     ])
   })
+
+  it.each(['ontology', 'ontologyOrValue'] as const)(
+    'passes the store filter labels to OntologyPicker as selectedLabels for type=%s',
+    (type) => {
+      const store = useSearchStore()
+      store.setFilter('diagnosis', ['254837009'], ['Fibrosis'])
+
+      const wrapper = mountField(makeField({ id: 'diagnosis', type }))
+
+      expect(wrapper.findComponent(OntologyPicker).props('selectedLabels')).toEqual(['Fibrosis'])
+    },
+  )
 })
